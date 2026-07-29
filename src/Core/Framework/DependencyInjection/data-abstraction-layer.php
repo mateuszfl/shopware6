@@ -18,6 +18,10 @@ use Shopware\Core\Framework\DataAbstractionLayer\Command\RefreshIndexCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\CriteriaFieldsResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\CriteriaQueryBuilder;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\AbstractSqlDialect;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\DatabaseDialectRegistry;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\MySqlDialect;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\PostgreSqlDialect;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityAggregator;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityForeignKeyResolver;
@@ -215,6 +219,26 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->public();
 
     $services->set(EntityDefinitionQueryHelper::class);
+
+    // SQL dialect abstraction: one implementation per supported database engine, resolved to the
+    // engine the connection actually negotiated. AbstractSqlDialect is the injectable handle.
+    $services->set(MySqlDialect::class)
+        ->tag('shopware.sql_dialect');
+
+    $services->set(PostgreSqlDialect::class)
+        ->tag('shopware.sql_dialect');
+
+    $services->set(DatabaseDialectRegistry::class)
+        ->args([
+            tagged_iterator('shopware.sql_dialect'),
+        ]);
+
+    $services->set(AbstractSqlDialect::class)
+        ->public()
+        ->factory([service(DatabaseDialectRegistry::class), 'get'])
+        ->args([
+            service(Connection::class),
+        ]);
 
     $services->set(JoinGroupBuilder::class)
         ->public();
@@ -462,6 +486,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(JsonFieldAccessorBuilder::class)
         ->args([
             service(Connection::class),
+            service(AbstractSqlDialect::class),
         ])
         ->tag('shopware.field_accessor_builder', ['priority' => -150]);
 

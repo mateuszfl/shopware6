@@ -224,7 +224,8 @@
     "suggest": {
         "shopware/dev-tools": "For development tools, profiler, faker, etc",
         "league/flysystem-async-aws-s3": "Required to use the Flysystem S3 driver (^3.10.3)",
-        "league/flysystem-google-cloud-storage": "Required to use the Flysystem Google cloud driver (^3.10.3)"
+        "league/flysystem-google-cloud-storage": "Required to use the Flysystem Google cloud driver (^3.10.3)",
+        "ext-pdo_pgsql": "Required to connect to a PostgreSQL database (experimental)"
     },
     "repositories": [
         {

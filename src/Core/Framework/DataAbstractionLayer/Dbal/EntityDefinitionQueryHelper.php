@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\SqlDialectProvider;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Exception\UnmappedFieldException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver\FieldResolverContext;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
@@ -40,11 +41,10 @@ class EntityDefinitionQueryHelper
 
     public static function escape(string $string): string
     {
-        if (str_contains($string, '`')) {
-            throw DataAbstractionLayerException::invalidIdentifier($string);
-        }
-
-        return '`' . $string . '`';
+        // Delegates identifier quoting to the active SQL dialect. The provider defaults to the
+        // MySQL dialect, so the output stays byte-for-byte identical (backticks) unless another
+        // engine is booted. See SqlDialectProvider / AbstractSqlDialect.
+        return SqlDialectProvider::get()->quoteIdentifier($string);
     }
 
     /**

@@ -129,6 +129,8 @@ class DataAbstractionLayerException extends HttpException
     public const DBAL_UNMAPPED_FIELD = 'FRAMEWORK__DBAL_UNMAPPED_FIELD';
     public const DBAL_UNEXPECTED_FIELD_TYPE = 'FRAMEWORK__DBAL_UNEXPECTED_FIELD_TYPE';
     public const DBAL_INVALID_IDENTIFIER = 'FRAMEWORK__DBAL_INVALID_IDENTIFIER';
+    public const DBAL_UNSUPPORTED_DATABASE_PLATFORM = 'FRAMEWORK__DBAL_UNSUPPORTED_DATABASE_PLATFORM';
+    public const DBAL_MISSING_CONFLICT_COLUMNS = 'FRAMEWORK__DBAL_MISSING_CONFLICT_COLUMNS';
     public const DBAL_MISSING_VERSION_FIELD = 'FRAMEWORK__DBAL_MISSING_VERSION_FIELD';
     public const DBAL_NO_TRANSLATION_DEFINITION = 'FRAMEWORK__DBAL_NO_TRANSLATION_DEFINITION';
     public const DBAL_MISSING_TRANSLATED_STORAGE_AWARE_PROPERTY = 'FRAMEWORK__DBAL_MISSING_TRANSLATED_STORAGE_AWARE_PROPERTY';
@@ -1016,6 +1018,26 @@ class DataAbstractionLayerException extends HttpException
             self::DBAL_INVALID_IDENTIFIER,
             'Backtick not allowed in identifier "{{ identifier }}"',
             ['identifier' => $identifier]
+        );
+    }
+
+    public static function unsupportedDatabasePlatform(string $platformClass): self
+    {
+        return new self(
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            self::DBAL_UNSUPPORTED_DATABASE_PLATFORM,
+            'No SQL dialect registered for database platform "{{ platform }}".',
+            ['platform' => $platformClass]
+        );
+    }
+
+    public static function missingConflictColumns(string $dialect): self
+    {
+        return new self(
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            self::DBAL_MISSING_CONFLICT_COLUMNS,
+            'The "{{ dialect }}" dialect requires explicit conflict columns to build an upsert statement.',
+            ['dialect' => $dialect]
         );
     }
 

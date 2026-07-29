@@ -8,6 +8,8 @@ use Shopware\Core\Framework\Adapter\Cache\ReverseProxy\ReverseProxyCompilerPass;
 use Shopware\Core\Framework\Adapter\Cache\StampedeProtectionConfigurator;
 use Shopware\Core\Framework\Adapter\Redis\RedisConnectionsCompilerPass;
 use Shopware\Core\Framework\DataAbstractionLayer\AttributeEntityCompiler;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\AbstractSqlDialect;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\SqlDialectProvider;
 use Shopware\Core\Framework\DependencyInjection\CompilerPass\AssetBundleRegistrationCompilerPass;
 use Shopware\Core\Framework\DependencyInjection\CompilerPass\AssetRegistrationCompilerPass;
 use Shopware\Core\Framework\DependencyInjection\CompilerPass\AttributeEntityCompilerPass;
@@ -176,6 +178,11 @@ class Framework extends Bundle
         CacheValueCompressor::$compress = $this->container->getParameter('shopware.cache.compress');
         CacheValueCompressor::$compressMethod = $this->container->getParameter('shopware.cache.compression_method');
         Feature::$emitDeprecations = $this->container->getParameter('kernel.debug');
+
+        // Bind the active SQL dialect for static call sites (e.g. EntityDefinitionQueryHelper::escape()).
+        // The resolver is lazy, so booting does not open a database connection on its own.
+        $container = $this->container;
+        SqlDialectProvider::setResolver(static fn (): AbstractSqlDialect => $container->get(AbstractSqlDialect::class));
 
         $stampedeProtectionConfigurator = $this->container->get(StampedeProtectionConfigurator::class);
         $stampedeProtectionConfigurator->apply();

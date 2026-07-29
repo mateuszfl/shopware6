@@ -4,6 +4,8 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\AbstractSqlDialect;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Dialect\JsonExtractType;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\DateField;
@@ -23,8 +25,10 @@ class JsonFieldAccessorBuilder implements FieldAccessorBuilderInterface
     /**
      * @internal
      */
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly AbstractSqlDialect $dialect
+    ) {
     }
 
     public function buildAccessor(string $root, Field $field, Context $context, string $accessor): ?string
@@ -57,23 +61,15 @@ class JsonFieldAccessorBuilder implements FieldAccessorBuilderInterface
             $jsonPath = implode('.', $jsonPathParts);
         }
 
-        $jsonValueExpr = \sprintf(
-            'JSON_EXTRACT(%s.%s, %s)',
-            EntityDefinitionQueryHelper::escape($root),
-            EntityDefinitionQueryHelper::escape($field->getStorageName()),
-            $this->connection->quote('$' . $jsonPath)
-        );
+        $column = EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName());
+        $path = $this->connection->quote('$' . $jsonPath);
 
         $embeddedField = $this->getField($jsonPath, $field->getPropertyMapping());
-        $accessor = $this->getFieldAccessor($jsonValueExpr, $embeddedField);
 
-        /*
-         * Values extracted from json have distinct json types, that are different from normal value types.
-         * We need to convert json nulls into sql nulls.
-         *
-         * For example: `JSON_EXTRACT('{"foo":null}', '$.foo') IS NOT NULL`
-         */
-        return \sprintf('IF(JSON_TYPE(%s) != "NULL", %s, NULL)', $jsonValueExpr, $accessor);
+        // The dialect renders the JSON extraction, the target-type coercion and the json-null to
+        // sql-null conversion. On MySQL this yields the exact previous expression
+        // (IF(JSON_TYPE(...) != "NULL", <typed accessor>, NULL)).
+        return $this->dialect->jsonExtractTyped($column, $path, $this->resolveType($embeddedField));
     }
 
     /**
@@ -104,29 +100,28 @@ class JsonFieldAccessorBuilder implements FieldAccessorBuilderInterface
         return null;
     }
 
-    private function getFieldAccessor(string $jsonValueExpr, ?Field $field = null): string
+    private function resolveType(?Field $field): JsonExtractType
     {
-        if ($field instanceof IntField || $field instanceof FloatField) {
-            return \sprintf('JSON_UNQUOTE(%s) + 0.0', $jsonValueExpr);
+        if ($field instanceof IntField) {
+            return JsonExtractType::INT;
+        }
+
+        if ($field instanceof FloatField) {
+            return JsonExtractType::FLOAT;
         }
 
         if ($field instanceof BoolField) {
-            return \sprintf(
-                'IF(JSON_UNQUOTE(%s) != "true" AND JSON_UNQUOTE(%s) = 0, 0, 1)',
-                $jsonValueExpr,
-                $jsonValueExpr
-            );
+            return JsonExtractType::BOOL;
         }
 
         if ($field instanceof DateTimeField) {
-            return \sprintf('CAST(JSON_UNQUOTE(%s) AS datetime(3))', $jsonValueExpr);
+            return JsonExtractType::DATETIME;
         }
 
         if ($field instanceof DateField) {
-            return \sprintf('CAST(JSON_UNQUOTE(%s) AS DATE)', $jsonValueExpr);
+            return JsonExtractType::DATE;
         }
 
-        // The CONVERT is required for mariadb support (mysqls JSON_UNQUOTE returns utf8mb4)
-        return \sprintf('CONVERT(JSON_UNQUOTE(%s) USING "utf8mb4") COLLATE utf8mb4_unicode_ci', $jsonValueExpr);
+        return JsonExtractType::STRING;
     }
 }
