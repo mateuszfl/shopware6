@@ -224,6 +224,7 @@
         "symplify/phpstan-rules": "14.10.0"
     },
     "suggest": {
+        "ext-pdo_pgsql": "Required to connect to PostgreSQL; ext-pdo_mysql remains required for supported MySQL and MariaDB setups",
         "shopware/dev-tools": "For development tools, profiler, faker, etc",
         "league/flysystem-async-aws-s3": "Required to use the Flysystem S3 driver (^3.10.3)",
         "league/flysystem-google-cloud-storage": "Required to use the Flysystem Google cloud driver (^3.10.3)"

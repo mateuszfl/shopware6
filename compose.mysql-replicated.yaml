@@ -1,0 +1,74 @@
+name: shopware-mysql-replicated
+
+x-mysql-image: &mysql-image mysql:8.4@sha256:0744ee5ef89ce6ccfa13de3e579fe6b9e27f93dd70da9c06d2c908b1b193fb8d
+x-mysql-health: &mysql-health
+  test: [CMD-SHELL, 'mysqladmin ping -h 127.0.0.1 -uroot -p"$${MYSQL_ROOT_PASSWORD}"']
+  interval: 5s
+  timeout: 3s
+  retries: 24
+  start_period: 10s
+
+services:
+  mysql-primary:
+    image: *mysql-image
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shopware_mysql
+      MYSQL_USER: shopware
+      MYSQL_PASSWORD: shopware
+      TZ: UTC
+    command: [--server-id=1, --log-bin=mysql-bin, --binlog-format=ROW, --gtid-mode=ON, --enforce-gtid-consistency=ON, --binlog-expire-logs-seconds=86400, --default-time-zone=+00:00]
+    volumes:
+      - mysql-primary-data:/var/lib/mysql
+      - ./dev-tools/database/mysql-primary-init.sql:/docker-entrypoint-initdb.d/10-shopware.sql:ro
+    ports:
+      - '3307:3306'
+    healthcheck: *mysql-health
+
+  mysql-replica-0:
+    image: *mysql-image
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command: [--server-id=2, --relay-log=relay-bin, --read-only=ON, --gtid-mode=ON, --enforce-gtid-consistency=ON, --default-time-zone=+00:00]
+    volumes:
+      - mysql-replica-0-data:/var/lib/mysql
+      - ./dev-tools/database/mysql-replica-init.sql:/docker-entrypoint-initdb.d/10-replication.sql:ro
+    ports:
+      - '3308:3306'
+    depends_on:
+      mysql-primary:
+        condition: service_healthy
+    healthcheck: *mysql-health
+
+  web:
+    build:
+      context: .
+      dockerfile: dev-tools/database/Dockerfile.web
+    ports:
+      - '8000:8000'
+    environment:
+      COMPOSER_ROOT_VERSION: 6.7.9999999-dev
+      HOST: 0.0.0.0
+      APP_URL: http://localhost:8000
+      DATABASE_URL: mysql://shopware:shopware@mysql-primary:3306/shopware_mysql?serverVersion=8.4.11&charset=utf8mb4
+      DATABASE_REPLICA_0_URL: mysql://shopware:shopware@mysql-replica-0:3306/shopware_mysql?serverVersion=8.4.11&charset=utf8mb4
+      MAILER_DSN: smtp://mailer:1025
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql-primary:
+        condition: service_healthy
+      mysql-replica-0:
+        condition: service_healthy
+
+  adminer:
+    image: adminer:latest
+    ports:
+      - '9082:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql-primary
+
+volumes:
+  mysql-primary-data:
+  mysql-replica-0-data:

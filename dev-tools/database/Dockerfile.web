@@ -1,0 +1,8 @@
+FROM ghcr.io/shopware/docker-dev:php8.4-node24-caddy@sha256:12c5e5963535d58df6349d89c9c89d8a7eb3cd0938eb00052467726b97649457
+
+USER root
+
+RUN install-php-extensions pdo_pgsql \
+    && apk add --no-cache postgresql18-client
+
+USER www-data

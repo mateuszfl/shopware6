@@ -1,0 +1,7 @@
+services:
+  web:
+    environment:
+      DATABASE_REPLICA_1_URL: postgresql://shopware:shopware@pg-replica-1:5432/shopware_pg?serverVersion=18.6&charset=utf8
+    depends_on:
+      pg-replica-1:
+        condition: service_healthy
