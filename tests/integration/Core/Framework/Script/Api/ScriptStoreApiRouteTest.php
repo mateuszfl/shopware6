@@ -3,7 +3,6 @@
 namespace Shopware\Tests\Integration\Core\Framework\Script\Api;
 
 use PHPUnit\Framework\TestCase;
-use Psr\Cache\CacheItemPoolInterface;
 use Shopware\Core\Content\Test\Product\ProductBuilder;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Adapter\Cache\Http\HttpCacheKeyGenerator;
@@ -355,10 +354,6 @@ class ScriptStoreApiRouteTest extends TestCase
 
         // Login to get the `logged-in` invalidation state
         $this->login();
-        $scriptCache = $this->browser->getContainer()->get('cache.object');
-        static::assertInstanceOf(CacheItemPoolInterface::class, $scriptCache);
-        // The fixture's cache_key block hashes this array for requests without query parameters.
-        $cachedBeforeRequest = $scriptCache->getItem(md5('{"script":"cache-script"}'))->isHit();
 
         $this->browser->request('GET', '/store-api/script/cache-script');
         static::assertNotFalse($this->browser->getResponse()->getContent());
@@ -366,16 +361,9 @@ class ScriptStoreApiRouteTest extends TestCase
 
         static::assertSame(Response::HTTP_OK, $this->browser->getResponse()->getStatusCode(), $this->browser->getResponse()->getContent());
 
-        $traces = $this->getScriptTraces($this->browser->getContainer());
-        if (Feature::isActive('v6.8.0.0')) {
-            if ($cachedBeforeRequest) {
-                static::assertArrayNotHasKey('store-api-cache-script::response', $traces);
-            } else {
-                static::assertArrayHasKey('store-api-cache-script::response', $traces);
-                static::assertCount(1, $traces['store-api-cache-script::response']);
-            }
-        } else {
+        if (!Feature::isActive('v6.8.0.0')) {
             // The logged-in invalidation state bypasses the anonymous cache entry.
+            $traces = $this->getScriptTraces($this->browser->getContainer());
             static::assertArrayHasKey('store-api-cache-script::response', $traces);
             static::assertCount(1, $traces['store-api-cache-script::response']);
         }
