@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+# These local planning artifacts must never be included in a commit.
+blocked_paths=()
+while IFS= read -r -d '' staged_path; do
+    case "$staged_path" in
+        battle-plan/*|.agents/skills/shopware-pg-next-task/*)
+            blocked_paths+=("$staged_path")
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR -z --)
+
+if (( ${#blocked_paths[@]} > 0 )); then
+    printf 'Commit blocked: local PostgreSQL planning files are staged:\n' >&2
+    printf '  %s\n' "${blocked_paths[@]}" >&2
+    printf 'Unstage these paths before committing.\n' >&2
+    exit 1
+fi
+
 function onExit {
     if [[ $? != 0 ]]
     then

@@ -149,6 +149,10 @@ src/Core/DevOps/Locust/**/__pycache__/
 /shop
 .codex
 
+# Local PostgreSQL POC plan and task runner; never commit.
+/battle-plan/
+/.agents/skills/shopware-pg-next-task/
+
 .php-cs-fixer.cache
 
 # tests / ci
