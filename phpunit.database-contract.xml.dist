@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache/database-contract"
+         cacheResult="false"
+         failOnRisky="true">
+    <php>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="memory_limit" value="-1"/>
+        <server name="TESTS_RUNNING" value="1"/>
+    </php>
+    <testsuites>
+        <testsuite name="database-contract">
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/DatabaseContractTest.php</file>
+        </testsuite>
+        <testsuite name="database-contract-replication">
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
+        </testsuite>
+    </testsuites>
+</phpunit>

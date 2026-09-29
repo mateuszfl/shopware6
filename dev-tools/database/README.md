@@ -31,6 +31,22 @@ development image with `pdo_pgsql` and the PostgreSQL 18 client. Composer keeps
 `ext-pdo_mysql` required for existing supported MySQL/MariaDB installations;
 `ext-pdo_pgsql` is suggested for PostgreSQL, and this web image installs both.
 
+The lightweight database contract suite builds only its five fixture tables;
+it does not run the Shopware installer or production migrations. Each web
+service exposes `DATABASE_CONTRACT_URL` for its test database. The replicated
+PostgreSQL service also exposes `DATABASE_CONTRACT_REPLICA_URL` for application
+reads and `DATABASE_CONTRACT_CONTROL_URL` as a separate administrative
+connection to that standby. Run the shared suite and the replay test with:
+
+```sh
+vendor/bin/phpunit -c phpunit.database-contract.xml.dist --testsuite database-contract
+vendor/bin/phpunit -c phpunit.database-contract.xml.dist --testsuite database-contract-replication
+```
+
+The replication suite rejects a primary and replica resolving to the same
+server, verifies the control connection is physically separate, and waits for
+the standby replay LSN after fixture setup and teardown.
+
 ## Verification
 
 Run the relevant smoke test from the repository root. It checks server
