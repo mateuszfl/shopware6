@@ -1,0 +1,15 @@
+# Core database dialect contract
+
+`DatabasePlatformResolver` belongs to one DBAL `Connection`. A service constructed before kernel boot can pass `Kernel::getConnection()` to its constructor; container services receive the same connection through DI. The resolver checks the configured driver before connecting, then checks the actual DBAL platform. A caller must keep the resolver with its connection rather than store a selected dialect globally.
+
+The dialect distinguishes one identifier containing a dot (`quoteIdentifier('alias.with.dot')`) from a qualified path (`quoteQualifiedIdentifier(['table', 'column'])`). Expression methods accept either one identifier string or an array of qualified parts. Values returned by `jsonExtract`, `jsonObject`, `stringAggregate`, `dateAddSeconds`, `upsert`, and the joined gateway strategy are carried as SQL, parameters, and DBAL types in `SqlFragment`. Callers pass all three to `Connection::executeStatement()` or a fetch method. For binary upsert values, callers supply `ParameterType::BINARY` in the column-to-type map. Gateway conditions are SQL owned by Core and must bind all dynamic values; they are not an API for raw client input.
+
+The common DBAL platform handles identifier quoting, concatenation, and date arithmetic. Dialects own hex, JSON, aggregation, and upsert syntax. `DatabaseQueryShape` is separate because MySQL joins in `UPDATE`/`DELETE` have a different query layout than PostgreSQL `FROM`/`USING`. A gateway must still determine whether multiple join matches have the intended write semantics. MySQL's `ON DUPLICATE KEY` can respond to any unique key, while PostgreSQL's `ON CONFLICT` uses the supplied target; `supportsConflictTarget` exposes this difference.
+
+## Static helper compatibility
+
+Existing static SQL helpers, including `SqlHelper::object()` and `SqlHelper::objectArray()`, keep their signatures and MySQL output for existing extensions. New Core call sites should take a resolver or dialect from their connection and use dialect methods. A later migration must inventory all static helper callers and replace them before a platform-neutral helper can become the default. No global current-platform variable or runtime SQL rewriting should be added. Changing or deprecating the static public surface needs a separate BC decision and release/upgrade documentation.
+
+The current direct `SqlHelper::objectArray()` callers are four queries in `src/Elasticsearch/Product/ElasticsearchProductDefinition.php` (tags, visibilities, categories, and category lookup). They still require gateway-level migration because `objectArray()` also defines ordering and JSON array behavior. The existing `SqlHelperTest` fixes the MySQL output for compatibility; it should remain while the static method remains.
+
+This task introduces internal Core services and leaves released APIs and setup unchanged. `RELEASE_INFO` and `UPGRADE` need no entry for this task. The connection factory, kernel bootstrap, DAL reader/searcher/aggregator/write gateway, and domain SQL call-site migrations remain in later tasks.
