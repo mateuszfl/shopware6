@@ -22,51 +22,29 @@ class DbalKernelPluginLoader extends KernelPluginLoader
 
     protected function loadPluginInfos(): void
     {
-        $platform = $this->connection->getDatabasePlatform();
-        $name = $platform->quoteSingleIdentifier('name');
-        $baseClass = $platform->quoteSingleIdentifier('base_class');
-        $active = $platform->quoteSingleIdentifier('active');
-        $installedAt = $platform->quoteSingleIdentifier('installed_at');
-        $path = $platform->quoteSingleIdentifier('path');
-        $version = $platform->quoteSingleIdentifier('version');
-        $autoload = $platform->quoteSingleIdentifier('autoload');
-        $managedByComposer = $platform->quoteSingleIdentifier('managed_by_composer');
-        $composerName = $platform->quoteSingleIdentifier('composer_name');
-        $pluginTable = $platform->quoteSingleIdentifier('plugin');
-        $baseClassAlias = $platform->quoteSingleIdentifier('baseClass');
-        $managedByComposerAlias = $platform->quoteSingleIdentifier('managedByComposer');
-        $composerNameAlias = $platform->quoteSingleIdentifier('composerName');
-
-        $sql = <<<SQL
+        $sql = <<<'SQL'
         -- dbal-plugin-loader
-        SELECT
-               {$name},
-               {$baseClass} AS {$baseClassAlias},
-               CASE WHEN {$active} AND {$installedAt} IS NOT NULL THEN 1 ELSE 0 END AS {$active},
-               {$path},
-               {$version},
-               {$autoload},
-               {$managedByComposer} AS {$managedByComposerAlias},
-               {$composerName} AS {$composerNameAlias}
-        FROM {$pluginTable}
-        ORDER BY {$installedAt};
-SQL;
+        SELECT name, base_class, path, version, autoload, managed_by_composer, composer_name,
+               CASE WHEN active AND installed_at IS NOT NULL THEN 1 ELSE 0 END AS active
+        FROM plugin
+        ORDER BY installed_at
+        SQL;
 
         $plugins = $this->connection->executeQuery($sql)->fetchAllAssociative();
 
         $result = [];
 
-        /** @var array{baseClass: string, name: string, active: int, path: string, version: string|null, autoload: string, managedByComposer: int, composerName: string } $plugin */
+        /** @var array{name: string, base_class: string, active: int|bool, path: string, version: string|null, autoload: string, managed_by_composer: int|bool, composer_name: string} $plugin */
         foreach ($plugins as $plugin) {
             $result[] = [
-                'baseClass' => $plugin['baseClass'],
+                'baseClass' => $plugin['base_class'],
                 'name' => $plugin['name'],
                 'active' => (bool) $plugin['active'],
                 'path' => $plugin['path'],
                 'version' => $plugin['version'],
                 'autoload' => json_decode((string) $plugin['autoload'], true, 512, \JSON_THROW_ON_ERROR),
-                'managedByComposer' => (bool) $plugin['managedByComposer'],
-                'composerName' => $plugin['composerName'],
+                'managedByComposer' => (bool) $plugin['managed_by_composer'],
+                'composerName' => $plugin['composer_name'],
             ];
         }
 

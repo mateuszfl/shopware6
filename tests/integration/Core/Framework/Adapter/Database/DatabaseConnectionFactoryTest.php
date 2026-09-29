@@ -4,6 +4,7 @@ namespace Shopware\Tests\Integration\Core\Framework\Adapter\Database;
 
 use Composer\Autoload\ClassLoader;
 use Doctrine\DBAL\Connections\PrimaryReadReplicaConnection;
+use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Adapter\Database\DatabaseConnectionFactory;
@@ -92,6 +93,48 @@ class DatabaseConnectionFactoryTest extends TestCase
         $loader->initializePlugins(\dirname(__DIR__, 6));
 
         static::assertSame([], $loader->getPluginInfos());
+        $connection->close();
+    }
+
+    #[DataProvider('databaseUrls')]
+    public function testPluginBootstrapMapsColumnsOnBothDrivers(string $environmentName): void
+    {
+        $url = getenv($environmentName);
+        if (!\is_string($url) || $url === '') {
+            static::markTestSkipped($environmentName . ' is not configured');
+        }
+
+        $this->setEnvVars(['DATABASE_URL' => $url, 'DATABASE_REPLICA_0_URL' => '']);
+        $connection = DatabaseConnectionFactory::create();
+        $connection->executeStatement('CREATE TEMPORARY TABLE plugin (name varchar(255), base_class varchar(255), active boolean, installed_at timestamp NULL, path varchar(255), version varchar(255), autoload text, managed_by_composer boolean, composer_name varchar(255))');
+        $connection->insert('plugin', [
+            'name' => 'Example',
+            'base_class' => 'ExamplePlugin',
+            'active' => true,
+            'installed_at' => null,
+            'path' => 'custom/plugins/Example',
+            'version' => '1.0.0',
+            'autoload' => '{}',
+            'managed_by_composer' => true,
+            'composer_name' => 'example/plugin',
+        ], [
+            'active' => ParameterType::BOOLEAN,
+            'managed_by_composer' => ParameterType::BOOLEAN,
+        ]);
+
+        $loader = new DbalKernelPluginLoader(new ClassLoader(), null, $connection);
+        $loader->initializePlugins(\dirname(__DIR__, 6));
+
+        static::assertSame([[
+            'baseClass' => 'ExamplePlugin',
+            'name' => 'Example',
+            'active' => false,
+            'path' => 'custom/plugins/Example',
+            'version' => '1.0.0',
+            'autoload' => [],
+            'managedByComposer' => true,
+            'composerName' => 'example/plugin',
+        ]], $loader->getPluginInfos());
         $connection->close();
     }
 
