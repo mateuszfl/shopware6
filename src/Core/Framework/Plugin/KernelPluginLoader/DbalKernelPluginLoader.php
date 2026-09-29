@@ -22,19 +22,34 @@ class DbalKernelPluginLoader extends KernelPluginLoader
 
     protected function loadPluginInfos(): void
     {
-        $sql = <<<'SQL'
-        # dbal-plugin-loader
+        $platform = $this->connection->getDatabasePlatform();
+        $name = $platform->quoteSingleIdentifier('name');
+        $baseClass = $platform->quoteSingleIdentifier('base_class');
+        $active = $platform->quoteSingleIdentifier('active');
+        $installedAt = $platform->quoteSingleIdentifier('installed_at');
+        $path = $platform->quoteSingleIdentifier('path');
+        $version = $platform->quoteSingleIdentifier('version');
+        $autoload = $platform->quoteSingleIdentifier('autoload');
+        $managedByComposer = $platform->quoteSingleIdentifier('managed_by_composer');
+        $composerName = $platform->quoteSingleIdentifier('composer_name');
+        $pluginTable = $platform->quoteSingleIdentifier('plugin');
+        $baseClassAlias = $platform->quoteSingleIdentifier('baseClass');
+        $managedByComposerAlias = $platform->quoteSingleIdentifier('managedByComposer');
+        $composerNameAlias = $platform->quoteSingleIdentifier('composerName');
+
+        $sql = <<<SQL
+        -- dbal-plugin-loader
         SELECT
-               `name`,
-               `base_class` AS baseClass,
-               IF(`active` = 1 AND `installed_at` IS NOT NULL, 1, 0) AS active,
-               `path`,
-               `version`,
-               `autoload`,
-               `managed_by_composer` AS managedByComposer,
-               composer_name as composerName
-        FROM `plugin`
-        ORDER BY `installed_at`;
+               {$name},
+               {$baseClass} AS {$baseClassAlias},
+               CASE WHEN {$active} AND {$installedAt} IS NOT NULL THEN 1 ELSE 0 END AS {$active},
+               {$path},
+               {$version},
+               {$autoload},
+               {$managedByComposer} AS {$managedByComposerAlias},
+               {$composerName} AS {$composerNameAlias}
+        FROM {$pluginTable}
+        ORDER BY {$installedAt};
 SQL;
 
         $plugins = $this->connection->executeQuery($sql)->fetchAllAssociative();

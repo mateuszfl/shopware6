@@ -112,6 +112,16 @@ class MaintenanceException extends HttpException
         );
     }
 
+    public static function postgresVersionMismatch(string $version): DatabaseSetupException
+    {
+        return new DatabaseSetupException(
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            self::MAINTENANCE_DB_VERSION_SELECT_FAILED,
+            'Your database server is running PostgreSQL {{ version }}, but Shopware requires at least PostgreSQL 18.6',
+            ['version' => $version]
+        );
+    }
+
     public static function shopConfigurationNotValid(string $message): self
     {
         return new self(

@@ -31,6 +31,11 @@ final class DatabaseDialectException extends AdapterException
         return new self(Response::HTTP_INTERNAL_SERVER_ERROR, 'FRAMEWORK__UNSUPPORTED_DATABASE_DRIVER', 'Unsupported database driver "{{ driver }}".', ['driver' => $driver]);
     }
 
+    public static function replicaDriverMismatch(): self
+    {
+        return new self(Response::HTTP_INTERNAL_SERVER_ERROR, 'FRAMEWORK__REPLICA_DATABASE_DRIVER_MISMATCH', 'Primary and replica database drivers must match.');
+    }
+
     public static function unsupportedPlatform(string $platform): self
     {
         return new self(Response::HTTP_INTERNAL_SERVER_ERROR, 'FRAMEWORK__UNSUPPORTED_DATABASE_PLATFORM', 'Unsupported database platform "{{ platform }}".', ['platform' => $platform]);

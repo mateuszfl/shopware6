@@ -72,6 +72,44 @@ class DatabaseConnectionInformationTest extends TestCase
         ], $info->toDBALParameters(true));
     }
 
+    public function testPostgreSQLEnvironmentAndMaintenanceParameters(): void
+    {
+        $this->setEnvVars([
+            'DATABASE_URL' => 'postgresql://shopware:p%40ss@localhost/shopware_pg',
+            'DATABASE_SSL_CA' => '/certs/ca.crt',
+            'DATABASE_SSL_CERT' => '/certs/client.crt',
+            'DATABASE_SSL_KEY' => '/certs/client.key',
+            'DATABASE_SSL_DONT_VERIFY_SERVER_CERT' => '',
+        ]);
+
+        $info = DatabaseConnectionInformation::fromEnv();
+        $params = $info->toDBALParameters();
+
+        static::assertSame('pdo_pgsql', $info->getDriver());
+        static::assertSame(5432, $info->getPort());
+        static::assertSame('p@ss', $info->getPassword());
+        static::assertSame('postgresql://shopware:p%40ss@localhost:5432/shopware_pg', $info->asDsn());
+        static::assertSame('pdo_pgsql', $params['driver'] ?? null);
+        static::assertSame('utf8', $params['charset'] ?? null);
+        static::assertSame('/certs/ca.crt', $params['sslrootcert'] ?? null);
+        static::assertSame('/certs/client.crt', $params['sslcert'] ?? null);
+        static::assertSame('/certs/client.key', $params['sslkey'] ?? null);
+        static::assertSame('verify-full', $params['sslmode'] ?? null);
+        static::assertSame('postgres', $info->toDBALParameters(true)['dbname'] ?? null);
+        static::assertArrayNotHasKey(Mysql::ATTR_SSL_CA, $params['driverOptions'] ?? []);
+    }
+
+    public function testPostgreSQLCertificateVerificationCanBeDisabled(): void
+    {
+        $this->setEnvVars([
+            'DATABASE_URL' => 'postgresql://shopware:shopware@localhost/shopware_pg',
+            'DATABASE_SSL_CA' => '/certs/ca.crt',
+            'DATABASE_SSL_DONT_VERIFY_SERVER_CERT' => true,
+        ]);
+
+        static::assertSame('require', DatabaseConnectionInformation::fromEnv()->toDBALParameters()['sslmode'] ?? null);
+    }
+
     public function testWithAdvancedSettings(): void
     {
         $info = new DatabaseConnectionInformation();

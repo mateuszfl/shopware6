@@ -34,6 +34,21 @@ class DatabaseConnectionFactory
 
     private static function checkVersion(Connection $connection): void
     {
+        if (($connection->getParams()['driver'] ?? null) === 'pdo_pgsql') {
+            $version = $connection->fetchOne('SHOW server_version_num');
+            if (!\is_string($version) || !\ctype_digit($version)) {
+                throw MaintenanceException::dbVersionSelectFailed();
+            }
+
+            if ((int) $version < 180006) {
+                throw MaintenanceException::postgresVersionMismatch($version);
+            }
+
+            $connection->executeStatement('SET TIME ZONE \'UTC\'');
+
+            return;
+        }
+
         // https://developer.shopware.com/docs/guides/installation/requirements.html#sql
         $mysqlRequiredVersion = '8.0.22';
         $mariaDBRequiredVersion = '10.11';

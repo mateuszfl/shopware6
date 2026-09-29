@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-use Shopware\Core\Framework\Adapter\Database\MySQLFactory;
+use Shopware\Core\Framework\Adapter\Database\DatabaseConnectionFactory;
 use Shopware\Core\Framework\Adapter\Kernel\KernelFactory;
 use Shopware\Core\Framework\Plugin\KernelPluginLoader\ComposerPluginLoader;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -30,7 +30,10 @@ return static function (array &$context) {
         $context['INSTALL'] = true;
     }
 
-    $_SERVER['DATABASE_URL'] = MySQLFactory::PLACEHOLDER_DATABASE_URL;
+    $databaseUrl = (string) ($_SERVER['DATABASE_URL'] ?? $context['DATABASE_URL'] ?? '');
+    $_SERVER['DATABASE_URL'] = \preg_match('#^(postgres|postgresql|pgsql|pdo-pgsql)://#', $databaseUrl)
+        ? DatabaseConnectionFactory::POSTGRESQL_PLACEHOLDER_DATABASE_URL
+        : DatabaseConnectionFactory::PLACEHOLDER_DATABASE_URL;
 
     $kernel = KernelFactory::create(
         $env,

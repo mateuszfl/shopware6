@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Maintenance\System\Struct;
 
+use Doctrine\DBAL\DriverManager;
 use Pdo\Mysql;
 use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -10,10 +11,17 @@ use Shopware\Core\Maintenance\MaintenanceException;
 
 /**
  * @internal
+ *
+ * @phpstan-import-type Params from DriverManager
  */
 #[Package('framework')]
 class DatabaseConnectionInformation extends Struct
 {
+    /**
+     * @var 'pdo_mysql'|'pdo_pgsql'
+     */
+    protected string $driver = 'pdo_mysql';
+
     protected string $hostname = '';
 
     protected int $port = 3306;
@@ -74,9 +82,16 @@ class DatabaseConnectionInformation extends Struct
             throw MaintenanceException::environmentVariableNotValid('DATABASE_URL', $dsn, 'Not a valid DSN');
         }
 
+        $driver = match ($params['scheme']) {
+            'mysql', 'pdo_mysql', 'pdo-mysql' => 'pdo_mysql',
+            'postgres', 'postgresql', 'pgsql', 'pdo_pgsql', 'pdo-pgsql' => 'pdo_pgsql',
+            default => throw MaintenanceException::environmentVariableNotValid('DATABASE_URL', $dsn, 'Unsupported database driver'),
+        };
+
         return (new self())->assign([
+            'driver' => $driver,
             'hostname' => $params['host'],
-            'port' => (int) ($params['port'] ?? '3306'),
+            'port' => (int) ($params['port'] ?? ($driver === 'pdo_pgsql' ? 5432 : 3306)),
             'username' => $params['user'] ?? null,
             'password' => $params['pass'] ?? null,
             'databaseName' => $dbName,
@@ -88,15 +103,15 @@ class DatabaseConnectionInformation extends Struct
     }
 
     /**
-     * @return array{host: string, port: int, charset: string, driver: 'pdo_mysql', dbname?: string, user?: string, password?: string, driverOptions: array<int, string|bool>}
+     * @return Params
      */
     public function toDBALParameters(bool $withoutDatabaseName = false): array
     {
         $parameters = [
             'host' => $this->hostname,
             'port' => $this->port,
-            'charset' => 'utf8mb4',
-            'driver' => 'pdo_mysql',
+            'charset' => $this->driver === 'pdo_pgsql' ? 'utf8' : 'utf8mb4',
+            'driver' => $this->driver,
             'driverOptions' => [
                 \PDO::ATTR_STRINGIFY_FETCHES => true,
             ],
@@ -104,6 +119,8 @@ class DatabaseConnectionInformation extends Struct
 
         if (!$withoutDatabaseName) {
             $parameters['dbname'] = $this->databaseName;
+        } elseif ($this->driver === 'pdo_pgsql') {
+            $parameters['dbname'] = 'postgres';
         }
 
         if ($this->username !== null) {
@@ -112,6 +129,24 @@ class DatabaseConnectionInformation extends Struct
 
         if ($this->password !== null) {
             $parameters['password'] = $this->password;
+        }
+
+        if ($this->driver === 'pdo_pgsql') {
+            if ($this->sslCaPath) {
+                $parameters['sslrootcert'] = $this->sslCaPath;
+                $parameters['sslmode'] = 'verify-full';
+            }
+            if ($this->sslCertPath) {
+                $parameters['sslcert'] = $this->sslCertPath;
+            }
+            if ($this->sslCertKeyPath) {
+                $parameters['sslkey'] = $this->sslCertKeyPath;
+            }
+            if ($this->sslDontVerifyServerCert) {
+                $parameters['sslmode'] = 'require';
+            }
+
+            return $parameters;
         }
 
         if ($this->sslCaPath) {
@@ -136,7 +171,8 @@ class DatabaseConnectionInformation extends Struct
     public function asDsn(bool $withoutDatabaseName = false): string
     {
         $dsn = \sprintf(
-            'mysql://%s%s:%d',
+            '%s://%s%s:%d',
+            $this->driver === 'pdo_pgsql' ? 'postgresql' : 'mysql',
             $this->username ? ($this->username . ($this->password ? ':' . rawurlencode($this->password) : '') . '@') : '',
             $this->hostname,
             $this->port
@@ -152,6 +188,11 @@ class DatabaseConnectionInformation extends Struct
     public function getDatabaseName(): string
     {
         return $this->databaseName;
+    }
+
+    public function getDriver(): string
+    {
+        return $this->driver;
     }
 
     public function setDatabaseName(string $databaseName): void
@@ -201,7 +242,7 @@ class DatabaseConnectionInformation extends Struct
 
     public function hasAdvancedSetting(): bool
     {
-        return $this->port !== 3306 || $this->sslCaPath || $this->sslCertPath || $this->sslCertKeyPath || $this->sslDontVerifyServerCert !== null;
+        return $this->port !== ($this->driver === 'pdo_pgsql' ? 5432 : 3306) || $this->sslCaPath || $this->sslCertPath || $this->sslCertKeyPath || $this->sslDontVerifyServerCert !== null;
     }
 
     public function validate(): void
