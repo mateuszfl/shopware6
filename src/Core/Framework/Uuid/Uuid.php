@@ -59,13 +59,23 @@ class Uuid
     }
 
     /**
+     * @param string|resource $bytes
+     *
      * @throws InvalidUuidException
      * @throws InvalidUuidLengthException
      *
      * @return non-empty-string
      */
-    public static function fromBytesToHex(string $bytes): string
+    public static function fromBytesToHex(mixed $bytes): string
     {
+        if (\is_resource($bytes)) {
+            $bytes = stream_get_contents($bytes);
+        }
+
+        if (!\is_string($bytes)) {
+            throw UuidException::invalidUuid(\get_debug_type($bytes));
+        }
+
         if (mb_strlen($bytes, '8bit') !== 16) {
             throw UuidException::invalidUuidLength(mb_strlen($bytes, '8bit'), bin2hex($bytes));
         }
@@ -83,7 +93,7 @@ class Uuid
     /**
      * @template TArrayKey of array-key
      *
-     * @param array<TArrayKey, string> $bytesList
+     * @param array<TArrayKey, string|resource> $bytesList
      *
      * @return array<TArrayKey, non-empty-string>
      */

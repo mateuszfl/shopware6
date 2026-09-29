@@ -41,6 +41,14 @@ class BlobFieldSerializer implements FieldSerializerInterface
             return $value;
         }
 
-        return (string) $value;
+        if (\is_resource($value)) {
+            $value = stream_get_contents($value);
+        }
+
+        if (!\is_string($value)) {
+            throw DataAbstractionLayerException::expectedFieldValueOfTypeWithValue($field, 'binary string or readable stream', \get_debug_type($value));
+        }
+
+        return $value;
     }
 }

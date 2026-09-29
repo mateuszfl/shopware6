@@ -44,6 +44,17 @@ class UuidTest extends TestCase
         static::assertSame($bytes, Uuid::fromHexToBytes($hex));
     }
 
+    public function testFromBytesToHexAcceptsPdoBinaryStream(): void
+    {
+        $stream = fopen('php://memory', 'w+');
+        static::assertIsResource($stream);
+        fwrite($stream, Uuid::fromHexToBytes('000102030405060708090a0b0c0d0e0f'));
+        rewind($stream);
+
+        static::assertSame('000102030405060708090a0b0c0d0e0f', Uuid::fromBytesToHex($stream));
+        fclose($stream);
+    }
+
     public function testFromBytesToHexThrowsOnInvalidLength(): void
     {
         $this->expectException(InvalidUuidLengthException::class);
