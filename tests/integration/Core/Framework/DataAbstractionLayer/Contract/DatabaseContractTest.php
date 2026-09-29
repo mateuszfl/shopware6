@@ -117,13 +117,13 @@ class DatabaseContractTest extends TestCase
         $gateway = new DatabaseContractGateway($this->connection);
         $empty = ['languages' => [], 'products' => [], 'translations' => [], 'tags' => [], 'productTags' => []];
 
-        static::assertSame(0, $gateway->write($empty));
+        $gateway->write($empty);
+        static::assertSame(0, $gateway->lastProductBatchCount());
         static::assertSame([], $gateway->read(DatabaseContractScenario::ENGLISH_LANGUAGE));
 
-        $productBatches = $gateway->write(DatabaseContractScenario::data());
+        DatabaseContractScenario::assertRoundTrip($gateway);
 
-        static::assertSame(3, $productBatches, 'Seven products must use two full batches and one remainder batch');
-        DatabaseContractScenario::assertState($gateway->read(DatabaseContractScenario::ENGLISH_LANGUAGE));
+        static::assertSame(3, $gateway->lastProductBatchCount(), 'Seven products must use two full batches and one remainder batch');
     }
 
     public function testDuplicateInBatchRollsBackAllRows(): void

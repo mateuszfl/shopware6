@@ -152,6 +152,12 @@ final class DatabaseContractScenario
         Assert::assertSame($expected, $actual);
     }
 
+    public static function assertRoundTrip(DatabaseContractDataAccess $dataAccess): void
+    {
+        $dataAccess->write(self::data());
+        self::assertState($dataAccess->read(self::ENGLISH_LANGUAGE));
+    }
+
     /**
      * @param list<array<string, mixed>> $state
      */

@@ -11,11 +11,15 @@ use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
  * Portable lower-level gateway used to prove the fixture and shared scenarios.
  * Production DAL gateways replace this class in subsequent porting tasks.
  *
+ * @phpstan-import-type ContractData from DatabaseContractDataAccess
+ *
  * @internal
  */
-final class DatabaseContractGateway
+final class DatabaseContractGateway implements DatabaseContractDataAccess
 {
     private readonly DatabaseDialect $dialect;
+
+    private int $lastProductBatchCount = 0;
 
     public function __construct(private readonly Connection $connection)
     {
@@ -23,17 +27,11 @@ final class DatabaseContractGateway
     }
 
     /**
-     * @param array{
-     *     languages: list<array{id: string, name: string}>,
-     *     products: list<array{id: string, versionId: string, parentId: ?string, parentVersionId: ?string, payload: ?array<string, mixed>, prices: list<array{currency: string, gross: float, net: float}>, active: bool, createdAt: string}>,
-     *     translations: list<array{productId: string, productVersionId: string, languageId: string, name: string, description: ?string, payload: ?array<string, mixed>, createdAt: string}>,
-     *     tags: list<array{id: string, name: string}>,
-     *     productTags: list<array{productId: string, productVersionId: string, tagId: string}>
-     * } $data
+     * @param ContractData $data
      */
-    public function write(array $data): int
+    public function write(array $data): void
     {
-        return $this->connection->transactional(function () use ($data): int {
+        $this->lastProductBatchCount = $this->connection->transactional(function () use ($data): int {
             $this->insertLanguages($data['languages']);
             $this->insertTags($data['tags']);
             $productBatches = $this->insertProducts($data['products']);
@@ -42,6 +40,11 @@ final class DatabaseContractGateway
 
             return $productBatches;
         });
+    }
+
+    public function lastProductBatchCount(): int
+    {
+        return $this->lastProductBatchCount;
     }
 
     /**

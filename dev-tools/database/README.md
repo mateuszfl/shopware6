@@ -47,6 +47,14 @@ The replication suite rejects a primary and replica resolving to the same
 server, verifies the control connection is physically separate, and waits for
 the standby replay LSN after fixture setup and teardown.
 
+The shared input and assertion contract is exposed through
+`DatabaseContractDataAccess`. Task 006 executes it with the portable fixture
+gateway. The production DAL implementation plugs into the same boundary in the
+DAL porting tasks: the current reader still emits MySQL identifier quoting and
+`GROUP_CONCAT(HEX(...))`, while the production write gateway and batch queue are
+ported separately. This suite therefore proves the fixture independently of
+those unfinished adapters rather than masking their SQL failures.
+
 ## Verification
 
 Run the relevant smoke test from the repository root. It checks server
