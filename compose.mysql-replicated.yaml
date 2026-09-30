@@ -54,6 +54,7 @@ services:
       DATABASE_URL: mysql://shopware:shopware@mysql-primary:3306/shopware_mysql?serverVersion=8.4.11&charset=utf8mb4
       DATABASE_REPLICA_0_URL: mysql://shopware:shopware@mysql-replica-0:3306/shopware_mysql?serverVersion=8.4.11&charset=utf8mb4
       DATABASE_CONTRACT_URL: mysql://shopware:shopware@mysql-primary:3306/shopware_mysql_test?serverVersion=8.4.11&charset=utf8mb4
+      DATABASE_CONTRACT_REPLICA_URL: mysql://shopware:shopware@mysql-replica-0:3306/shopware_mysql_test?serverVersion=8.4.11&charset=utf8mb4
       MAILER_DSN: smtp://mailer:1025
     volumes:
       - .:/var/www/html

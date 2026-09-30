@@ -17,5 +17,17 @@
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>
+        <testsuite name="database-replica-routing">
+            <file>tests/integration/Core/Framework/Adapter/Database/ReplicaRoutingContractTest.php</file>
+        </testsuite>
+        <testsuite name="database-replica-failures">
+            <file>tests/integration/Core/Framework/Adapter/Database/PostgreSQLReplicaFailureContractTest.php</file>
+        </testsuite>
+        <testsuite name="database-two-replicas">
+            <file>tests/integration/Core/Framework/Adapter/Database/PostgreSQLTwoReplicaContractTest.php</file>
+        </testsuite>
+        <testsuite name="database-replica-restart-host">
+            <file>tests/integration/Core/Framework/Adapter/Database/PostgreSQLReplicaRestartContractTest.php</file>
+        </testsuite>
     </testsuites>
 </phpunit>
