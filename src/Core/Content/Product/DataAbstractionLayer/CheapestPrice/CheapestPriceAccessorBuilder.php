@@ -2,27 +2,41 @@
 
 namespace Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice;
 
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Price\Struct\CartPrice;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\JsonPath;
+use Shopware\Core\Framework\Adapter\Database\SqlFragment;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\FieldAccessorBuilderInterface;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\FragmentFieldAccessorBuilderInterface;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\PriceFieldAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Util\Hasher;
 
 #[Package('framework')]
-class CheapestPriceAccessorBuilder implements FieldAccessorBuilderInterface
+class CheapestPriceAccessorBuilder implements FragmentFieldAccessorBuilderInterface
 {
     /**
      * @internal
      */
     public function __construct(
         private readonly int $maxRulePrices,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly ?Connection $connection = null
     ) {
     }
 
     public function buildAccessor(string $root, Field $field, Context $context, string $accessor): ?string
+    {
+        return $this->buildAccessorFragment($root, $field, $context, $accessor)?->inline($this->getConnection());
+    }
+
+    public function buildAccessorFragment(string $root, Field $field, Context $context, string $accessor): ?SqlFragment
     {
         if (!$field instanceof CheapestPriceField) {
             return null;
@@ -67,86 +81,39 @@ class CheapestPriceAccessorBuilder implements FieldAccessorBuilderInterface
             array_pop($parts);
         }
 
-        $template = '(JSON_UNQUOTE(JSON_EXTRACT(`#root#`.`#field#`, "$.#rule_key#.#currency_key#.#property#")) * #factor#)';
-        $variables = [
-            '#template#' => $template,
-            '#decimals#' => (string) $context->getRounding()->getDecimals(),
-        ];
-
-        $template = str_replace(
-            array_keys($variables),
-            array_values($variables),
-            '(ROUND(CAST(#template# as DECIMAL(30, 20)), #decimals#))'
-        );
-
-        $multiplier = '';
-        if ($this->useCashRounding($context)) {
-            $multiplier = 100 / ($context->getRounding()->getInterval() * 100);
-            $template = '(ROUND(' . $template . ' * #multiplier#, 0) / #multiplier#)';
-        }
-
+        $connection = $this->getConnection();
+        $dialect = (new DatabasePlatformResolver($connection))->dialect();
+        $column = EntityDefinitionQueryHelper::escape($root, $connection) . '.' . EntityDefinitionQueryHelper::escape('cheapest_price_accessor', $connection);
         $select = [];
-
+        $parameters = [];
+        $types = [];
         foreach ($keys as $ruleId) {
-            $parameters = [
-                '#root#' => $root,
-                '#field#' => 'cheapest_price_accessor',
-                '#rule_key#' => 'rule' . $ruleId,
-                '#currency_key#' => 'currency' . $context->getCurrencyId(),
-                '#property#' => $jsonAccessor,
-                '#factor#' => '1',
-                '#multiplier#' => (string) $multiplier,
-            ];
-
-            $select[] = str_replace(
-                array_keys($parameters),
-                array_values($parameters),
-                $template
-            );
-
-            if ($context->getCurrencyId() === Defaults::CURRENCY) {
-                continue;
+            $currencies = [$context->getCurrencyId() => '1'];
+            if ($context->getCurrencyId() !== Defaults::CURRENCY) {
+                $currencies[Defaults::CURRENCY] = (string) $context->getCurrencyFactor();
             }
-
-            $parameters = [
-                '#root#' => $root,
-                '#field#' => 'cheapest_price_accessor',
-                '#rule_key#' => 'rule' . $ruleId,
-                '#currency_key#' => 'currency' . Defaults::CURRENCY,
-                '#property#' => $jsonAccessor,
-                '#factor#' => (string) $context->getCurrencyFactor(),
-                '#multiplier#' => (string) $multiplier,
-            ];
-
-            $select[] = str_replace(
-                array_keys($parameters),
-                array_values($parameters),
-                $template
-            );
+            foreach ($currencies as $currencyId => $factor) {
+                $value = $dialect->jsonExtractPath($column, JsonPath::members(array_merge(['rule' . $ruleId, 'currency' . $currencyId], explode('.', $jsonAccessor))));
+                $factorKey = 'price_factor_' . Hasher::hash($factor, 'sha256');
+                $select[] = PriceFieldAccessorBuilder::roundPrice('(' . $dialect->jsonScalar($value->sql, 'number') . ' * :' . $factorKey . ')', $context);
+                $parameters = array_merge($parameters, $value->parameters, [$factorKey => $factor]);
+                $types = array_merge($types, $value->types);
+            }
         }
-
-        $result = \sprintf('COALESCE(%s)', implode(',', $select));
+        $result = 'COALESCE(' . implode(', ', $select) . ')';
 
         // The DB stores the discount percentage (e.g. 25 for "25% off"), but the API
         // exposes the price-to-list-price ratio (e.g. 75 for "pay 75% of list price").
         // Invert here so filters/sorts operate on the intuitive ratio scale.
         if ($isPercentageAccessor) {
-            return \sprintf('(100 - %s)', $result);
+            $result = \sprintf('(100 - %s)', $result);
         }
 
-        return $result;
+        return new SqlFragment($result, $parameters, $types);
     }
 
-    private function useCashRounding(Context $context): bool
+    private function getConnection(): Connection
     {
-        if ($context->getRounding()->getDecimals() !== 2) {
-            return false;
-        }
-
-        if ($context->getTaxState() === CartPrice::TAX_STATE_GROSS) {
-            return true;
-        }
-
-        return $context->getRounding()->roundForNet();
+        return $this->connection ?? DriverManager::getConnection(['driver' => 'pdo_mysql', 'serverVersion' => '8.0']);
     }
 }

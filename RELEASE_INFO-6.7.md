@@ -2,6 +2,12 @@
 
 ## Core
 
+### DAL JSON filters preserve literal members and list value types
+
+JSON paths can address literal member names containing dots, quotes or backslashes by using a JSON double-quoted member, for example `payload."key.with.dot"`. List filters now preserve the supplied value's type: a numeric or boolean candidate matches the corresponding JSON value, while a string candidate remains a string.
+
+Price selectors with an explicit currency UUID now use that currency's conversion factor when the stored price needs a default-currency fallback. Missing and JSON-null price values use fallback; a stored zero remains selected.
+
 ### `JsonField` supports typed properties with additional extension data
 
 `JsonField` accepts the new `allowAdditionalProperties: true` constructor argument. Use it for a JSON field with stable, mapped properties whose types should be validated while extension-owned keys must remain writable:

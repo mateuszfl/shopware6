@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\FragmentFieldAccessorBuilderInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver\CriteriaPartResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StorageAware;
@@ -24,6 +25,8 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 class CriteriaQueryBuilder
 {
+    public const GROUPED_QUERY = 'grouped_query';
+
     public function __construct(
         private readonly SqlQueryParser $parser,
         private readonly EntityDefinitionQueryHelper $helper,
@@ -122,7 +125,8 @@ class CriteriaQueryBuilder
                 continue;
             }
 
-            $accessor = $this->helper->getFieldAccessor($sorting->getField(), $definition, $definition->getEntityName(), $context);
+            $accessor = $this->helper->getFieldAccessor($sorting->getField(), $definition, $definition->getEntityName(), $context, $query);
+            $field = $this->helper->getField($sorting->getField(), $definition, $definition->getEntityName());
 
             if ($sorting instanceof CountSorting) {
                 $query->addOrderBy(\sprintf('COUNT(%s)', $accessor), $sorting->getDirection());
@@ -135,6 +139,9 @@ class CriteriaQueryBuilder
             }
 
             if (!$this->hasGroupBy($criteria, $query)) {
+                if ($field?->getAccessorBuilder() instanceof FragmentFieldAccessorBuilderInterface) {
+                    $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $sorting->getDirection());
+                }
                 $query->addOrderBy($accessor, $sorting->getDirection());
 
                 continue;
@@ -148,6 +155,9 @@ class CriteriaQueryBuilder
                 }
             } else {
                 $accessor = 'MIN(' . $accessor . ')';
+            }
+            if ($field?->getAccessorBuilder() instanceof FragmentFieldAccessorBuilderInterface) {
+                $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $sorting->getDirection());
             }
             $query->addOrderBy($accessor, $sorting->getDirection());
         }
@@ -194,7 +204,8 @@ class CriteriaQueryBuilder
                 \sprintf('%s.%s', (string) $associationPath, $associationPrimary->getPropertyName()),
                 $definition,
                 $definition->getEntityName(),
-                $context
+                $context,
+                $query
             );
 
             $distincts[$scoreQuery->getScoreField()] = \sprintf('COUNT(DISTINCT %s)', $field);
@@ -262,7 +273,7 @@ class CriteriaQueryBuilder
             return false;
         }
 
-        return $query->hasState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN) || $criteria->getGroupFields() !== [];
+        return $query->hasState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN) || $criteria->getGroupFields() !== [] || $query->hasState(self::GROUPED_QUERY);
     }
 
     /**

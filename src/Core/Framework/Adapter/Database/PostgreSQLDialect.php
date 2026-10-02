@@ -58,6 +58,93 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
         return new SqlFragment('jsonb_build_object(' . implode(', ', $expressions) . ')', array_keys($fields), array_fill(0, \count($fields), ParameterType::STRING));
     }
 
+    public function jsonExtractPath(string $expression, JsonPath $path): SqlFragment
+    {
+        $hasIndex = array_any($path->steps, static fn (array $step): bool => $step['kind'] === 'index');
+        if (!$path->hasWildcard() && !$hasIndex) {
+            return (new SqlFragment(
+                'jsonb_path_query_first(' . $expression . '::jsonb, ?::jsonpath, \'{}\'::jsonb, true)',
+                ['strict ' . $path->expression()],
+                [ParameterType::STRING]
+            ))->named();
+        }
+
+        // Evaluate each step separately. A missing member in one wildcard element
+        // must not stop matching later elements; [0] alone permits scalar autowrapping.
+        $from = '(SELECT ' . $expression . '::jsonb AS value) AS sw_path_root';
+        $previous = 'sw_path_root';
+        $selectors = [];
+        $ordering = [];
+        foreach ($path->steps as $index => $step) {
+            $alias = 'sw_path_' . $index;
+            $selector = match ($step['kind']) {
+                'member' => 'strict $.' . json_encode($step['value'], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE),
+                'wildcard' => 'strict $.*',
+                default => ($step['value'] === '*' ? 'strict' : 'lax') . ' $[' . $step['value'] . ']',
+            };
+            $from .= ' CROSS JOIN LATERAL jsonb_path_query(' . $previous . '.value, ?::jsonpath, \'{}\'::jsonb, true) WITH ORDINALITY AS ' . $alias . '(value, ordinality)';
+            $selectors[] = $selector;
+            $ordering[] = $alias . '.ordinality';
+            $previous = $alias;
+        }
+        $select = $path->hasWildcard()
+            ? 'jsonb_agg(' . $previous . '.value ORDER BY ' . implode(', ', $ordering) . ')'
+            : $previous . '.value';
+        $sql = '(SELECT ' . $select . ' FROM ' . $from . ($path->hasWildcard() ? '' : ' LIMIT 1') . ')';
+
+        return (new SqlFragment($sql, $selectors, array_fill(0, \count($selectors), ParameterType::STRING)))->named();
+    }
+
+    public function jsonScalar(string $expression, string $type = 'text'): string
+    {
+        $text = '(' . $expression . ' #>> \'{}\')';
+        // Match MySQL's numeric prefix conversion, including false/non-numeric -> 0.
+        $number = 'COALESCE(substring(' . $text . ' FROM \'^[[:space:]]*([+-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?)\')::numeric, 0)';
+        $scalar = match ($type) {
+            'number' => $number,
+            'bool' => 'CASE WHEN ' . $text . ' != \'true\' AND ' . $number . ' = 0 THEN 0 ELSE 1 END',
+            'datetime' => 'CASE WHEN ' . $text . ' ~ \'^[0-9]{4}([-/]?[0-9]{2}){2}([ T]|$)\' AND pg_input_is_valid(' . $text . ', \'timestamp without time zone\') THEN CAST(' . $text . ' AS timestamp(3) without time zone) ELSE NULL END',
+            'date' => 'CASE WHEN ' . $text . ' ~ \'^[0-9]{4}([-/]?[0-9]{2}){2}([ T]|$)\' AND pg_input_is_valid(' . $text . ', \'date\') THEN CAST(' . $text . ' AS date) ELSE NULL END',
+            'json' => $expression,
+            default => $text . ' COLLATE "sw_type_ci"',
+        };
+
+        return 'CASE WHEN jsonb_typeof(' . $expression . ') != \'null\' THEN ' . $scalar . ' ELSE NULL END';
+    }
+
+    public function jsonListContains(string $expression, string $placeholder): string
+    {
+        // JSON_CONTAINS descends through arrays, unlike jsonb structural containment.
+        // ListField filters bind a singleton scalar candidate; object values are not list members.
+        $target = $expression . '::jsonb';
+        $nested = '(WITH RECURSIVE sw_list_values(value) AS (SELECT ' . $target
+            . ' UNION ALL SELECT element.value FROM sw_list_values CROSS JOIN LATERAL jsonb_array_elements('
+            . 'CASE WHEN jsonb_typeof(sw_list_values.value) = \'array\' THEN sw_list_values.value ELSE \'[]\'::jsonb END'
+            . ') AS element(value)) SELECT EXISTS (SELECT 1 FROM sw_list_values WHERE value = (' . $placeholder . '::jsonb -> 0)))';
+
+        return 'CASE WHEN jsonb_typeof(' . $target . ') = \'array\' THEN ' . $nested . ' ELSE (' . $target . ' @> ' . $placeholder . '::jsonb) END';
+    }
+
+    public function nullSafeEquals(string $expression, string $placeholder): string
+    {
+        return $expression . ' IS NOT DISTINCT FROM ' . $placeholder;
+    }
+
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
+    {
+        $parts = [];
+        foreach ($fields as $expression) {
+            $parts[] = '?::text';
+            $parts[] = $expression;
+        }
+        $sql = 'jsonb_build_object(' . implode(', ', $parts) . ')';
+        if ($aggregate) {
+            $sql = 'jsonb_agg(DISTINCT ' . $sql . ')';
+        }
+
+        return (new SqlFragment($sql, array_map(strval(...), array_keys($fields)), array_fill(0, \count($fields), ParameterType::STRING)))->named();
+    }
+
     public function stringAggregate(string|array $column, string|array $orderColumn, string $separator = ','): SqlFragment
     {
         return new SqlFragment('string_agg(' . $this->quoteColumn($column) . '::text, ?::text ORDER BY ' . $this->quoteColumn($orderColumn) . ')', [$separator], [ParameterType::STRING]);

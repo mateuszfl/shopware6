@@ -836,6 +836,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([
             param('shopware.dal.max_rule_prices'),
             service('logger'),
+            service(Connection::class),
         ])
         ->tag('shopware.field_accessor_builder', ['priority' => -200]);
 

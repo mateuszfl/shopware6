@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Search\Parser;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -57,11 +58,14 @@ class SqlQueryParser
 
             foreach ($parsed->getWheres() as $where) {
                 if ($query->getScoreField()) {
+                    $result = new ParseResult();
+
                     $field = $this->queryHelper->getFieldAccessor(
                         $query->getScoreField(),
                         $definition,
                         $root,
-                        $context
+                        $context,
+                        $result
                     );
 
                     $result->addWhere(
@@ -125,7 +129,7 @@ class SqlQueryParser
 
         $key = $this->getKey();
 
-        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
+        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
 
         $where = [];
 
@@ -157,9 +161,9 @@ class SqlQueryParser
     {
         $key = $this->getKey();
 
-        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
-
         $result = new ParseResult();
+
+        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
         $result->addWhere($field . ' LIKE :' . $key);
 
         $escaped = addcslashes((string) $query->getValue(), '\\_%');
@@ -172,9 +176,9 @@ class SqlQueryParser
     {
         $key = $this->getKey();
 
-        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
-
         $result = new ParseResult();
+
+        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
         $result->addWhere($field . ' LIKE :' . $key);
 
         $escaped = addcslashes($query->getValue(), '\\_%');
@@ -187,9 +191,9 @@ class SqlQueryParser
     {
         $key = $this->getKey();
 
-        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
-
         $result = new ParseResult();
+
+        $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
         $result->addWhere($field . ' LIKE :' . $key);
 
         $escaped = addcslashes($query->getValue(), '\\_%');
@@ -201,18 +205,18 @@ class SqlQueryParser
     private function parseEqualsAnyFilter(EqualsAnyFilter $query, EntityDefinition $definition, string $root, Context $context, bool $negated): ParseResult
     {
         $key = $this->getKey();
-        $select = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
-        $field = $this->queryHelper->getField($query->getField(), $definition, $root);
-
         $result = new ParseResult();
+
+        $select = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
+        $field = $this->queryHelper->getField($query->getField(), $definition, $root);
 
         if ($field instanceof ListField) {
             $where = [];
 
             foreach ($query->getValue() as $value) {
                 $key = $this->getKey();
-                $where[] = \sprintf('JSON_CONTAINS(%s, JSON_ARRAY(%s))', $select, ':' . $key);
-                $result->addParameter($key, $value);
+                $where[] = (new DatabasePlatformResolver($this->connection))->dialect()->jsonListContains($select, ':' . $key);
+                $result->addParameter($key, json_encode([$value], \JSON_THROW_ON_ERROR));
             }
 
             if ($where === []) {
@@ -269,10 +273,10 @@ class SqlQueryParser
     private function parseEqualsFilter(EqualsFilter $query, EntityDefinition $definition, string $root, Context $context, bool $negated): ParseResult
     {
         $key = $this->getKey();
-        $select = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context);
-        $field = $this->queryHelper->getField($query->getField(), $definition, $root);
-
         $result = new ParseResult();
+
+        $select = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
+        $field = $this->queryHelper->getField($query->getField(), $definition, $root);
 
         if ($field instanceof ListField) {
             if ($query->getValue() === null) {
@@ -280,14 +284,14 @@ class SqlQueryParser
 
                 return $result;
             }
-            $result->addWhere('JSON_CONTAINS(' . $select . ', JSON_ARRAY(:' . $key . '))');
-            $result->addParameter($key, $query->getValue());
+            $result->addWhere((new DatabasePlatformResolver($this->connection))->dialect()->jsonListContains($select, ':' . $key));
+            $result->addParameter($key, json_encode([$query->getValue()], \JSON_THROW_ON_ERROR));
 
             return $result;
         }
 
         if ($negated || $query->getValue() === null) {
-            $result->addWhere($select . ' <=> :' . $key);
+            $result->addWhere((new DatabasePlatformResolver($this->connection))->dialect()->nullSafeEquals($select, ':' . $key));
         } else {
             $result->addWhere($select . ' = :' . $key);
         }

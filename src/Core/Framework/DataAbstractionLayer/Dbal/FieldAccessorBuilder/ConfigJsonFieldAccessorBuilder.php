@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder;
 
+use Shopware\Core\Framework\Adapter\Database\SqlFragment;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ConfigJsonField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
@@ -13,7 +14,7 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 class ConfigJsonFieldAccessorBuilder extends JsonFieldAccessorBuilder
 {
-    public function buildAccessor(string $root, Field $field, Context $context, string $accessor): ?string
+    public function buildAccessorFragment(string $root, Field $field, Context $context, string $accessor): ?SqlFragment
     {
         if (!$field instanceof ConfigJsonField) {
             return null;
@@ -27,6 +28,6 @@ class ConfigJsonFieldAccessorBuilder extends JsonFieldAccessorBuilder
 
         $accessor = $field->getPropertyName() . '.' . ConfigJsonField::STORAGE_KEY . $jsonPath;
 
-        return parent::buildAccessor($root, $field, $context, $accessor);
+        return parent::buildAccessorFragment($root, $field, $context, $accessor);
     }
 }

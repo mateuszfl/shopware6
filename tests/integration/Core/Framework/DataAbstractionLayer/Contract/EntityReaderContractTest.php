@@ -21,6 +21,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelpe
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityForeignKeyResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityHydrator;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityReader;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\CustomFieldsAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\DefaultFieldAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\JsonFieldAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\PriceFieldAccessorBuilder;
@@ -38,12 +39,14 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityTranslationDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\AutoIncrementField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ChildrenAssociationField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\CustomFields;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\DateTimeField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\CascadeDelete;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Inherited;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\PrimaryKey;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Required;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\FloatField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\JsonField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToManyAssociationField;
@@ -59,8 +62,10 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\TranslationsAssociationFi
 use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\BoolFieldSerializer;
+use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\CustomFieldsSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\DateTimeFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\FkFieldSerializer;
+use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\FloatFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\IdFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\JsonFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\ManyToManyAssociationFieldSerializer;
@@ -77,6 +82,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\MappingEntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Pricing\PriceCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\SqlQueryParser;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Query\ScoreQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\FieldSorting;
@@ -88,6 +94,7 @@ use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\Framework\Uuid\Uuid;
+use Shopware\Core\System\CustomField\CustomFieldService;
 use Shopware\Core\System\Language\LanguageDefinition;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\DatabaseContractScenario;
@@ -113,6 +120,8 @@ class EntityReaderContractTest extends TestCase
 
     private Context $context;
 
+    private bool $ownsJsonCollationSchema = false;
+
     protected function setUp(): void
     {
         $this->connection = ContractConnectionFactory::create('DATABASE_CONTRACT_URL');
@@ -128,7 +137,7 @@ class EntityReaderContractTest extends TestCase
         $this->registry = new DefinitionInstanceRegistry($container, [], []);
         $this->helper = new EntityDefinitionQueryHelper($this->connection);
         $validator = Validation::createValidator();
-        foreach ([IdFieldSerializer::class, FkFieldSerializer::class, BoolFieldSerializer::class, DateTimeFieldSerializer::class, JsonFieldSerializer::class, PriceFieldSerializer::class] as $class) {
+        foreach ([IdFieldSerializer::class, FkFieldSerializer::class, BoolFieldSerializer::class, DateTimeFieldSerializer::class, FloatFieldSerializer::class, JsonFieldSerializer::class, PriceFieldSerializer::class] as $class) {
             $container->set($class, new $class($validator, $this->registry));
         }
         $container->set(StringFieldSerializer::class, new StringFieldSerializer($validator, $this->registry, new HtmlSanitizer()));
@@ -140,6 +149,14 @@ class EntityReaderContractTest extends TestCase
         foreach ([JsonFieldAccessorBuilder::class, PriceFieldAccessorBuilder::class] as $class) {
             $container->set($class, new $class($this->connection));
         }
+        $customFields = static::createStub(CustomFieldService::class);
+        $customFields->method('getCustomField')->willReturnCallback(static fn (string $name) => match ($name) {
+            'score' => new FloatField($name, $name),
+            'nested' => new JsonField($name, $name, [new FloatField('amount', 'amount')]),
+            default => new JsonField($name, $name),
+        });
+        $container->set(CustomFieldsAccessorBuilder::class, new CustomFieldsAccessorBuilder($customFields, $this->connection));
+        $container->set(CustomFieldsSerializer::class, new CustomFieldsSerializer($this->registry, $validator, $customFields));
         $container->set(DefaultFieldAccessorBuilder::class, new DefaultFieldAccessorBuilder($this->connection));
         $container->set(ManyToOneAssociationFieldResolver::class, new ManyToOneAssociationFieldResolver($this->helper, $this->connection));
         $container->set(OneToManyAssociationFieldResolver::class, new OneToManyAssociationFieldResolver($this->connection));
@@ -164,8 +181,34 @@ class EntityReaderContractTest extends TestCase
     {
         if (isset($this->connection)) {
             $this->dropSchema();
+            if ($this->ownsJsonCollationSchema) {
+                $this->connection->executeStatement('DROP SCHEMA sw_dal_json_collation CASCADE');
+            }
             $this->connection->close();
         }
+    }
+
+    public function testNestedJsonFiltersUseParentAndLanguageFallbackWithBoundPaths(): void
+    {
+        if ($this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            $this->connection->executeStatement('CREATE SCHEMA sw_dal_json_collation');
+            $this->ownsJsonCollationSchema = true;
+            $this->connection->executeStatement('SET search_path TO sw_dal_json_collation, public');
+            $this->connection->executeStatement('CREATE COLLATION sw_type_ci (provider = icu, locale = \'und-u-ks-level1\', deterministic = false)');
+        }
+        foreach (['payload' => 'payload', 'custom_fields' => 'customFields'] as $column => $property) {
+            $this->connection->executeStatement('UPDATE sw_dal_product SET ' . $column . ' = :payload WHERE id = :id', ['payload' => '{"score":10}', 'id' => Uuid::fromHexToBytes(self::id(0))], ['id' => ParameterType::BINARY]);
+            $criteria = (new Criteria([self::id(1)]))->addFilter(new EqualsFilter($property . '.score', '10'));
+            static::assertSame([self::id(1)], array_values($this->reader->read($this->product, $criteria, $this->context)->getIds()));
+            $this->connection->executeStatement('UPDATE sw_dal_product SET ' . $column . ' = :payload WHERE id = :id', ['payload' => '{"score":null}', 'id' => Uuid::fromHexToBytes(self::id(1))], ['id' => ParameterType::BINARY]);
+            static::assertSame([self::id(1)], array_values($this->reader->read($this->product, $criteria, $this->context)->getIds()));
+        }
+        $this->connection->executeStatement('UPDATE sw_dal_product_translation SET attributes = :payload WHERE sw_dal_product_id = :id AND language_id = :language', ['payload' => '{"nested":{"amount":12.5}}', 'id' => Uuid::fromHexToBytes(self::id(0)), 'language' => Uuid::fromHexToBytes(DatabaseContractScenario::ENGLISH_LANGUAGE)], ['id' => ParameterType::BINARY, 'language' => ParameterType::BINARY]);
+        $criteria = (new Criteria([self::id(1)]))->addFilter(new RangeFilter('attributes.nested.amount', [RangeFilter::GT => 12]));
+        static::assertSame([self::id(1)], array_values($this->reader->read($this->product, $criteria, $this->context)->getIds()));
+        $this->context = new Context(new SystemSource(), languageIdChain: [DatabaseContractScenario::GERMAN_LANGUAGE, DatabaseContractScenario::ENGLISH_LANGUAGE]);
+        $this->context->setConsiderInheritance(true);
+        static::assertSame([self::id(1)], array_values($this->reader->read($this->product, $criteria, $this->context)->getIds()));
     }
 
     public function testDeprecatedMetadataHelpersUseLiteralSchemaNamesOnBothPlatforms(): void
@@ -475,6 +518,7 @@ class EntityReaderContractTest extends TestCase
         }
         $table->addColumn('tags', Types::BINARY, ['length' => 16, 'notnull' => false]);
         $table->addColumn('payload', Types::JSONB, ['notnull' => false]);
+        $table->addColumn('custom_fields', Types::JSONB, ['notnull' => false]);
         $table->addColumn('prices', Types::JSONB);
         $table->addColumn('active', Types::BOOLEAN);
         $table->addColumn('created_at', Types::DATETIME_MUTABLE, ['columnDefinition' => $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform ? 'TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL' : 'DATETIME(3) NOT NULL']);
@@ -484,6 +528,7 @@ class EntityReaderContractTest extends TestCase
             $table->addColumn($column, Types::BINARY, ['length' => 16]);
         }
         $table->addColumn('name', Types::STRING, ['notnull' => false, 'length' => 255]);
+        $table->addColumn('attributes', Types::JSONB, ['notnull' => false]);
         $table->addPrimaryKeyConstraint(PrimaryKeyConstraint::editor()->setColumnNames(UnqualifiedName::unquoted('sw_dal_product_id'), UnqualifiedName::unquoted('sw_dal_product_version_id'), UnqualifiedName::unquoted('language_id'))->create());
         $table = $schema->createTable('sw_dal_tag');
         $table->addColumn('id', Types::BINARY, ['length' => 16]);
@@ -596,7 +641,8 @@ class ReaderProductDefinition extends EntityDefinition
         return new FieldCollection([
             (new IdField('id', 'id'))->addFlags(new PrimaryKey(), new Required()),
             new VersionField(), new ParentFkField(self::class), new ReferenceVersionField(self::class, 'parent_version_id'), new ParentAssociationField(self::class),
-            (new JsonField('payload', 'payload'))->addFlags(new Inherited()), new PriceField('prices', 'prices'), new BoolField('active', 'active'), new DateTimeField('created_at', 'createdAt'),
+            (new JsonField('payload', 'payload'))->addFlags(new Inherited()), (new CustomFields())->addFlags(new Inherited()), new PriceField('prices', 'prices'), new BoolField('active', 'active'), new DateTimeField('created_at', 'createdAt'),
+            (new TranslatedField('attributes'))->addFlags(new Inherited()),
             (new TranslatedField('name'))->addFlags(new Inherited()), new TranslationsAssociationField(ReaderTranslationDefinition::class, 'sw_dal_product_id'), new ChildrenAssociationField(self::class),
             (new ManyToManyAssociationField('tags', ReaderTagDefinition::class, ReaderMappingDefinition::class, 'sw_dal_product_id', 'sw_dal_tag_id'))->addFlags(new CascadeDelete(), new Inherited()),
             new OneToOneAssociationField('detail', 'id', 'sw_dal_product_id', ReaderDetailDefinition::class, false),
@@ -627,7 +673,7 @@ class ReaderTranslationDefinition extends EntityTranslationDefinition
 
     protected function defineFields(): FieldCollection
     {
-        return new FieldCollection([new StringField('name', 'name')]);
+        return new FieldCollection([new StringField('name', 'name'), new CustomFields('attributes', 'attributes')]);
     }
 }
 

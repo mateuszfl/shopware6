@@ -180,7 +180,7 @@ class EntitySearcher implements EntitySearcherInterface
 
         $partitionColumns = [];
         foreach (array_values($criteria->getGroupFields()) as $i => $grouping) {
-            $accessor = $this->queryHelper->getFieldAccessor($grouping->getField(), $definition, $table, $context);
+            $accessor = $this->queryHelper->getFieldAccessor($grouping->getField(), $definition, $table, $context, $query);
             $alias = '_group_' . $i;
             $query->addSelect($accessor . ' as `' . $alias . '`');
             $partitionColumns[] = 'inner_q.`' . $alias . '`';

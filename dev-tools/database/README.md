@@ -22,8 +22,9 @@ standbys publish 5434, 5435, and 5436. MySQL publishes 3307 and 3308. These
 local examples use matching user names and passwords; replace them before
 using them on a shared host.
 
-The independent test databases are `shopware_pg_test` and
-`shopware_mysql_test`. Point destructive tests there, never at an installed
+The independent test databases are `shopware_pg_test`, `shopware_mysql_test`
+and the dedicated JSON Criteria database `shopware_json_test`
+(setup in [JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md)). Point destructive tests there, never at an installed
 shop. The PostgreSQL image is pinned to `postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722`;
 both servers use that image. The MySQL image is 8.4.11, pinned by digest in
 `compose.mysql-replicated.yaml`. The web image builds on the pinned Shopware
@@ -49,11 +50,14 @@ the standby replay LSN after fixture setup and teardown.
 
 The shared input and assertion contract is exposed through
 `DatabaseContractDataAccess`. Task 006 executes it with the portable fixture
-gateway. The production DAL implementation plugs into the same boundary in the
-DAL porting tasks: the current reader still emits MySQL identifier quoting and
-`GROUP_CONCAT(HEX(...))`, while the production write gateway and batch queue are
-ported separately. This suite therefore proves the fixture independently of
-those unfinished adapters rather than masking their SQL failures.
+gateway. The production DAL reader now uses connection-scoped quoting and UUID
+aggregation, with the same fixture boundary verified against both engines.
+Bound JSON/config/custom-field/price selectors, list filters, nested aggregation
+and cheapest-price reads have their own cross-engine suite. See
+[DAL_READ_CONTRACT.md](DAL_READ_CONTRACT.md) and
+[JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md) for the supported behaviors,
+commands and remaining work. Production writes, full repository search, schema
+generation and index producers are ported separately.
 
 ## Verification
 

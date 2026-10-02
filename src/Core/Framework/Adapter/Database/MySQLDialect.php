@@ -52,6 +52,51 @@ final class MySQLDialect extends AbstractDatabaseDialect
         return new SqlFragment('JSON_OBJECT(' . implode(', ', $expressions) . ')', array_keys($fields), array_fill(0, \count($fields), ParameterType::STRING));
     }
 
+    public function jsonExtractPath(string $expression, JsonPath $path): SqlFragment
+    {
+        return (new SqlFragment('JSON_EXTRACT(' . $expression . ', ?)', [$path->expression()], [ParameterType::STRING]))->named();
+    }
+
+    public function jsonScalar(string $expression, string $type = 'text'): string
+    {
+        $text = 'JSON_UNQUOTE(' . $expression . ')';
+        $scalar = match ($type) {
+            'number' => '(' . $text . ' + 0.0)',
+            'bool' => 'CASE WHEN ' . $text . ' != \'true\' AND ' . $text . ' = 0 THEN 0 ELSE 1 END',
+            'datetime' => 'CAST(' . $text . ' AS datetime(3))',
+            'date' => 'CAST(' . $text . ' AS DATE)',
+            'json' => $expression,
+            default => 'CONVERT(' . $text . ' USING utf8mb4) COLLATE utf8mb4_unicode_ci',
+        };
+
+        return 'CASE WHEN JSON_TYPE(' . $expression . ') != \'NULL\' THEN ' . $scalar . ' ELSE NULL END';
+    }
+
+    public function jsonListContains(string $expression, string $placeholder): string
+    {
+        return 'JSON_CONTAINS(' . $expression . ', ' . $placeholder . ')';
+    }
+
+    public function nullSafeEquals(string $expression, string $placeholder): string
+    {
+        return $expression . ' <=> ' . $placeholder;
+    }
+
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
+    {
+        $parts = [];
+        foreach ($fields as $expression) {
+            $parts[] = '?';
+            $parts[] = $expression;
+        }
+        $sql = 'JSON_OBJECT(' . implode(', ', $parts) . ')';
+        if ($aggregate) {
+            $sql = 'CONCAT(\'[\', GROUP_CONCAT(DISTINCT ' . $sql . '), \']\')';
+        }
+
+        return (new SqlFragment($sql, array_map(strval(...), array_keys($fields)), array_fill(0, \count($fields), ParameterType::STRING)))->named();
+    }
+
     public function stringAggregate(string|array $column, string|array $orderColumn, string $separator = ','): SqlFragment
     {
         return new SqlFragment('GROUP_CONCAT(' . $this->quoteColumn($column) . ' ORDER BY ' . $this->quoteColumn($orderColumn) . ' SEPARATOR ?)', [$separator], [ParameterType::STRING]);

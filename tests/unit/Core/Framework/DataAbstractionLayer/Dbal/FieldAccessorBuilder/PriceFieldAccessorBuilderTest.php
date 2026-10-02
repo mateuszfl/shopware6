@@ -2,8 +2,9 @@
 
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder;
 
-use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Cart\Price\Struct\CartPrice;
 use Shopware\Core\Defaults;
@@ -24,103 +25,42 @@ class PriceFieldAccessorBuilderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->builder = new PriceFieldAccessorBuilder(
-            static::createStub(Connection::class)
-        );
+        $this->builder = new PriceFieldAccessorBuilder(DriverManager::getConnection(['driver' => 'pdo_mysql', 'serverVersion' => '8.4']));
     }
 
     public function testReturnsNullForNonPriceField(): void
     {
-        $field = new StringField('name', 'name');
-        $context = Context::createDefaultContext();
-
-        static::assertNull($this->builder->buildAccessor('product', $field, $context, 'name'));
+        static::assertNull($this->builder->buildAccessor('product', new StringField('name', 'name'), Context::createDefaultContext(), 'name'));
     }
 
-    public function testPriceAccessorDoesNotInvert(): void
+    /**
+     * @return iterable<string, array{string, string, list<string>, bool}>
+     */
+    public static function selectors(): iterable
     {
-        $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price');
-
-        static::assertNotNull($sql);
-        static::assertStringNotContainsString('100 -', $sql);
-        static::assertStringContainsString('gross', $sql);
+        yield 'gross context' => ['price', CartPrice::TAX_STATE_GROSS, ['gross'], false];
+        yield 'net context' => ['price', CartPrice::TAX_STATE_NET, ['net'], false];
+        yield 'list price' => ['price.listPrice', CartPrice::TAX_STATE_GROSS, ['listPrice', 'gross'], false];
+        yield 'percentage ratio gross' => ['price.percentage', CartPrice::TAX_STATE_GROSS, ['percentage', 'gross'], true];
+        yield 'percentage ratio net' => ['price.percentage', CartPrice::TAX_STATE_NET, ['percentage', 'net'], true];
+        yield 'explicit gross overrides net context' => ['price.percentage.gross', CartPrice::TAX_STATE_NET, ['percentage', 'gross'], true];
+        yield 'explicit net overrides gross context' => ['price.percentage.net', CartPrice::TAX_STATE_GROSS, ['percentage', 'net'], true];
     }
 
-    public function testListPriceAccessorDoesNotInvert(): void
+    /**
+     * @param list<string> $selector
+     */
+    #[DataProvider('selectors')]
+    public function testSelectsThePricePropertyAndExposesPercentageRatio(string $accessor, string $taxState, array $selector, bool $ratio): void
     {
-        $field = new PriceField('price', 'price');
         $context = Context::createDefaultContext();
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.listPrice');
-
-        static::assertNotNull($sql);
-        static::assertStringNotContainsString('100 -', $sql);
-        static::assertStringContainsString('listPrice.gross', $sql);
-    }
-
-    public function testPercentageAccessorInvertsWithGrossContext(): void
-    {
+        $context->setTaxState($taxState);
         $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.percentage');
-
-        static::assertNotNull($sql);
-        static::assertStringStartsWith('(100 - ', $sql);
-        static::assertStringContainsString('percentage.gross', $sql);
-    }
-
-    public function testPercentageAccessorInvertsWithNetContext(): void
-    {
-        $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-        $context->setTaxState(CartPrice::TAX_STATE_NET);
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.percentage');
-
-        static::assertNotNull($sql);
-        static::assertStringStartsWith('(100 - ', $sql);
-        static::assertStringContainsString('percentage.net', $sql);
-        static::assertStringNotContainsString('percentage.gross', $sql);
-    }
-
-    public function testPercentageWithExplicitGrossAccessor(): void
-    {
-        $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-        $context->setTaxState(CartPrice::TAX_STATE_NET);
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.percentage.gross');
-
-        static::assertNotNull($sql);
-        static::assertStringStartsWith('(100 - ', $sql);
-        static::assertStringContainsString('percentage.gross', $sql);
-    }
-
-    public function testPercentageWithExplicitNetAccessor(): void
-    {
-        $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.percentage.net');
-
-        static::assertNotNull($sql);
-        static::assertStringStartsWith('(100 - ', $sql);
-        static::assertStringContainsString('percentage.net', $sql);
-        static::assertStringNotContainsString('percentage.gross', $sql);
-    }
-
-    public function testPercentageAccessorUsesDefaultCurrency(): void
-    {
-        $field = new PriceField('price', 'price');
-        $context = Context::createDefaultContext();
-
-        $sql = $this->builder->buildAccessor('product', $field, $context, 'price.percentage');
-
-        static::assertNotNull($sql);
-        static::assertStringContainsString('$.c' . Defaults::CURRENCY . '.percentage.gross', $sql);
+        $fragment = $this->builder->buildAccessorFragment('product', $field, $context, $accessor);
+        static::assertNotNull($fragment);
+        $path = '$."c' . Defaults::CURRENCY . '".' . implode('.', array_map(static fn (string $part): string => '"' . $part . '"', $selector));
+        static::assertSame([$path], array_values($fragment->parameters));
+        static::assertSame($ratio, str_starts_with($fragment->sql, '(100 - '));
+        static::assertNotNull($this->builder->buildAccessor('product', $field, $context, $accessor));
     }
 }

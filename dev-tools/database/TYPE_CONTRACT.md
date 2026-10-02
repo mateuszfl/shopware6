@@ -38,12 +38,13 @@ length check prevents the silent padding permitted by MySQL `BINARY(16)`.
 JSON duplicate object keys are canonicalized to the last value on both tested
 servers. Numeric range is **not** equivalent: PostgreSQL `jsonb` accepts
 `1e400` as a number while MySQL 8.4 reports invalid JSON. Do not accept such
-payloads solely because PostgreSQL stores them. Validation and JSON path
-operations need field-specific tests in later JSON/DAL tasks. A 20-digit JSON
+payloads solely because PostgreSQL stores them. Read extraction and predicates
+now have field-specific tests in [JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md);
+production write validation remains with task 009. A 20-digit JSON
 integer can be recovered as a string with `JSON_BIGINT_AS_STRING`, but the
 current DAL decoder uses PHP's default JSON decoding and exposes it as an
 inexact float on both servers. Consumers needing an exact integer must not
-rely on that JSON field. The later JSON adapter must reject non-finite or
+rely on that JSON field. The production write adapter must reject non-finite or
 out-of-range inputs consistently before PostgreSQL stores values that MySQL
 would reject.
 
@@ -64,6 +65,11 @@ collation equivalence for all Unicode strings. Apply the collation per relevant
 column or expression; do not change technical keys, tokens, or binary data to
 case insensitive comparison. Record the ICU collation version when creating
 indexes, and audit/reindex affected indexes after an ICU version change.
+
+JSON scalar text extraction uses this same `sw_type_ci` collation. Schema task
+011 must create it in the application's search path before running these
+queries. JSON read fixtures create and remove it in their owned schemas;
+they do not introduce a second JSON-specific collation.
 
 Ascending `ORDER BY value` places `NULL` **last** on PostgreSQL and **first** on
 MySQL in the fixture. Queries whose public order matters must specify a `CASE`
@@ -86,7 +92,8 @@ TYPE_CONTRACT_DATABASE_URL='mysql://shopware:shopware@127.0.0.1:3307/shopware_my
 
 The test requires an explicit `_test` database and asserts the server version;
 it drops only its own fixture tables and collation. Adapter integration, actual
-schema generation, migration translation, JSON queries, and broader raw SQL
-callers remain with the later tasks. No release or upgrade note is needed for
+schema generation, migration translation and broader raw SQL callers remain
+with the later tasks. JSON queries have the separate task 008 contract linked
+above. No release or upgrade note is needed for
 this internal POC contract and binary hydration fix: it introduces no released
 database configuration or migration path for external users yet.

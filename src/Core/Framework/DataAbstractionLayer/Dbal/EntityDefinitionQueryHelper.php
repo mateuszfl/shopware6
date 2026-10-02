@@ -9,6 +9,7 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Exception\UnmappedFieldException;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\FragmentFieldAccessorBuilderInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver\FieldResolverContext;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\AssociationField;
@@ -23,6 +24,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\TranslatedField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\CriteriaPartInterface;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\ParseResult;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\Database\TableHelper;
@@ -274,10 +276,8 @@ class EntityDefinitionQueryHelper
      *
      * @throws UnmappedFieldException
      */
-    public function getFieldAccessor(string $fieldName, EntityDefinition $definition, string $root, Context $context): string
+    public function getFieldAccessor(string $fieldName, EntityDefinition $definition, string $root, Context $context, QueryBuilder|ParseResult|null $parameters = null): string
     {
-        $fieldName = str_replace('extensions.', '', $fieldName);
-
         $original = $fieldName;
         $prefix = $root . '.';
 
@@ -287,11 +287,16 @@ class EntityDefinitionQueryHelper
             $original = $prefix . $original;
         }
 
+        if (str_starts_with($fieldName, 'extensions.')) {
+            $fieldName = substr($fieldName, \strlen('extensions.'));
+            $original = $prefix . $fieldName;
+        }
+
         $fields = $definition->getFields();
         if ($fields->has($fieldName)) {
             $field = $fields->get($fieldName);
 
-            return $this->buildInheritedAccessor($field, $root, $definition, $context, $fieldName);
+            return $this->buildInheritedAccessor($field, $root, $definition, $context, $fieldName, $parameters);
         }
 
         $parts = explode('.', $fieldName);
@@ -309,7 +314,7 @@ class EntityDefinitionQueryHelper
 
         // case for json object fields, other fields has now same option to act with more point notations but hasn't to be an association field. E.g. price.gross
         if (!$field instanceof AssociationField && ($field instanceof StorageAware || $field instanceof TranslatedField)) {
-            return $this->buildInheritedAccessor($field, $root, $definition, $context, $fieldName);
+            return $this->buildInheritedAccessor($field, $root, $definition, $context, $fieldName, $parameters);
         }
 
         if (!$field instanceof AssociationField) {
@@ -325,7 +330,8 @@ class EntityDefinitionQueryHelper
             $original,
             $referenceDefinition,
             $root . '.' . $field->getPropertyName(),
-            $context
+            $context,
+            $parameters
         );
     }
 
@@ -650,7 +656,7 @@ class EntityDefinitionQueryHelper
     {
         if ($criteria->getGroupFields()) {
             foreach ($criteria->getGroupFields() as $grouping) {
-                $accessor = $this->getFieldAccessor($grouping->getField(), $definition, $definition->getEntityName(), $context);
+                $accessor = $this->getFieldAccessor($grouping->getField(), $definition, $definition->getEntityName(), $context, $query);
 
                 $query->addGroupBy($accessor);
             }
@@ -729,7 +735,7 @@ class EntityDefinitionQueryHelper
     /**
      * @param list<string> $chain
      */
-    private function getTranslationFieldAccessor(Field $field, string $accessor, array $chain, Context $context): string
+    private function getTranslationFieldAccessor(Field $field, string $accessor, array $chain, Context $context, QueryBuilder|ParseResult|null $parameters): string
     {
         if (!$field instanceof StorageAware) {
             throw DataAbstractionLayerException::onlyStorageAwareFieldsAsTranslated();
@@ -737,7 +743,7 @@ class EntityDefinitionQueryHelper
 
         $selects = [];
         foreach ($chain as $part) {
-            $select = $this->buildFieldSelector($part, $field, $context, $accessor);
+            $select = $this->buildFieldSelector($part, $field, $context, $accessor, $parameters);
 
             $selects[] = str_replace(
                 $this->quote($part) . '.' . $this->quote($field->getStorageName()),
@@ -762,7 +768,8 @@ class EntityDefinitionQueryHelper
         string $root,
         EntityDefinition $definition,
         Context $context,
-        string $original
+        string $original,
+        QueryBuilder|ParseResult|null $parameters
     ): string {
         if ($field instanceof TranslatedField) {
             $translationChain = self::buildTranslationChain(
@@ -773,25 +780,41 @@ class EntityDefinitionQueryHelper
 
             $translatedField = self::getTranslatedField($definition, $field);
 
-            return $this->getTranslationFieldAccessor($translatedField, $original, $translationChain, $context);
+            return $this->getTranslationFieldAccessor($translatedField, $original, $translationChain, $context, $parameters);
         }
 
-        $select = $this->buildFieldSelector($root, $field, $context, $original);
+        $select = $this->buildFieldSelector($root, $field, $context, $original, $parameters);
 
         if (!$field->is(Inherited::class) || !$context->considerInheritance()) {
             return $select;
         }
 
-        $parentSelect = $this->buildFieldSelector($root . '.parent', $field, $context, $original);
+        $parentSelect = $this->buildFieldSelector($root . '.parent', $field, $context, $original, $parameters);
 
         return \sprintf('COALESCE(%s, %s)', $select, $parentSelect);
     }
 
-    private function buildFieldSelector(string $root, Field $field, Context $context, string $accessor): string
+    private function buildFieldSelector(string $root, Field $field, Context $context, string $accessor, QueryBuilder|ParseResult|null $parameters): string
     {
         $accessorBuilder = $field->getAccessorBuilder();
         if (!$accessorBuilder) {
             throw DataAbstractionLayerException::fieldAccessorBuilderNotFound($field->getPropertyName());
+        }
+
+        if ($parameters !== null && $accessorBuilder instanceof FragmentFieldAccessorBuilderInterface) {
+            $fragment = $accessorBuilder->buildAccessorFragment($root, $field, $context, $accessor)?->named();
+            if ($fragment !== null) {
+                foreach ($fragment->parameters as $key => $value) {
+                    $type = $fragment->types[$key] ?? ParameterType::STRING;
+                    if ($parameters instanceof QueryBuilder) {
+                        $parameters->setParameter((string) $key, $value, $type);
+                    } else {
+                        $parameters->addParameter((string) $key, $value, $type);
+                    }
+                }
+
+                return $fragment->sql;
+            }
         }
 
         $accessor = $accessorBuilder->buildAccessor($root, $field, $context, $accessor);

@@ -7,10 +7,10 @@ The `database-dal-reader` PHPUnit suite uses the production `EntityReader`, `Ent
 Provide a PostgreSQL 18.6 or reference MySQL 8.4 DSN using `DATABASE_CONTRACT_URL` and run:
 
 ```sh
-vendor/bin/phpunit -c phpunit.database-contract.xml.dist --testsuite database-contract,database-dal-reader
+vendor/bin/phpunit -c phpunit.database-contract.xml.dist --testsuite database-contract,database-dal-reader,database-dal-json
 ```
 
-The suite creates and drops only its `sw_dal_*` tables; the existing database contract uses its own fixture tables. Run one suite process per database at a time. PostgreSQL and MySQL can run independently. Tests check the actual server platform/version and reject a standby as the fixture endpoint.
+The reader suite creates and drops only its `sw_dal_*` tables and an owned PostgreSQL collation schema; the existing database contract uses its own fixture tables. The JSON suite requires the dedicated MySQL `shopware_json_test` database: see [JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md) for setup and DSNs. Run one suite process per database at a time. PostgreSQL and MySQL can run independently. Tests check the actual server platform/version and reject a standby as the fixture endpoint.
 
 ## Supported read behavior
 
@@ -29,15 +29,16 @@ Services receive their own DBAL `Connection` through DI. `EntityDefinitionQueryH
 
 `hexAggregate()` returns a `SqlFragment`: its separator is bound and its UUID ordering is explicit. The reader gives each owned fragment a unique named parameter and transfers parameter types into subqueries. JSON SQL extraction is not part of this hex aggregation operation.
 
+Task 008 adds bound nested JSON/config/custom-field/price accessors, typed scalar extraction, list membership, null-safe filters, scalar null ordering and JSON/price aggregation. The reader contract now also exercises inherited and translated custom-field selectors. Their value, collation, pricing and query-owner contracts are defined in [JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md).
+
 ## Remaining work
 
 | Owner | Remaining behavior | Why outside this read contract |
 | --- | --- | --- |
-| JSON/filter task 008 | `JsonFieldAccessorBuilder`, `PriceFieldAccessorBuilder`, JSON selectors in the helper and JSON/list/null/range/contains filter generation | Reading complete JSON and typed prices is covered; querying nested JSON values and comparing JSON shapes needs its own dialect contract. |
 | Write task 009 | Entity write gateways, serializer encode paths, `StatementHelper` parameter types, version cleanup deletes | The fixture seeds rows through DBAL; it does not claim production DAL writes. |
-| Search/aggregation task 010 | `EntitySearcher`, `EntityAggregator`, full Criteria generation, `JoinGroupBuilder`, search terms/scoring on associated fields, arbitrary grouped filters, NULL ordering and aggregation statistics | Elementary filters and explicit scalar scoring needed for relation pagination are covered. Repository `search()` and advanced search query generation remain incomplete on PostgreSQL. The existing inverse N:M relation without `CascadeDelete` collects logical IDs across mapping versions, then target hydration selects the context version; task 010 must evaluate this contract consistently across unrestricted and restricted query shapes. |
-| Schema task 011 | SchemaBuilder, definition validation against a complete schema, migration query generation | Only the deprecated helper metadata lookups and isolated fixture schema are covered. |
-| Indexing task 012 | `ChildCountUpdater`, `InheritanceUpdater`, `ManyToManyIdFieldUpdater`, `TreeUpdater` and consumers' full/incremental index results | These helpers execute denormalizing writes, UPDATE joins and JSON aggregation; iterator correctness alone does not prove index correctness. |
+| Search/aggregation task 010 | Full repository search, `JoinGroupBuilder`, search terms/scoring on associated fields, arbitrary grouped filters and remaining non-JSON aggregation SQL | Elementary filters and explicit scalar scoring needed for relation pagination, plus task 008's JSON filtering/sorting/nested aggregation, are covered. The existing inverse N:M relation without `CascadeDelete` collects logical IDs across mapping versions, then target hydration selects the context version; task 010 must evaluate this contract consistently across unrestricted and restricted query shapes. |
+| Schema task 011 | SchemaBuilder, definition validation against a complete schema, migration query generation and `sw_type_ci` collation setup | Only deprecated helper metadata lookups and isolated fixture schema are covered. JSON scalar text selectors require the documented collation in the application search path. |
+| Indexing task 012 | `ChildCountUpdater`, `InheritanceUpdater`, `ManyToManyIdFieldUpdater`, `TreeUpdater`, cheapest-price producers and consumers' full/incremental index results | These helpers execute denormalizing writes, UPDATE joins and JSON aggregation; iterator and cheapest-price read correctness alone do not prove index correctness. Preserve task 008's cheapest-price shape and rule/currency priority contract. |
 | Framework task 016 | Scheduled version cleanup and runtime framework consumers | Lifecycle/queue execution is not part of entity hydration. |
 | Elasticsearch/admin indexing task 017 | Search config loading, Elasticsearch indexing and DSL integration | Tokenizers/DSL builders do not execute DAL read SQL; their consuming runtime needs separate validation. |
 | Storefront task 018 | Theme indexer `INSERT IGNORE` | It is a Storefront index write. |

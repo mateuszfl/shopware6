@@ -3,6 +3,9 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder;
 
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\JsonPath;
+use Shopware\Core\Framework\Adapter\Database\SqlFragment;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
@@ -18,115 +21,68 @@ use Shopware\Core\Framework\Log\Package;
  * @internal
  */
 #[Package('framework')]
-class JsonFieldAccessorBuilder implements FieldAccessorBuilderInterface
+class JsonFieldAccessorBuilder implements FragmentFieldAccessorBuilderInterface
 {
     /**
      * @internal
      */
-    public function __construct(private readonly Connection $connection)
+    public function __construct(protected readonly Connection $connection)
     {
     }
 
     public function buildAccessor(string $root, Field $field, Context $context, string $accessor): ?string
     {
+        return $this->buildAccessorFragment($root, $field, $context, $accessor)?->inline($this->connection);
+    }
+
+    public function buildAccessorFragment(string $root, Field $field, Context $context, string $accessor): ?SqlFragment
+    {
         if (!$field instanceof JsonField) {
             return null;
         }
 
-        $jsonPath = preg_replace(
-            '#^' . preg_quote($field->getPropertyName(), '#') . '#',
-            '',
-            $accessor
-        );
-
-        if ($jsonPath === null || $jsonPath === '') {
-            return EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName());
+        $column = EntityDefinitionQueryHelper::escape($root, $this->connection) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection);
+        $suffix = substr($accessor, \strlen($field->getPropertyName()));
+        if ($suffix === '') {
+            return new SqlFragment($column);
         }
 
-        // enquote hyphenated json keys in path
-        if (str_contains($jsonPath, '-')) {
-            $jsonPathParts = explode('.', $jsonPath);
-            foreach ($jsonPathParts as $index => $jsonPathPart) {
-                if ($index === 0) {
-                    continue;
-                }
-                if (str_contains($jsonPathPart, '-')) {
-                    $jsonPathParts[$index] = \sprintf('"%s"', $jsonPathPart);
-                }
-            }
-            $jsonPath = implode('.', $jsonPathParts);
-        }
+        $path = JsonPath::parse($suffix);
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $value = $dialect->jsonExtractPath($column, $path);
+        $embeddedField = $this->getField($path, $field->getPropertyMapping());
+        $type = match (true) {
+            $embeddedField instanceof IntField, $embeddedField instanceof FloatField => 'number',
+            $embeddedField instanceof BoolField => 'bool',
+            $embeddedField instanceof DateTimeField => 'datetime',
+            $embeddedField instanceof DateField => 'date',
+            default => 'text',
+        };
 
-        $jsonValueExpr = \sprintf(
-            'JSON_EXTRACT(%s.%s, %s)',
-            EntityDefinitionQueryHelper::escape($root),
-            EntityDefinitionQueryHelper::escape($field->getStorageName()),
-            $this->connection->quote('$' . $jsonPath)
-        );
-
-        $embeddedField = $this->getField($jsonPath, $field->getPropertyMapping());
-        $accessor = $this->getFieldAccessor($jsonValueExpr, $embeddedField);
-
-        /*
-         * Values extracted from json have distinct json types, that are different from normal value types.
-         * We need to convert json nulls into sql nulls.
-         *
-         * For example: `JSON_EXTRACT('{"foo":null}', '$.foo') IS NOT NULL`
-         */
-        return \sprintf('IF(JSON_TYPE(%s) != "NULL", %s, NULL)', $jsonValueExpr, $accessor);
+        return new SqlFragment($dialect->jsonScalar($value->sql, $type), $value->parameters, $value->types);
     }
 
     /**
      * @param Field[] $fields
      */
-    private function getField(string $path, array $fields): ?Field
+    private function getField(JsonPath $path, array $fields): ?Field
     {
-        /** @var string $fieldName */
-        $fieldName = preg_replace(
-            '#^\.("([^"]*)"|([^.]*)).*#',
-            '$2$3',
-            $path
-        );
-        $subPath = mb_substr($path, mb_strlen($fieldName) + 1);
-
-        foreach ($fields as $field) {
-            if ($field->getPropertyName() !== $fieldName) {
-                continue;
+        $mapping = $fields;
+        $embedded = null;
+        foreach ($path->steps as $step) {
+            if ($step['kind'] !== 'member') {
+                return null;
             }
-
-            if ($field instanceof JsonField && $field->getPropertyMapping() !== []) {
-                return $this->getField($subPath, $field->getPropertyMapping());
+            $embedded = null;
+            foreach ($mapping as $candidate) {
+                if ($candidate->getPropertyName() === $step['value']) {
+                    $embedded = $candidate;
+                    break;
+                }
             }
-
-            return $field;
+            $mapping = $embedded instanceof JsonField ? $embedded->getPropertyMapping() : [];
         }
 
-        return null;
-    }
-
-    private function getFieldAccessor(string $jsonValueExpr, ?Field $field = null): string
-    {
-        if ($field instanceof IntField || $field instanceof FloatField) {
-            return \sprintf('JSON_UNQUOTE(%s) + 0.0', $jsonValueExpr);
-        }
-
-        if ($field instanceof BoolField) {
-            return \sprintf(
-                'IF(JSON_UNQUOTE(%s) != "true" AND JSON_UNQUOTE(%s) = 0, 0, 1)',
-                $jsonValueExpr,
-                $jsonValueExpr
-            );
-        }
-
-        if ($field instanceof DateTimeField) {
-            return \sprintf('CAST(JSON_UNQUOTE(%s) AS datetime(3))', $jsonValueExpr);
-        }
-
-        if ($field instanceof DateField) {
-            return \sprintf('CAST(JSON_UNQUOTE(%s) AS DATE)', $jsonValueExpr);
-        }
-
-        // The CONVERT is required for mariadb support (mysqls JSON_UNQUOTE returns utf8mb4)
-        return \sprintf('CONVERT(JSON_UNQUOTE(%s) USING "utf8mb4") COLLATE utf8mb4_unicode_ci', $jsonValueExpr);
+        return $embedded;
     }
 }

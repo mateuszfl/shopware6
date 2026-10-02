@@ -36,6 +36,23 @@ interface DatabaseDialect
      */
     public function jsonExtract(string|array $column, array $path): SqlFragment;
 
+    public function jsonExtractPath(string $expression, JsonPath $path): SqlFragment;
+
+    public function jsonScalar(string $expression, string $type = 'text'): string;
+
+    /**
+     * The placeholder binds a JSON array containing exactly one scalar or JSON null.
+     * Descend through nested target arrays, preserving scalar types and ignoring object values.
+     */
+    public function jsonListContains(string $expression, string $placeholder): string;
+
+    public function nullSafeEquals(string $expression, string $placeholder): string;
+
+    /**
+     * @param array<int|string, string> $fields Trusted SQL expressions keyed by JSON member
+     */
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment;
+
     /**
      * @param array<string, string|list<string>> $fields Map of JSON keys to column names
      */

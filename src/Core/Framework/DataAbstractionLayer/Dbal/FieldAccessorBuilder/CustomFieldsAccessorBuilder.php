@@ -3,6 +3,8 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder;
 
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\JsonPath;
+use Shopware\Core\Framework\Adapter\Database\SqlFragment;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\CustomFields;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
@@ -25,30 +27,21 @@ class CustomFieldsAccessorBuilder extends JsonFieldAccessorBuilder
         parent::__construct($connection);
     }
 
-    public function buildAccessor(string $root, Field $field, Context $context, string $accessor): ?string
+    public function buildAccessorFragment(string $root, Field $field, Context $context, string $accessor): ?SqlFragment
     {
         if (!$field instanceof CustomFields) {
             return null;
         }
 
-        /**
-         * Possible paths / attribute names:
-         * - propertyName.attribute_name -> attribute_name
-         * - propertyName.attribute_name.foo -> attribute_name
-         * - propertyName."attribute.name" -> attribute.name
-         * - propertyName."attribute.name".foo -> attribute.name
-         *
-         * @var string $attributeName
-         */
-        $attributeName = preg_replace(
-            '#^' . preg_quote($field->getPropertyName(), '#') . '\.("([^"]*)"|([^.]*)).*#',
-            '$2$3',
-            $accessor
-        );
+        $path = JsonPath::parse(substr($accessor, \strlen($field->getPropertyName())));
+        if ($path->steps === []) {
+            return parent::buildAccessorFragment($root, $field, $context, $accessor);
+        }
+        $attributeName = $path->steps[0]['value'];
         $attributeField = $this->customFieldService->getCustomField($attributeName);
 
         $field->setPropertyMapping([$attributeField]);
 
-        return parent::buildAccessor($root, $field, $context, $accessor);
+        return parent::buildAccessorFragment($root, $field, $context, $accessor);
     }
 }
