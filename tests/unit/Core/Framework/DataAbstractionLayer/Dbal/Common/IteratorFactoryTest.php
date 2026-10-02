@@ -2,7 +2,7 @@
 
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Dbal\Common;
 
-use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Defaults;
@@ -21,7 +21,7 @@ class IteratorFactoryTest extends TestCase
 {
     public function testCreateIteratorAddsVersionFilterWhenVersionAwareAndProvided(): void
     {
-        $connection = static::createStub(Connection::class);
+        $connection = DriverManager::getConnection(['driver' => 'pdo_mysql', 'serverVersion' => '8.4.11']);
         $registry = static::createStub(DefinitionInstanceRegistry::class);
 
         $definition = new class extends EntityDefinition {

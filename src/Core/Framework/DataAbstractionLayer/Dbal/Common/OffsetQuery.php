@@ -16,7 +16,14 @@ class OffsetQuery implements IterableQuery
 
     public function fetch(): array
     {
-        $data = $this->query->executeQuery()->fetchAllKeyValue();
+        $data = [];
+        foreach ($this->query->executeQuery()->fetchAllNumeric() as $row) {
+            $key = $row[0];
+            if (\is_resource($key)) {
+                $key = stream_get_contents($key);
+            }
+            $data[$key] = $row[1];
+        }
 
         $this->offset = $this->query->getFirstResult() + \count($data);
         $this->query->setFirstResult($this->offset);
@@ -37,6 +44,8 @@ class OffsetQuery implements IterableQuery
         $select = $query->getSelectParts();
 
         $query->resetOrderBy();
+        $query->setFirstResult(0);
+        $query->setMaxResults(null);
         $query->select('COUNT(DISTINCT ' . array_shift($select) . ')');
 
         return (int) $query->executeQuery()->fetchOne();

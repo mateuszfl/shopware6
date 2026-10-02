@@ -63,6 +63,11 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
         return new SqlFragment('string_agg(' . $this->quoteColumn($column) . '::text, ?::text ORDER BY ' . $this->quoteColumn($orderColumn) . ')', [$separator], [ParameterType::STRING]);
     }
 
+    public function hexAggregate(string|array $column, string $separator = '||'): SqlFragment
+    {
+        return new SqlFragment('string_agg(' . $this->hex($column) . ', ?::text ORDER BY ' . $this->quoteColumn($column) . ')', [$separator], [ParameterType::STRING]);
+    }
+
     public function queryShape(): DatabaseQueryShape
     {
         return new PostgreSQLQueryShape($this);

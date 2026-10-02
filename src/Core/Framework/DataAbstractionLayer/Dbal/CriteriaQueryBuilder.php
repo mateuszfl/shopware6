@@ -73,7 +73,7 @@ class CriteriaQueryBuilder
 
         $this->addQueries($definition, $criteria, $query, $context);
 
-        if ($criteria->getLimit() === 1) {
+        if ($criteria->getLimit() === 1 && !$query->hasState(Criteria::SCORE_FIELD)) {
             $query->removeState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN);
         }
 
@@ -219,7 +219,7 @@ class CriteriaQueryBuilder
 
         $minScore = min($minScore);
 
-        $query->andHaving('_score >= :_minScore');
+        $query->andHaving($select . ' >= :_minScore');
         $query->setParameter('_minScore', $minScore);
         $query->addState(Criteria::SCORE_FIELD);
 

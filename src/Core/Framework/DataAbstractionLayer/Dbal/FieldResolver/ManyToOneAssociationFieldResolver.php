@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -18,6 +19,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\OneToOneAssociationField;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
  * @internal
@@ -64,15 +66,15 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
         // No Blacklisting Whitelisting for ManyToOne Association because of possible Dependencies on subentities
         $parameters = [
             '#source#' => $source,
-            '#root#' => EntityDefinitionQueryHelper::escape($context->getAlias()),
-            '#alias#' => EntityDefinitionQueryHelper::escape($alias),
+            '#root#' => $this->quote($context->getAlias()),
+            '#alias#' => $this->quote($alias),
             '#reference_column#' => $referenceColumn,
         ];
 
         $context->getQuery()->leftJoin(
-            EntityDefinitionQueryHelper::escape($context->getAlias()),
-            EntityDefinitionQueryHelper::escape($table),
-            EntityDefinitionQueryHelper::escape($alias),
+            $this->quote($context->getAlias()),
+            $this->quote($table),
+            $this->quote($alias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -90,14 +92,14 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
         }
 
         if (!$field->is(Inherited::class)) {
-            return EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName());
+            return $this->quote($root) . '.' . $this->quote($field->getStorageName());
         }
 
         if (!$context->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName());
+            return $this->quote($root) . '.' . $this->quote($field->getStorageName());
         }
 
-        $inherited = EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getPropertyName());
+        $inherited = $this->quote($root) . '.' . $this->quote($field->getPropertyName());
 
         $fk = $definition->getFields()->getByStorageName($field->getStorageName());
 
@@ -111,9 +113,9 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
 
         if ($fk instanceof FkField && $field->is(Required::class)) {
             return \sprintf(
-                'IFNULL(%s, %s)',
-                EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName()),
-                EntityDefinitionQueryHelper::escape($root . '.parent') . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName())
+                'COALESCE(%s, %s)',
+                $this->quote($root) . '.' . $this->quote($field->getStorageName()),
+                $this->quote($root . '.parent') . '.' . $this->quote($field->getStorageName())
             );
         }
 
@@ -133,18 +135,18 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
         if ($fkVersionId) {
             if ($field->is(Inherited::class) && $context->getContext()->considerInheritance()) {
                 return \sprintf(
-                    ' AND IFNULL(#root#.%s, %s.%s) = #alias#.%s',
-                    EntityDefinitionQueryHelper::escape($fkVersionId),
-                    EntityDefinitionQueryHelper::escape($context->getAlias() . '.parent'),
-                    EntityDefinitionQueryHelper::escape($fkVersionId),
-                    EntityDefinitionQueryHelper::escape('version_id'),
+                    ' AND COALESCE(#root#.%s, %s.%s) = #alias#.%s',
+                    $this->quote($fkVersionId),
+                    $this->quote($context->getAlias() . '.parent'),
+                    $this->quote($fkVersionId),
+                    $this->quote('version_id'),
                 );
             }
 
             return \sprintf(
                 ' AND #root#.%s = #alias#.%s',
-                EntityDefinitionQueryHelper::escape($fkVersionId),
-                EntityDefinitionQueryHelper::escape('version_id'),
+                $this->quote($fkVersionId),
+                $this->quote('version_id'),
             );
         }
 
@@ -155,17 +157,15 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
             if ($field->getReferenceDefinition()->getFields()->getByStorageName($ownFkVersionIdk)) {
                 return \sprintf(
                     ' AND #root#.%s = #alias#.%s',
-                    EntityDefinitionQueryHelper::escape('version_id'),
-                    EntityDefinitionQueryHelper::escape($ownFkVersionIdk),
+                    $this->quote('version_id'),
+                    $this->quote($ownFkVersionIdk),
                 );
             }
         }
 
-        return \sprintf(
-            ' AND #alias#.%s = UNHEX("%s")',
-            EntityDefinitionQueryHelper::escape('version_id'),
-            Defaults::LIVE_VERSION,
-        );
+        $context->getQuery()->setParameter('associationLiveVersion', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
+
+        return ' AND #alias#.' . $this->quote('version_id') . ' = :associationLiveVersion';
     }
 
     private function getVersionField(FieldResolverContext $context, ManyToOneAssociationField|OneToOneAssociationField $field): ?string
@@ -196,10 +196,10 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
         $subRoot = $field->getReferenceDefinition()->getEntityName();
 
         $versionQuery = new QueryBuilder($this->connection);
-        $versionQuery->select(EntityDefinitionQueryHelper::escape($subRoot) . '.*');
+        $versionQuery->select($this->quote($subRoot) . '.*');
         $versionQuery->from(
-            EntityDefinitionQueryHelper::escape($subRoot),
-            EntityDefinitionQueryHelper::escape($subRoot),
+            $this->quote($subRoot),
+            $this->quote($subRoot),
         );
         $queryHelper->joinVersion($versionQuery, $field->getReferenceDefinition(), $subRoot, $context);
 
@@ -209,10 +209,10 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
     private function getReferenceColumn(AssociationField $field, Context $context): string
     {
         if ($field->is(ReverseInherited::class) && $context->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
+            return $this->quote($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
         }
 
-        return EntityDefinitionQueryHelper::escape($field->getReferenceField());
+        return $this->quote($field->getReferenceField());
     }
 
     /**
@@ -230,15 +230,15 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
 
         $parameters = [
             '#source#' => $source,
-            '#root#' => EntityDefinitionQueryHelper::escape($root),
-            '#alias#' => EntityDefinitionQueryHelper::escape($alias),
+            '#root#' => $this->quote($root),
+            '#alias#' => $this->quote($alias),
             '#reference_column#' => $referenceColumn,
         ];
 
         $query->leftJoin(
-            EntityDefinitionQueryHelper::escape($root),
+            $this->quote($root),
             '(' . $versionQuery->getSQL() . ')',
-            EntityDefinitionQueryHelper::escape($alias),
+            $this->quote($alias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -247,7 +247,12 @@ class ManyToOneAssociationFieldResolver extends AbstractFieldResolver
         );
 
         foreach ($versionQuery->getParameters() as $key => $value) {
-            $query->setParameter($key, $value, $query->getParameterType($key));
+            $query->setParameter($key, $value, $versionQuery->getParameterType($key));
         }
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

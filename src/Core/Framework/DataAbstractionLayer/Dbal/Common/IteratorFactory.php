@@ -3,6 +3,8 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -36,30 +38,42 @@ class IteratorFactory
 
         $entity = $definition->getEntityName();
 
-        $escaped = EntityDefinitionQueryHelper::escape($entity);
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $escaped = EntityDefinitionQueryHelper::escape($entity, $this->connection);
+        $id = $dialect->hex([$entity, 'id']);
         $query = new QueryBuilder($this->connection);
         $query->from($escaped);
         $query->setMaxResults($limit);
 
         if ($definition->isVersionAware() && $versionId !== null) {
             $query->andWhere($escaped . '.version_id = :versionId');
-            $query->setParameter('versionId', Uuid::fromHexToBytes($versionId));
+            $query->setParameter('versionId', Uuid::fromHexToBytes($versionId), ParameterType::BINARY);
         }
 
         if ($definition->hasAutoIncrement()) {
-            $query->select($escaped . '.auto_increment', 'LOWER(HEX(' . $escaped . '.id)) as id');
+            $query->select($escaped . '.auto_increment', $id . ' as id');
             $query->andWhere($escaped . '.auto_increment > :lastId');
             $query->addOrderBy($escaped . '.auto_increment');
-            $query->setParameter('lastId', 0);
+            $query->setParameter('lastId', 0, ParameterType::INTEGER);
 
             if ($lastId !== null) {
-                $query->setParameter('lastId', $lastId['offset']);
+                $query->setParameter('lastId', $lastId['offset'], ParameterType::INTEGER);
             }
 
             return new LastIdQuery($query);
         }
 
-        $query->select($escaped . '.id', 'LOWER(HEX(' . $escaped . '.id))');
+        $key = $escaped . '.id';
+        if ($definition->isVersionAware() && $versionId === null) {
+            // Without a version filter the iterator covers physical versions. Keep both rows in a batch even when
+            // they have the same entity ID; consumers use the values while the composite key advances the offset.
+            $key = $this->connection->getDatabasePlatform()->getConcatExpression($id, $dialect->hex([$entity, 'version_id']));
+        }
+        $query->select($key, $id);
+        $query->addOrderBy($escaped . '.id');
+        if ($definition->isVersionAware()) {
+            $query->addOrderBy($escaped . '.version_id');
+        }
         $query->setFirstResult(0);
         if ($lastId !== null) {
             $query->setFirstResult((int) $lastId['offset']);

@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common;
 
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\Log\Package;
 
@@ -18,10 +19,14 @@ class LastIdQuery implements IterableQuery
     {
         $data = $this->query->executeQuery()->fetchAllKeyValue();
 
+        if ($data === []) {
+            return [];
+        }
+
         $keys = array_keys($data);
         $this->lastId = (int) array_pop($keys);
 
-        $this->query->setParameter('lastId', $this->lastId);
+        $this->query->setParameter('lastId', $this->lastId, ParameterType::INTEGER);
 
         return $data;
     }
@@ -34,6 +39,8 @@ class LastIdQuery implements IterableQuery
         $select = $query->getSelectParts();
 
         $query->resetOrderBy();
+        $query->setFirstResult(0);
+        $query->setMaxResults(null);
         $query->select('COUNT(DISTINCT ' . array_shift($select) . ')');
 
         return (int) $query->executeQuery()->fetchOne();

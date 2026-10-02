@@ -140,14 +140,14 @@ class CriteriaPartResolver
 
             // Since this query only acts as an EXISTS check, we select a dummy value that will cause the EXISTS to be true.
             $query->addSelect('1');
-            $query->from(self::escape($reference->getEntityName()), self::escape($alias));
+            $query->from($this->quote($reference->getEntityName()), $this->quote($alias));
             $query->addState($alias);
 
             $parameters = [
-                '#root#' => self::escape($definition->getEntityName()),
+                '#root#' => $this->quote($definition->getEntityName()),
                 '#source_column#' => $this->getSourceColumn($field, $context),
-                '#alias#' => self::escape($alias),
-                '#reference_column#' => self::escape($field->getReferenceField()),
+                '#alias#' => $this->quote($alias),
+                '#reference_column#' => $this->quote($field->getReferenceField()),
             ];
 
             $query->andWhere(str_replace(
@@ -165,7 +165,7 @@ class CriteriaPartResolver
 
             // Since this query only acts as an EXISTS check, we select a dummy value that will cause the EXISTS to be true.
             $query->addSelect('1');
-            $query->from(self::escape($reference->getEntityName()), self::escape($alias));
+            $query->from($this->quote($reference->getEntityName()), $this->quote($alias));
             $query->addState($alias);
 
             $versionWhere = '';
@@ -173,14 +173,14 @@ class CriteriaPartResolver
                 $aliasVersionId = $this->getVersionIdFieldForManyToOneRelation($reference, $definition);
                 $rootVersionId = $this->getVersionIdFieldForManyToOneRelation($definition, $reference);
 
-                $versionWhere = ' AND #root#.`' . $rootVersionId . '` = #alias#.`' . $aliasVersionId . '`';
+                $versionWhere = ' AND #root#.' . $this->quote($rootVersionId) . ' = #alias#.' . $this->quote($aliasVersionId);
             }
 
             $parameters = [
-                '#root#' => self::escape($definition->getEntityName()),
+                '#root#' => $this->quote($definition->getEntityName()),
                 '#source_column#' => $this->getSourceColumn($field, $context),
-                '#alias#' => self::escape($alias),
-                '#reference_column#' => self::escape($field->getReferenceField()),
+                '#alias#' => $this->quote($alias),
+                '#reference_column#' => $this->quote($field->getReferenceField()),
             ];
 
             $query->andWhere(str_replace(
@@ -203,20 +203,20 @@ class CriteriaPartResolver
 
         // Since this query only acts as an EXISTS check, we select a dummy value that will cause the EXISTS to be true.
         $query->addSelect('1');
-        $query->from(self::escape($reference->getEntityName()), self::escape($mappingAlias));
+        $query->from($this->quote($reference->getEntityName()), $this->quote($mappingAlias));
         $query->addState($alias);
 
         $parameters = [
-            '#mapping#' => self::escape($mappingAlias),
-            '#source_column#' => self::escape($field->getMappingReferenceColumn()),
-            '#alias#' => self::escape($alias),
+            '#mapping#' => $this->quote($mappingAlias),
+            '#source_column#' => $this->quote($field->getMappingReferenceColumn()),
+            '#alias#' => $this->quote($alias),
             '#reference_column#' => $this->getReferenceColumn($context, $field),
         ];
 
         $query->leftJoin(
-            self::escape($mappingAlias),
-            self::escape($field->getToManyReferenceDefinition()->getEntityName()),
-            self::escape($alias),
+            $this->quote($mappingAlias),
+            $this->quote($field->getToManyReferenceDefinition()->getEntityName()),
+            $this->quote($alias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -226,10 +226,10 @@ class CriteriaPartResolver
         );
 
         $parameters = [
-            '#alias#' => self::escape($definition->getEntityName()),
+            '#alias#' => $this->quote($definition->getEntityName()),
             '#source_column#' => $this->getSourceColumn($field, $context),
-            '#mapping#' => self::escape($mappingAlias),
-            '#reference_column#' => self::escape($field->getMappingLocalColumn()),
+            '#mapping#' => $this->quote($mappingAlias),
+            '#reference_column#' => $this->quote($field->getMappingLocalColumn()),
         ];
 
         $query->andWhere(str_replace(
@@ -312,14 +312,14 @@ class CriteriaPartResolver
     private function getReferenceColumn(Context $context, ManyToManyAssociationField $field): string
     {
         if (!$field->is(ReverseInherited::class)) {
-            return self::escape($field->getReferenceField());
+            return $this->quote($field->getReferenceField());
         }
 
         if (!$context->considerInheritance()) {
-            return self::escape($field->getReferenceField());
+            return $this->quote($field->getReferenceField());
         }
 
-        return self::escape($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
+        return $this->quote($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
     }
 
     private function buildMappingVersionWhere(EntityDefinition $definition, AssociationField $field): string
@@ -331,9 +331,9 @@ class CriteriaPartResolver
             return '';
         }
 
-        $versionField = '`' . $definition->getEntityName() . '_version_id`';
+        $versionField = $this->quote($definition->getEntityName() . '_version_id');
 
-        return ' AND #alias#.`version_id` = #mapping#.' . $versionField;
+        return ' AND #alias#.version_id = #mapping#.' . $versionField;
     }
 
     private function buildVersionWhere(EntityDefinition $definition, AssociationField $field): string
@@ -345,32 +345,27 @@ class CriteriaPartResolver
             return '';
         }
 
-        $versionField = '`' . $definition->getEntityName() . '_version_id`';
+        $versionField = $this->quote($definition->getEntityName() . '_version_id');
 
-        return ' AND #root#.`version_id` = #alias#.' . $versionField;
-    }
-
-    private static function escape(string $string): string
-    {
-        return EntityDefinitionQueryHelper::escape($string);
+        return ' AND #root#.version_id = #alias#.' . $versionField;
     }
 
     private function getSourceColumn(AssociationField $association, Context $context): string
     {
         if ($association->is(Inherited::class) && $context->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($association->getPropertyName());
+            return $this->quote($association->getPropertyName());
         }
 
         if ($association instanceof ManyToOneAssociationField || $association instanceof OneToOneAssociationField) {
-            return EntityDefinitionQueryHelper::escape($association->getStorageName());
+            return $this->quote($association->getStorageName());
         }
 
         if ($association instanceof OneToManyAssociationField) {
-            return EntityDefinitionQueryHelper::escape($association->getLocalField());
+            return $this->quote($association->getLocalField());
         }
 
         if ($association instanceof ManyToManyAssociationField) {
-            return EntityDefinitionQueryHelper::escape($association->getLocalField());
+            return $this->quote($association->getLocalField());
         }
 
         throw DataAbstractionLayerException::unexpectedAssociationFieldClass($association::class);
@@ -385,5 +380,10 @@ class CriteriaPartResolver
         }
 
         return $rootVersionId;
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

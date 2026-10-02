@@ -184,6 +184,16 @@ class DataAbstractionLayerException extends HttpException
         );
     }
 
+    public static function unreadableHydrationValue(string $field): self
+    {
+        return new self(
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            'FRAMEWORK__UNREADABLE_HYDRATION_VALUE',
+            'Unable to read binary DAL field "{{ field }}".',
+            ['field' => $field]
+        );
+    }
+
     public static function invalidSerializerField(string $expectedClass, Field $field): self
     {
         return new self(

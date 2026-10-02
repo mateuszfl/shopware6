@@ -3,7 +3,9 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\AssociationField;
@@ -264,8 +266,8 @@ class EntityForeignKeyResolver implements ResetInterface
 
         $query = new QueryBuilder($this->connection);
         $query->from(
-            EntityDefinitionQueryHelper::escape($root->getEntityName()),
-            EntityDefinitionQueryHelper::escape($root->getEntityName())
+            $this->quote($root->getEntityName()),
+            $this->quote($root->getEntityName())
         );
 
         $this->queryHelper->resolveField($association, $root, $root->getEntityName(), $query, $context);
@@ -284,9 +286,9 @@ class EntityForeignKeyResolver implements ResetInterface
 
                 $query->addSelect(\sprintf(
                     '%s.%s as %s',
-                    EntityDefinitionQueryHelper::escape($root->getEntityName()),
-                    EntityDefinitionQueryHelper::escape($field->getStorageName()),
-                    EntityDefinitionQueryHelper::escape('_' . $field->getPropertyName())
+                    $this->quote($root->getEntityName()),
+                    $this->quote($field->getStorageName()),
+                    $this->quote('_' . $field->getPropertyName())
                 ));
             }
         }
@@ -306,14 +308,14 @@ class EntityForeignKeyResolver implements ResetInterface
             $storageName = $field->getStorageName();
 
             $vars = [
-                '#root#' => EntityDefinitionQueryHelper::escape($alias),
-                '#field#' => EntityDefinitionQueryHelper::escape($storageName),
+                '#root#' => $this->quote($alias),
+                '#field#' => $this->quote($storageName),
                 '#property#' => $field->getPropertyName(),
             ];
 
             $template = '#root#.#field# as #property#';
             if ($field instanceof IdField || $field instanceof FkField) {
-                $template = 'LOWER(HEX(#root#.#field#)) as #property#';
+                $template = (new DatabasePlatformResolver($this->connection))->dialect()->hex([$alias, $storageName]) . ' as #property#';
             }
 
             $accessor = str_replace(array_keys($vars), array_values($vars), $template);
@@ -324,8 +326,8 @@ class EntityForeignKeyResolver implements ResetInterface
         }
 
         if ($root->isVersionAware()) {
-            $query->andWhere(EntityDefinitionQueryHelper::escape($root->getEntityName()) . '.`version_id` = :version');
-            $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()));
+            $query->andWhere($this->quote($root->getEntityName()) . '.version_id = :version');
+            $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
         }
 
         $this->queryHelper->addIdCondition(new Criteria($ids), $root, $query);
@@ -418,5 +420,10 @@ class EntityForeignKeyResolver implements ResetInterface
 
             $this->restrictDeleteMetaFields->set($entityName, $merged);
         }
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

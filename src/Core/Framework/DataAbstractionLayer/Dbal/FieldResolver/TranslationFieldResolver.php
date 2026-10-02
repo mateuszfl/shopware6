@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -105,7 +106,7 @@ class TranslationFieldResolver extends AbstractFieldResolver
         string $path,
         string $alias,
     ): void {
-        $translationQuery = $mainQuery->getTranslationQueryBuilder(EntityDefinitionQueryHelper::escape($alias));
+        $translationQuery = $mainQuery->getTranslationQueryBuilder($this->quote($alias));
         $translationChain = array_reverse(EntityDefinitionQueryHelper::buildTranslationChain(
             $path,
             $context,
@@ -143,31 +144,31 @@ class TranslationFieldResolver extends AbstractFieldResolver
             $translatedVersionFieldName
         );
         foreach ($translationQuery->getParameters() as $key => $value) {
-            $query->setParameter($key, $value);
+            $query->setParameter($key, $value, $translationQuery->getParameterType($key));
         }
 
         $translationAlias = $alias . '.' . $definition->getEntityName() . '_translation';
         $variables = [
-            '#alias#' => EntityDefinitionQueryHelper::escape($translationAlias),
-            '#foreignKey#' => EntityDefinitionQueryHelper::escape($definition->getEntityName() . '_id'),
-            '#on#' => EntityDefinitionQueryHelper::escape($alias),
+            '#alias#' => $this->quote($translationAlias),
+            '#foreignKey#' => $this->quote($definition->getEntityName() . '_id'),
+            '#on#' => $this->quote($alias),
         ];
 
         $versionJoin = '';
         if ($rootVersionFieldName && $translatedVersionFieldName) {
-            $variables['#rootVersionField#'] = EntityDefinitionQueryHelper::escape($rootVersionFieldName);
-            $variables['#translatedVersionField#'] = EntityDefinitionQueryHelper::escape($translatedVersionFieldName);
+            $variables['#rootVersionField#'] = $this->quote($rootVersionFieldName);
+            $variables['#translatedVersionField#'] = $this->quote($translatedVersionFieldName);
             $versionJoin = ' AND #alias#.#translatedVersionField# = #on#.#rootVersionField#';
         }
 
         $query->addTranslationJoin(
-            fromAlias: EntityDefinitionQueryHelper::escape($alias),
-            joinAlias: EntityDefinitionQueryHelper::escape($translationAlias),
+            fromAlias: $this->quote($alias),
+            joinAlias: $this->quote($translationAlias),
             queryBuilder: $translationQuery,
             joinCondition: str_replace(
                 array_keys($variables),
                 array_values($variables),
-                '#alias#.#foreignKey# = #on#.`id`' . $versionJoin,
+                '#alias#.#foreignKey# = #on#.id' . $versionJoin,
             ),
         );
     }
@@ -185,7 +186,7 @@ class TranslationFieldResolver extends AbstractFieldResolver
             );
         }
 
-        return EntityDefinitionQueryHelper::escape($alias) . '.' . EntityDefinitionQueryHelper::escape($translationField->getStorageName()) . ' as ' . EntityDefinitionQueryHelper::escape($alias . '.' . $translationField->getPropertyName());
+        return $this->quote($alias) . '.' . $this->quote($translationField->getStorageName()) . ' as ' . $this->quote($alias . '.' . $translationField->getPropertyName());
     }
 
     private function getTranslationQuery(
@@ -205,21 +206,21 @@ class TranslationFieldResolver extends AbstractFieldResolver
         $first = array_shift($chain);
         $firstAlias = $on . '.translation';
 
-        $foreignKey = EntityDefinitionQueryHelper::escape($firstAlias) . '.' . EntityDefinitionQueryHelper::escape($definition->getEntityName() . '_id');
+        $foreignKey = $this->quote($firstAlias) . '.' . $this->quote($definition->getEntityName() . '_id');
 
         // used as join condition
         $query->addSelect($foreignKey);
 
         if ($versionFieldName !== null) {
-            $versionKey = EntityDefinitionQueryHelper::escape($firstAlias) . '.' . EntityDefinitionQueryHelper::escape($versionFieldName);
+            $versionKey = $this->quote($firstAlias) . '.' . $this->quote($versionFieldName);
             $query->addSelect($versionKey);
         }
 
         // set first language as from part
         $query->addSelect(str_replace('#alias#', $firstAlias, $select));
-        $query->from(EntityDefinitionQueryHelper::escape($table), EntityDefinitionQueryHelper::escape($firstAlias));
-        $query->where(EntityDefinitionQueryHelper::escape($firstAlias) . '.`language_id` = :languageId');
-        $query->setParameter('languageId', Uuid::fromHexToBytes($first));
+        $query->from($this->quote($table), $this->quote($firstAlias));
+        $query->where($this->quote($firstAlias) . '.language_id = :languageId');
+        $query->setParameter('languageId', Uuid::fromHexToBytes($first), ParameterType::BINARY);
 
         /*
          * Build the following select
@@ -251,32 +252,37 @@ class TranslationFieldResolver extends AbstractFieldResolver
         foreach ($chain as $i => $language) {
             ++$i;
 
-            $condition = '#firstAlias#.#column# = #alias#.#column# AND #alias#.`language_id` = :languageId' . $i;
+            $condition = '#firstAlias#.#column# = #alias#.#column# AND #alias#.language_id = :languageId' . $i;
 
             $alias = $on . '.translation.override_' . $i;
 
             $variables = [
-                '#column#' => EntityDefinitionQueryHelper::escape($definition->getEntityName() . '_id'),
-                '#alias#' => EntityDefinitionQueryHelper::escape($alias),
-                '#firstAlias#' => EntityDefinitionQueryHelper::escape($firstAlias),
+                '#column#' => $this->quote($definition->getEntityName() . '_id'),
+                '#alias#' => $this->quote($alias),
+                '#firstAlias#' => $this->quote($firstAlias),
             ];
 
             if ($versionFieldName !== null) {
-                $variables['#versionFieldName#'] = EntityDefinitionQueryHelper::escape($versionFieldName);
+                $variables['#versionFieldName#'] = $this->quote($versionFieldName);
                 $condition .= ' AND #firstAlias#.#versionFieldName# = #alias#.#versionFieldName#';
             }
 
             $query->leftJoin(
-                EntityDefinitionQueryHelper::escape($firstAlias),
-                EntityDefinitionQueryHelper::escape($table),
-                EntityDefinitionQueryHelper::escape($alias),
+                $this->quote($firstAlias),
+                $this->quote($table),
+                $this->quote($alias),
                 str_replace(array_keys($variables), array_values($variables), $condition)
             );
 
             $query->addSelect(str_replace('#alias#', $alias, $select));
-            $query->setParameter('languageId' . $i, Uuid::fromHexToBytes($language));
+            $query->setParameter('languageId' . $i, Uuid::fromHexToBytes($language), ParameterType::BINARY);
         }
 
         return $query;
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

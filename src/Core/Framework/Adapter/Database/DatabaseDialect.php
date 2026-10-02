@@ -48,6 +48,11 @@ interface DatabaseDialect
     public function stringAggregate(string|array $column, string|array $orderColumn, string $separator = ','): SqlFragment;
 
     /**
+     * @param string|list<string> $column
+     */
+    public function hexAggregate(string|array $column, string $separator = '||'): SqlFragment;
+
+    /**
      * @param string|list<string> ...$columns
      */
     public function concat(string|array ...$columns): string;

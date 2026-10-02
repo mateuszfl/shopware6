@@ -97,6 +97,21 @@ class EntityHydrator
         }
 
         foreach ($rows as $row) {
+            // PDO PostgreSQL exposes bytea as streams and native numeric/boolean scalars. Normalize once before
+            // decoding primary keys and fields, since reading a stream twice would lose its value.
+            foreach ($row as $key => $value) {
+                if (\is_resource($value)) {
+                    $bytes = stream_get_contents($value);
+                    if ($bytes === false) {
+                        throw DataAbstractionLayerException::unreadableHydrationValue($key);
+                    }
+                    $row[$key] = $bytes;
+                } elseif (\is_bool($value)) {
+                    $row[$key] = $value ? '1' : '0';
+                } elseif (\is_int($value) || \is_float($value)) {
+                    $row[$key] = (string) $value;
+                }
+            }
             $collection->add($this->hydrateEntity($definition, $entityClass, $row, $root, $context));
         }
 

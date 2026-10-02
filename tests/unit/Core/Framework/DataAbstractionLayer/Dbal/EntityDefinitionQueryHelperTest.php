@@ -2,6 +2,7 @@
 
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Dbal;
 
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,17 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[CoversClass(EntityDefinitionQueryHelper::class)]
 class EntityDefinitionQueryHelperTest extends TestCase
 {
+    public function testIdentifierQuotingStaysScopedToTheConnection(): void
+    {
+        $mysql = DriverManager::getConnection(['driver' => 'pdo_mysql', 'serverVersion' => '8.4.11']);
+        $postgres = DriverManager::getConnection(['driver' => 'pdo_pgsql', 'serverVersion' => '18.6']);
+
+        static::assertSame('`product.translation.name`', EntityDefinitionQueryHelper::escape('product.translation.name', $mysql));
+        static::assertSame('"product.translation.name"', EntityDefinitionQueryHelper::escape('product.translation.name', $postgres));
+        static::assertSame('`product.translation.name`', EntityDefinitionQueryHelper::escape('product.translation.name'));
+        static::assertSame('"name""quote"', EntityDefinitionQueryHelper::escape('name"quote', $postgres));
+    }
+
     #[DataProvider('provideTestGetRoot')]
     public function testGetRoot(string $accessor, ?string $expectedRoot): void
     {

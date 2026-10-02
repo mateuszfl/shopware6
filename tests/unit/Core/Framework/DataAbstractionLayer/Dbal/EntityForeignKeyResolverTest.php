@@ -51,6 +51,8 @@ class EntityForeignKeyResolverTest extends TestCase
         parent::setUp();
 
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MariaDBPlatform());
 
         $this->resolver = new EntityForeignKeyResolver(
             $this->connection,
@@ -138,9 +140,6 @@ class EntityForeignKeyResolverTest extends TestCase
         $emptyResult = static::createStub(Result::class);
         $emptyResult->method('fetchAllAssociative')->willReturn([]);
 
-        // getSQL() needs a platform to render the query; use MariaDB, the engine that rejects the alias.
-        $this->connection->method('getDatabasePlatform')->willReturn(new MariaDBPlatform());
-
         $this->connection->method('executeQuery')->willReturnCallback(
             function (string $query) use (&$capturedQueries, $emptyResult): Result {
                 $capturedQueries[] = $query;
@@ -178,7 +177,6 @@ class EntityForeignKeyResolverTest extends TestCase
 
         $queries = 0;
 
-        $this->connection->method('getDatabasePlatform')->willReturn(new MariaDBPlatform());
         $this->connection->method('executeQuery')->willReturnCallback(
             function (string $query) use ($parentId, $childId, &$queries): Result {
                 if (++$queries > 10) {

@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver;
 
+use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\CascadeDelete;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Inherited;
@@ -15,6 +16,10 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 class OneToManyAssociationFieldResolver extends AbstractFieldResolver
 {
+    public function __construct(private readonly ?Connection $connection = null)
+    {
+    }
+
     public function join(FieldResolverContext $context): string
     {
         $field = $context->getField();
@@ -37,17 +42,17 @@ class OneToManyAssociationFieldResolver extends AbstractFieldResolver
 
         $parameters = [
             '#source#' => $source,
-            '#alias#' => EntityDefinitionQueryHelper::escape($alias),
+            '#alias#' => $this->quote($alias),
             '#reference_column#' => $referenceColumn,
-            '#root#' => EntityDefinitionQueryHelper::escape($context->getAlias()),
+            '#root#' => $this->quote($context->getAlias()),
         ];
 
         $versionWhere = $this->buildVersionWhere($context, $field);
 
         $context->getQuery()->leftJoin(
-            EntityDefinitionQueryHelper::escape($context->getAlias()),
-            EntityDefinitionQueryHelper::escape($field->getReferenceDefinition()->getEntityName()),
-            EntityDefinitionQueryHelper::escape($alias),
+            $this->quote($context->getAlias()),
+            $this->quote($field->getReferenceDefinition()->getEntityName()),
+            $this->quote($alias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -85,18 +90,23 @@ class OneToManyAssociationFieldResolver extends AbstractFieldResolver
     private function getSourceColumn(FieldResolverContext $context, OneToManyAssociationField $field): string
     {
         if ($field->is(Inherited::class) && $context->getContext()->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($context->getAlias()) . '.' . EntityDefinitionQueryHelper::escape($field->getPropertyName());
+            return $this->quote($context->getAlias()) . '.' . $this->quote($field->getPropertyName());
         }
 
-        return EntityDefinitionQueryHelper::escape($context->getAlias()) . '.' . EntityDefinitionQueryHelper::escape($field->getLocalField());
+        return $this->quote($context->getAlias()) . '.' . $this->quote($field->getLocalField());
     }
 
     private function getReferenceColumn(FieldResolverContext $context, OneToManyAssociationField $field): string
     {
         if ($field->is(ReverseInherited::class) && $context->getContext()->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
+            return $this->quote($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
         }
 
-        return EntityDefinitionQueryHelper::escape($field->getReferenceField());
+        return $this->quote($field->getReferenceField());
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

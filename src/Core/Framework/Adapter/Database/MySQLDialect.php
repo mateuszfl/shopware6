@@ -57,6 +57,11 @@ final class MySQLDialect extends AbstractDatabaseDialect
         return new SqlFragment('GROUP_CONCAT(' . $this->quoteColumn($column) . ' ORDER BY ' . $this->quoteColumn($orderColumn) . ' SEPARATOR ?)', [$separator], [ParameterType::STRING]);
     }
 
+    public function hexAggregate(string|array $column, string $separator = '||'): SqlFragment
+    {
+        return new SqlFragment('GROUP_CONCAT(' . $this->hex($column) . ' ORDER BY ' . $this->quoteColumn($column) . ' SEPARATOR ?)', [$separator], [ParameterType::STRING]);
+    }
+
     public function queryShape(): DatabaseQueryShape
     {
         return new MySQLQueryShape($this);

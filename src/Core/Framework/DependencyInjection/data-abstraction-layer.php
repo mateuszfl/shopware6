@@ -216,7 +216,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(EntityCacheKeyGenerator::class)
         ->public();
 
-    $services->set(EntityDefinitionQueryHelper::class);
+    $services->set(EntityDefinitionQueryHelper::class)
+        ->args([service(Connection::class)]);
 
     $services->set(JoinGroupBuilder::class)
         ->public();
@@ -445,9 +446,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->tag('shopware.field_resolver', ['priority' => -50]);
 
     $services->set(OneToManyAssociationFieldResolver::class)
+        ->args([service(Connection::class)])
         ->tag('shopware.field_resolver', ['priority' => -50]);
 
     $services->set(ManyToManyAssociationFieldResolver::class)
+        ->args([service(Connection::class)])
         ->tag('shopware.field_resolver', ['priority' => -50]);
 
     $services->set(TranslationFieldResolver::class)
@@ -469,6 +472,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->tag('shopware.field_accessor_builder', ['priority' => -150]);
 
     $services->set(DefaultFieldAccessorBuilder::class)
+        ->args([service(Connection::class)])
         ->tag('shopware.field_accessor_builder', ['priority' => -200]);
 
     $services->set(ConfigJsonFieldAccessorBuilder::class)

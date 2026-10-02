@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver;
 
+use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
@@ -17,6 +18,10 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 class ManyToManyAssociationFieldResolver extends AbstractFieldResolver
 {
+    public function __construct(private readonly ?Connection $connection = null)
+    {
+    }
+
     public function join(FieldResolverContext $context): string
     {
         $field = $context->getField();
@@ -36,16 +41,16 @@ class ManyToManyAssociationFieldResolver extends AbstractFieldResolver
         $source = $this->getMappingSourceColumn($context->getAlias(), $field, $context->getContext());
 
         $parameters = [
-            '#root#' => EntityDefinitionQueryHelper::escape($context->getAlias()),
+            '#root#' => $this->quote($context->getAlias()),
             '#source#' => $source,
-            '#alias#' => EntityDefinitionQueryHelper::escape($mappingAlias),
-            '#reference_column#' => EntityDefinitionQueryHelper::escape($field->getMappingLocalColumn()),
+            '#alias#' => $this->quote($mappingAlias),
+            '#reference_column#' => $this->quote($field->getMappingLocalColumn()),
         ];
 
         $context->getQuery()->leftJoin(
-            EntityDefinitionQueryHelper::escape($context->getAlias()),
-            EntityDefinitionQueryHelper::escape($field->getMappingDefinition()->getEntityName()),
-            EntityDefinitionQueryHelper::escape($mappingAlias),
+            $this->quote($context->getAlias()),
+            $this->quote($field->getMappingDefinition()->getEntityName()),
+            $this->quote($mappingAlias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -55,16 +60,16 @@ class ManyToManyAssociationFieldResolver extends AbstractFieldResolver
         );
 
         $parameters = [
-            '#mapping#' => EntityDefinitionQueryHelper::escape($mappingAlias),
-            '#source_column#' => EntityDefinitionQueryHelper::escape($field->getMappingReferenceColumn()),
-            '#alias#' => EntityDefinitionQueryHelper::escape($alias),
+            '#mapping#' => $this->quote($mappingAlias),
+            '#source_column#' => $this->quote($field->getMappingReferenceColumn()),
+            '#alias#' => $this->quote($alias),
             '#reference_column#' => $this->getReferenceColumn($context, $field),
         ];
 
         $context->getQuery()->leftJoin(
-            EntityDefinitionQueryHelper::escape($mappingAlias),
-            EntityDefinitionQueryHelper::escape($field->getToManyReferenceDefinition()->getEntityName()),
-            EntityDefinitionQueryHelper::escape($alias),
+            $this->quote($mappingAlias),
+            $this->quote($field->getToManyReferenceDefinition()->getEntityName()),
+            $this->quote($alias),
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
@@ -86,29 +91,29 @@ class ManyToManyAssociationFieldResolver extends AbstractFieldResolver
         }
         $versionField = $definition->getEntityName() . '_version_id';
 
-        return ' AND #root#.`version_id` = #alias#.`' . $versionField . '`';
+        return ' AND #root#.version_id = #alias#.' . $this->quote($versionField);
     }
 
     private function getMappingSourceColumn(string $root, ManyToManyAssociationField $association, Context $context): string
     {
         if ($association->is(Inherited::class) && $context->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($association->getPropertyName());
+            return $this->quote($root) . '.' . $this->quote($association->getPropertyName());
         }
 
-        return EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($association->getLocalField());
+        return $this->quote($root) . '.' . $this->quote($association->getLocalField());
     }
 
     private function getReferenceColumn(FieldResolverContext $context, ManyToManyAssociationField $field): string
     {
         if (!$field->is(ReverseInherited::class)) {
-            return EntityDefinitionQueryHelper::escape($field->getReferenceField());
+            return $this->quote($field->getReferenceField());
         }
 
         if (!$context->getContext()->considerInheritance()) {
-            return EntityDefinitionQueryHelper::escape($field->getReferenceField());
+            return $this->quote($field->getReferenceField());
         }
 
-        return EntityDefinitionQueryHelper::escape($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
+        return $this->quote($field->getFlag(ReverseInherited::class)->getReversedPropertyName());
     }
 
     private function buildVersionWhere(EntityDefinition $definition, ManyToManyAssociationField $field): string
@@ -120,8 +125,13 @@ class ManyToManyAssociationFieldResolver extends AbstractFieldResolver
             return '';
         }
 
-        $versionField = '`' . $definition->getEntityName() . '_version_id`';
+        $versionField = $this->quote($definition->getEntityName() . '_version_id');
 
-        return ' AND #alias#.`version_id` = #mapping#.' . $versionField;
+        return ' AND #alias#.version_id = #mapping#.' . $versionField;
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }

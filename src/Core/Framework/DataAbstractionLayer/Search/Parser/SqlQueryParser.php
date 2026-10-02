@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Search\Parser;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -64,14 +65,14 @@ class SqlQueryParser
                     );
 
                     $result->addWhere(
-                        \sprintf('IF(%s , %s * %s, 0)', $where, $this->connection->quote((string) $query->getScore()), $field)
+                        \sprintf('CASE WHEN %s THEN %s * %s ELSE 0 END', $where, $this->connection->quote((string) $query->getScore()), $field)
                     );
 
                     continue;
                 }
 
                 $result->addWhere(
-                    \sprintf('IF(%s , %s, 0)', $where, $this->connection->quote((string) $query->getScore()))
+                    \sprintf('CASE WHEN %s THEN %s ELSE 0 END', $where, $this->connection->quote((string) $query->getScore()))
                 );
             }
 
@@ -240,7 +241,7 @@ class SqlQueryParser
 
         $where = [];
         if ($value !== []) {
-            $result->addParameter($key, $value, ArrayParameterType::STRING);
+            $result->addParameter($key, $value, $field instanceof IdField || $field instanceof FkField ? ArrayParameterType::BINARY : ArrayParameterType::STRING);
 
             $inFilter = $select . ' IN (:' . $key . ')';
             if ($negated && !$hasNulls) {
@@ -302,7 +303,7 @@ class SqlQueryParser
             $value = Uuid::fromHexToBytes((string) $value);
         }
 
-        $result->addParameter($key, $value);
+        $result->addParameter($key, $value, $field instanceof IdField || $field instanceof FkField ? ParameterType::BINARY : ParameterType::STRING);
 
         return $result;
     }

@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
@@ -38,13 +39,17 @@ class EntityDefinitionQueryHelper
 {
     final public const HAS_TO_MANY_JOIN = 'has_to_many_join';
 
-    public static function escape(string $string): string
+    public function __construct(private readonly ?Connection $connection = null)
+    {
+    }
+
+    public static function escape(string $string, ?Connection $connection = null): string
     {
         if (!self::isValidIdentifier($string)) {
             throw DataAbstractionLayerException::invalidIdentifier($string);
         }
 
-        return '`' . $string . '`';
+        return $connection?->getDatabasePlatform()->quoteSingleIdentifier($string) ?? '`' . $string . '`';
     }
 
     /**
@@ -74,12 +79,7 @@ class EntityDefinitionQueryHelper
             Feature::deprecatedMethodMessage(self::class, __METHOD__, 'v6.8.0.0', 'Use TableHelper::columnExists instead')
         );
 
-        $exists = $connection->fetchOne(
-            'SHOW COLUMNS FROM ' . self::escape($table) . ' WHERE `Field` LIKE :column',
-            ['column' => $column]
-        );
-
-        return $exists !== false;
+        return isset($connection->createSchemaManager()->listTableColumns($table)[$column]);
     }
 
     /**
@@ -92,12 +92,9 @@ class EntityDefinitionQueryHelper
             Feature::deprecatedMethodMessage(self::class, __METHOD__, 'v6.8.0.0')
         );
 
-        $exists = $connection->fetchOne(
-            'SHOW COLUMNS FROM ' . self::escape($table) . ' WHERE `Field` LIKE :column AND `Null` = "YES"',
-            ['column' => $column]
-        );
+        $columns = $connection->createSchemaManager()->listTableColumns($table);
 
-        return $exists !== false;
+        return isset($columns[$column]) && !$columns[$column]->getNotnull();
     }
 
     /**
@@ -110,7 +107,7 @@ class EntityDefinitionQueryHelper
             Feature::deprecatedMethodMessage(self::class, __METHOD__, 'v6.8.0.0', 'Use TableHelper::tableExists instead')
         );
 
-        return $connection->fetchOne('SHOW TABLES LIKE :table', ['table' => $table]) !== false;
+        return $connection->createSchemaManager()->tablesExist([$table]);
     }
 
     /**
@@ -366,7 +363,7 @@ class EntityDefinitionQueryHelper
     {
         $table = $definition->getEntityName();
 
-        $query->from(self::escape($table));
+        $query->from($this->quote($table));
 
         $useVersionFallback // only applies for versioned entities
             = $definition->isVersionAware()
@@ -389,8 +386,8 @@ class EntityDefinitionQueryHelper
 
             $versionIdField = array_shift($versionIdField);
 
-            $query->andWhere(self::escape($table) . '.' . self::escape($versionIdField->getStorageName()) . ' = :version');
-            $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()));
+            $query->andWhere($this->quote($table) . '.' . $this->quote($versionIdField->getStorageName()) . ' = :version');
+            $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
         }
 
         return $query;
@@ -518,7 +515,7 @@ class EntityDefinitionQueryHelper
                 $select = str_replace(
                     array_keys($vars),
                     array_values($vars),
-                    self::escape('#root#.#field#'),
+                    $this->quote('#root#.#field#'),
                 );
 
                 $query->addSelect($select);
@@ -528,7 +525,7 @@ class EntityDefinitionQueryHelper
             $selects = array_unique($selects);
 
             if (\count($selects) === 1) {
-                $query->addSelect(\sprintf('%s as %s', $selects[0], self::escape($root . '.' . $field->getPropertyName())));
+                $query->addSelect(\sprintf('%s as %s', $selects[0], $this->quote($root . '.' . $field->getPropertyName())));
 
                 continue;
             }
@@ -536,7 +533,7 @@ class EntityDefinitionQueryHelper
             // add selection for resolved parent-child and language inheritance
             $query->addSelect(
                 \sprintf('COALESCE(%s)', implode(',', $selects)) . ' as '
-                . self::escape($root . '.' . $field->getPropertyName())
+                . $this->quote($root . '.' . $field->getPropertyName())
             );
         }
     }
@@ -549,16 +546,16 @@ class EntityDefinitionQueryHelper
         $query->andWhere(
             str_replace(
                 ['#root#', '#table#', '#version#'],
-                [self::escape($root), self::escape($table), self::escape($versionRoot)],
+                [$this->quote($root), $this->quote($table), $this->quote($versionRoot)],
                 '#root#.version_id = COALESCE(
-                    (SELECT DISTINCT version_id FROM #table# AS #version# WHERE #version#.`id` = #root#.`id` AND `version_id` = :version),
+                    (SELECT DISTINCT version_id FROM #table# AS #version# WHERE #version#.id = #root#.id AND version_id = :version),
                     :liveVersion
                 )'
             )
         );
 
-        $query->setParameter('liveVersion', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
-        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()));
+        $query->setParameter('liveVersion', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
+        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
     }
 
     public static function getTranslatedField(EntityDefinition $definition, TranslatedField $translatedField): Field
@@ -637,8 +634,8 @@ class EntityDefinitionQueryHelper
 
             $query->andWhere(\sprintf(
                 '%s.%s IN (:ids)',
-                EntityDefinitionQueryHelper::escape($definition->getEntityName()),
-                EntityDefinitionQueryHelper::escape($primaryKeyField->getStorageName())
+                $this->quote($definition->getEntityName()),
+                $this->quote($primaryKeyField->getStorageName())
             ));
 
             $query->setParameter('ids', $primaryKeys, ArrayParameterType::BINARY);
@@ -662,10 +659,17 @@ class EntityDefinitionQueryHelper
         }
 
         if ($query->hasState(self::HAS_TO_MANY_JOIN)) {
-            $query->addGroupBy(
-                self::escape($table) . '.' . self::escape('id')
-            );
+            foreach ($definition->getPrimaryKeys() as $primaryKey) {
+                if ($primaryKey instanceof StorageAware) {
+                    $query->addGroupBy($this->quote($table) . '.' . $this->quote($primaryKey->getStorageName()));
+                }
+            }
         }
+    }
+
+    private function quote(string $identifier): string
+    {
+        return self::escape($identifier, $this->connection);
     }
 
     private function callResolver(FieldResolverContext $context): string
@@ -707,11 +711,11 @@ class EntityDefinitionQueryHelper
 
                 $key = 'pk' . Uuid::randomHex();
 
-                $accessor = EntityDefinitionQueryHelper::escape($definition->getEntityName()) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName());
+                $accessor = $this->quote($definition->getEntityName()) . '.' . $this->quote($field->getStorageName());
 
                 $where[$accessor] = $accessor . ' = :' . $key;
 
-                $query->setParameter($key, $value);
+                $query->setParameter($key, $value, $field instanceof IdField || $field instanceof FkField ? ParameterType::BINARY : ParameterType::STRING);
             }
 
             $wheres[] = '(' . implode(' AND ', $where) . ')';
@@ -736,8 +740,8 @@ class EntityDefinitionQueryHelper
             $select = $this->buildFieldSelector($part, $field, $context, $accessor);
 
             $selects[] = str_replace(
-                '`.' . self::escape($field->getStorageName()),
-                '.' . $field->getPropertyName() . '`',
+                $this->quote($part) . '.' . $this->quote($field->getStorageName()),
+                $this->quote($part . '.' . $field->getPropertyName()),
                 $select
             );
         }
@@ -780,7 +784,7 @@ class EntityDefinitionQueryHelper
 
         $parentSelect = $this->buildFieldSelector($root . '.parent', $field, $context, $original);
 
-        return \sprintf('IFNULL(%s, %s)', $select, $parentSelect);
+        return \sprintf('COALESCE(%s, %s)', $select, $parentSelect);
     }
 
     private function buildFieldSelector(string $root, Field $field, Context $context, string $accessor): string

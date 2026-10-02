@@ -4,7 +4,9 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Log\LoggerInterface;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
@@ -36,6 +38,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\SqlQueryParser;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Struct\ArrayStruct;
+use Shopware\Core\Framework\Util\Hasher;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 use function Symfony\Component\String\u;
@@ -342,19 +345,19 @@ class EntityReader implements EntityReaderInterface
                 $parentAlias = $root . '.' . $parentAssociation->getPropertyName();
 
                 // contains the field accessor for the child value (eg. `product.name`.`name`)
-                $childAccessor = EntityDefinitionQueryHelper::escape($root) . '.'
-                    . EntityDefinitionQueryHelper::escape($field->getStorageName());
+                $childAccessor = $this->quote($root) . '.'
+                    . $this->quote($field->getStorageName());
 
                 // contains the field accessor for the parent value (eg. `product.parent`.`name`)
-                $parentAccessor = EntityDefinitionQueryHelper::escape($parentAlias) . '.'
-                    . EntityDefinitionQueryHelper::escape($field->getStorageName());
+                $parentAccessor = $this->quote($parentAlias) . '.'
+                    . $this->quote($field->getStorageName());
 
                 // contains the alias for the resolved field (eg. `product.name`)
-                $fieldAlias = EntityDefinitionQueryHelper::escape($root . '.' . $field->getPropertyName());
+                $fieldAlias = $this->quote($root . '.' . $field->getPropertyName());
 
                 if ($field instanceof JsonField) {
                     // merged in hydrator
-                    $parentFieldAlias = EntityDefinitionQueryHelper::escape($root . '.' . $field->getPropertyName() . '.inherited');
+                    $parentFieldAlias = $this->quote($root . '.' . $field->getPropertyName() . '.inherited');
                     $query->addSelect(\sprintf('%s as %s', $parentAccessor, $parentFieldAlias));
                 }
                 // add selection for resolved parent-child inheritance field
@@ -366,9 +369,9 @@ class EntityReader implements EntityReaderInterface
             // all other StorageAware fields are stored inside the main entity
             if ($field instanceof StorageAware) {
                 $query->addSelect(
-                    EntityDefinitionQueryHelper::escape($root) . '.'
-                    . EntityDefinitionQueryHelper::escape($field->getStorageName()) . ' as '
-                    . EntityDefinitionQueryHelper::escape($root . '.' . $field->getPropertyName())
+                    $this->quote($root) . '.'
+                    . $this->quote($field->getStorageName()) . ' as '
+                    . $this->quote($root . '.' . $field->getPropertyName())
                 );
             }
         }
@@ -421,6 +424,24 @@ class EntityReader implements EntityReaderInterface
         }
 
         $this->queryHelper->addGroupBy($definition, $criteria, $context, $query, $table);
+
+        if ($query->hasState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN) && $criteria->getGroupFields() === []) {
+            // PostgreSQL cannot infer functional dependencies across to-one joins. Group the selected non-score
+            // values as well as the complete root primary key when a to-many sorting introduces duplicate rows.
+            foreach ($query->getSelectParts() as $select) {
+                if (str_ends_with($select, ' as ' . Criteria::SCORE_FIELD)) {
+                    continue;
+                }
+                $alias = strrpos($select, ' as ');
+                $query->addGroupBy($alias === false ? $select : substr($select, $alias + 4));
+            }
+        }
+
+        foreach ($definition->getPrimaryKeys() as $primaryKey) {
+            if ($primaryKey instanceof StorageAware) {
+                $query->addOrderBy($this->quote($table) . '.' . $this->quote($primaryKey->getStorageName()));
+            }
+        }
 
         if ($criteria->getTitle()) {
             $query->setTitle($criteria->getTitle() . '::read');
@@ -493,26 +514,34 @@ class EntityReader implements EntityReaderInterface
             $versionCondition = ' AND #alias#.' . $versionField . ' = #root#.version_id';
         }
 
-        $source = EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getLocalField());
+        $source = $this->quote($root) . '.' . $this->quote($field->getLocalField());
         if ($field->is(Inherited::class) && $context->considerInheritance()) {
-            $source = EntityDefinitionQueryHelper::escape($root) . '.' . EntityDefinitionQueryHelper::escape($field->getPropertyName());
+            $source = $this->quote($root) . '.' . $this->quote($field->getPropertyName());
         }
 
         $parameters = [
-            '#alias#' => EntityDefinitionQueryHelper::escape($root . '.' . $field->getPropertyName() . '.mapping'),
-            '#mapping_reference_column#' => EntityDefinitionQueryHelper::escape($field->getMappingReferenceColumn()),
-            '#mapping_table#' => EntityDefinitionQueryHelper::escape($mapping->getEntityName()),
-            '#mapping_local_column#' => EntityDefinitionQueryHelper::escape($field->getMappingLocalColumn()),
-            '#root#' => EntityDefinitionQueryHelper::escape($root),
+            '#alias#' => $this->quote($root . '.' . $field->getPropertyName() . '.mapping'),
+            '#mapping_reference_column#' => $this->quote($field->getMappingReferenceColumn()),
+            '#mapping_table#' => $this->quote($mapping->getEntityName()),
+            '#mapping_local_column#' => $this->quote($field->getMappingLocalColumn()),
+            '#root#' => $this->quote($root),
             '#source#' => $source,
-            '#property#' => EntityDefinitionQueryHelper::escape($root . '.' . $field->getPropertyName() . '.id_mapping'),
+            '#property#' => $this->quote($root . '.' . $field->getPropertyName() . '.id_mapping'),
         ];
+
+        $aggregate = (new DatabasePlatformResolver($this->connection))->dialect()->hexAggregate([
+            $root . '.' . $field->getPropertyName() . '.mapping',
+            $field->getMappingReferenceColumn(),
+        ]);
+        $separator = 'mappingSeparator' . Hasher::hash($root . '.' . $field->getPropertyName());
+        $query->setParameter($separator, $aggregate->parameters[0], $aggregate->types[0]);
+        $parameters['#aggregate#'] = str_replace('?', ':' . $separator, $aggregate->sql);
 
         $query->addSelect(
             str_replace(
                 array_keys($parameters),
                 array_values($parameters),
-                '(SELECT GROUP_CONCAT(HEX(#alias#.#mapping_reference_column#) SEPARATOR \'||\')
+                '(SELECT #aggregate#
                   FROM #mapping_table# #alias#
                   WHERE #alias#.#mapping_local_column# = #source#'
                   . $versionCondition
@@ -568,7 +597,7 @@ class EntityReader implements EntityReaderInterface
         }
 
         // association should not be paginated > load data over foreign key condition
-        if ($fieldCriteria->getLimit() === null) {
+        if ($fieldCriteria->getLimit() === null && ($fieldCriteria->getOffset() ?? 0) === 0) {
             $this->loadOneToManyWithoutPagination(
                 $definition,
                 $association,
@@ -918,8 +947,8 @@ class EntityReader implements EntityReaderInterface
             throw DataAbstractionLayerException::noInverseAssociationFound($association->getPropertyName());
         }
 
-        $root = EntityDefinitionQueryHelper::escape(
-            $association->getToManyReferenceDefinition()->getEntityName() . '.' . $reference->getPropertyName() . '.mapping'
+        $root = $this->quote(
+            $association->getToManyReferenceDefinition()->getEntityName() . '.' . $reference->getPropertyName() . '.association_mapping'
         );
 
         $query = new QueryBuilder($this->connection);
@@ -935,11 +964,11 @@ class EntityReader implements EntityReaderInterface
             $context
         );
 
-        $localColumn = EntityDefinitionQueryHelper::escape($association->getMappingLocalColumn());
-        $referenceColumn = EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn());
+        $localColumn = $this->quote($association->getMappingLocalColumn());
+        $referenceColumn = $this->quote($association->getMappingReferenceColumn());
 
         $condition = $root . '.' . $referenceColumn . ' = '
-            . EntityDefinitionQueryHelper::escape($association->getToManyReferenceDefinition()->getEntityName()) . '.id';
+            . $this->quote($association->getToManyReferenceDefinition()->getEntityName()) . '.id';
 
         if (str_ends_with($association->getMappingReferenceColumn(), '_id')) {
             $referenceVersionColumn = u($association->getMappingReferenceColumn())->trimSuffix('_id')->append('_version_id')->toString();
@@ -950,96 +979,118 @@ class EntityReader implements EntityReaderInterface
         if ($association->getToManyReferenceDefinition()->isVersionAware()
             && $association->getMappingDefinition()->getField($referenceVersionColumn)
         ) {
-            $condition .= ' AND ' . $root . '.version_id = '
-                . EntityDefinitionQueryHelper::escape($referenceVersionColumn) . '.version_id';
+            $condition .= ' AND ' . $root . '.' . $this->quote($referenceVersionColumn) . ' = '
+                . $this->quote($association->getToManyReferenceDefinition()->getEntityName()) . '.version_id';
         }
 
         $query
             ->leftJoin(
-                EntityDefinitionQueryHelper::escape($association->getToManyReferenceDefinition()->getEntityName()),
-                EntityDefinitionQueryHelper::escape($association->getMappingDefinition()->getEntityName()),
+                $this->quote($association->getToManyReferenceDefinition()->getEntityName()),
+                $this->quote($association->getMappingDefinition()->getEntityName()),
                 $root,
                 $condition
             );
 
-        if (!$association->is(Inherited::class)) {
+        if (!$association->is(Inherited::class) || !$context->considerInheritance()) {
             $query->andWhere($root . '.' . $localColumn . ' IN (:localIds)');
             $query->setParameter('localIds', Uuid::fromHexToBytesList($collection->getIds()), ArrayParameterType::BINARY);
         } else {
             // When the association is inherited, we need to join the base entity to the local table
             // the "join column" (column name = property name) contains the id of the parent entity if the association is inherited
             $joinCondition = $root . '.' . $localColumn . ' = '
-                . EntityDefinitionQueryHelper::escape($definition->getEntityName()) . '.'
-                . EntityDefinitionQueryHelper::escape($association->getPropertyName());
+                . $this->quote($definition->getEntityName()) . '.'
+                . $this->quote($association->getPropertyName());
 
             if ($definition->isVersionAware()) {
                 $joinCondition .= ' AND ' . $root . '.'
-                    . EntityDefinitionQueryHelper::escape($definition->getEntityName() . '_version_id') . ' = '
-                    . EntityDefinitionQueryHelper::escape($definition->getEntityName()) . '.version_id';
+                    . $this->quote($definition->getEntityName() . '_version_id') . ' = '
+                    . $this->quote($definition->getEntityName()) . '.version_id';
             }
             $query->innerJoin(
                 $root,
-                EntityDefinitionQueryHelper::escape($definition->getEntityName()),
-                EntityDefinitionQueryHelper::escape($definition->getEntityName()),
+                $this->quote($definition->getEntityName()),
+                $this->quote($definition->getEntityName()),
                 $joinCondition
             );
 
-            $query->andWhere(EntityDefinitionQueryHelper::escape($definition->getEntityName()) . '.id IN (:localIds)');
+            $query->andWhere($this->quote($definition->getEntityName()) . '.id IN (:localIds)');
             $query->setParameter('localIds', Uuid::fromHexToBytesList($collection->getIds()), ArrayParameterType::BINARY);
         }
 
-        $orderBy = '';
-        $parts = $query->getOrderByParts();
-        if ($parts !== []) {
-            $orderBy = ' ORDER BY ' . implode(', ', $parts);
-            $query->resetOrderBy();
-        }
-        // order by is handled in group_concat
-        // Order of IDs in criteria will determine result order, when no order by is given
-        $fieldCriteria->resetSorting();
-
-        $query->select(
-            'LOWER(HEX(' . $root . '.' . $localColumn . ')) as `key`',
-            'GROUP_CONCAT(LOWER(HEX(' . $root . '.' . $referenceColumn . ')) ' . $orderBy . ') as `value`',
-        );
-
-        $query->addGroupBy($root . '.' . $localColumn);
-
-        if ($fieldCriteria->getLimit() !== null) {
-            $limitQuery = $this->buildManyToManyLimitQuery($association);
-
-            $params = [
-                '#source_column#' => EntityDefinitionQueryHelper::escape($association->getMappingLocalColumn()),
-                '#reference_column#' => EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn()),
-                '#table#' => $root,
-            ];
-            $query->innerJoin(
-                $root,
-                '(' . $limitQuery . ')',
-                'counter_table',
-                str_replace(
-                    array_keys($params),
-                    array_values($params),
-                    'counter_table.#source_column# = #table#.#source_column# AND
-                     counter_table.#reference_column# = #table#.#reference_column# AND
-                     counter_table.id_count <= :limit'
-                )
-            );
-            $query->setParameter('limit', $fieldCriteria->getLimit());
-
-            $this->connection->executeQuery('SET @n = 0; SET @c = null;');
+        if ($definition->isVersionAware() && $association->is(CascadeDelete::class)) {
+            $inherited = $association->is(Inherited::class) && $context->considerInheritance();
+            $ownerId = $inherited ? $this->quote($definition->getEntityName()) . '.id' : $root . '.' . $localColumn;
+            $ownerVersion = $inherited ? $this->quote($definition->getEntityName()) . '.version_id' : $root . '.' . $this->quote($definition->getEntityName() . '_version_id');
+            $versions = [];
+            foreach (array_values($collection->getElements()) as $index => $entity) {
+                $versions[] = '(' . $ownerId . ' = :mappingId' . $index . ' AND ' . $ownerVersion . ' = :mappingVersion' . $index . ')';
+                $query->setParameter('mappingId' . $index, Uuid::fromHexToBytes($entity->getUniqueIdentifier()), ParameterType::BINARY);
+                $query->setParameter('mappingVersion' . $index, Uuid::fromHexToBytes($entity->get('versionId')), ParameterType::BINARY);
+            }
+            $query->andWhere('(' . implode(' OR ', $versions) . ')');
         }
 
-        $mapping = $query->executeQuery()->fetchAllKeyValue();
-
-        $ids = [];
-        foreach ($mapping as &$row) {
-            $row = \array_filter(explode(',', (string) $row));
-            foreach ($row as $id) {
-                $ids[] = $id;
+        $scoreExpression = null;
+        foreach ($query->getSelectParts() as $select) {
+            if (str_ends_with($select, ' as ' . Criteria::SCORE_FIELD)) {
+                $scoreExpression = substr($select, 0, -\strlen(' as ' . Criteria::SCORE_FIELD));
             }
         }
-        unset($row);
+        $orderBy = $query->getOrderByPairs();
+        $query->resetOrderBy();
+        $query->select($root . '.' . $localColumn . ' as local_id', $root . '.' . $referenceColumn . ' as reference_id');
+        if ($scoreExpression !== null) {
+            $query->addSelect($scoreExpression . ' as ' . Criteria::SCORE_FIELD);
+            $query->addGroupBy($root . '.' . $localColumn, $root . '.' . $referenceColumn);
+        }
+
+        $windowOrder = [];
+        foreach ($orderBy as $index => [$expression, $direction]) {
+            if ($expression === Criteria::SCORE_FIELD && $scoreExpression !== null) {
+                $expression = $scoreExpression;
+            } elseif ($scoreExpression !== null) {
+                $query->addGroupBy($expression);
+            }
+            $query->addSelect($expression . ' as sort_' . $index);
+            $windowOrder[] = 'sort_' . $index . ' ' . $direction;
+        }
+        $windowOrder[] = 'reference_id';
+
+        // Choose the first sorted joined row for each relation before counting per-parent slots. A DISTINCT
+        // projection is insufficient when a nested to-many sorting contributes different values for one relation.
+        $deduplicated = new QueryBuilder($this->connection);
+        $deduplicated->select('filtered_mapping.*', 'ROW_NUMBER() OVER (PARTITION BY local_id, reference_id ORDER BY ' . implode(', ', $windowOrder) . ') as duplicate_position');
+        $deduplicated->from('(' . $query->getSQL() . ')', 'filtered_mapping');
+
+        $ranked = new QueryBuilder($this->connection);
+        $ranked->select('local_id', 'reference_id', 'ROW_NUMBER() OVER (PARTITION BY local_id ORDER BY ' . implode(', ', $windowOrder) . ') as position');
+        $ranked->from('(' . $deduplicated->getSQL() . ')', 'unique_mapping');
+        $ranked->andWhere('duplicate_position = 1');
+
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $wrapper = new QueryBuilder($this->connection);
+        $wrapper->select($dialect->hex(['mapping', 'local_id']) . ' as ' . $this->quote('key'), $dialect->hex(['mapping', 'reference_id']) . ' as value');
+        $wrapper->from('(' . $ranked->getSQL() . ')', 'mapping');
+        $wrapper->andWhere('position > :associationOffset');
+        $wrapper->setParameter('associationOffset', $fieldCriteria->getOffset() ?? 0, ParameterType::INTEGER);
+        if ($fieldCriteria->getLimit() !== null) {
+            $wrapper->andWhere('position <= :associationEnd');
+            $wrapper->setParameter('associationEnd', ($fieldCriteria->getOffset() ?? 0) + $fieldCriteria->getLimit(), ParameterType::INTEGER);
+        }
+        $wrapper->orderBy('local_id');
+        $wrapper->addOrderBy('position');
+        foreach ($query->getParameters() as $key => $value) {
+            $wrapper->setParameter($key, $value, $query->getParameterType($key));
+        }
+
+        $mapping = [];
+        $ids = [];
+        foreach ($wrapper->executeQuery()->fetchAllAssociative() as $row) {
+            $mapping[$row['key']][] = $row['value'];
+            $ids[] = $row['value'];
+        }
+        // The per-parent mapping determines the order of the hydrated collections.
+        $fieldCriteria->resetSorting();
 
         $referenceClass = $association->getToManyReferenceDefinition();
         /** @var EntityCollection<Entity> $collectionClass */
@@ -1135,10 +1186,10 @@ class EntityReader implements EntityReaderInterface
         }
 
         // build sql accessor for foreign key field in reference table `customer_address.customer_id`
-        $sqlAccessor = EntityDefinitionQueryHelper::escape($association->getReferenceDefinition()->getEntityName()) . '.'
-            . EntityDefinitionQueryHelper::escape($foreignKey);
+        $sqlAccessor = $this->quote($association->getReferenceDefinition()->getEntityName()) . '.'
+            . $this->quote($foreignKey);
 
-        $primaryKeyAccessor = EntityDefinitionQueryHelper::escape($association->getReferenceDefinition()->getEntityName()) . '.id';
+        $primaryKeyAccessor = $this->quote($association->getReferenceDefinition()->getEntityName()) . '.id';
 
         $orderByParts = $query->getOrderByParts();
         $scoreExpression = null;
@@ -1199,27 +1250,27 @@ class EntityReader implements EntityReaderInterface
             $query->addSelect(\sprintf('%s as sort_%d', substr((string) $sorting, 0, -4), $i));
         }
 
-        $root = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $root = $this->quote($definition->getEntityName());
 
         // create a wrapper query which select the root primary key and the grouped reference ids
-        $wrapper = $this->connection->createQueryBuilder();
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $wrapper = new QueryBuilder($this->connection);
+        $this->queryHelper->getBaseQuery($wrapper, $definition, $context);
         $wrapper->select(
-            'LOWER(HEX(' . $root . '.id)) as id',
-            'LOWER(HEX(child.id)) as child_id',
+            $dialect->hex([$definition->getEntityName(), 'id']) . ' as id',
+            $dialect->hex(['child', 'id']) . ' as child_id',
         );
 
-        foreach ($orderByParts as $i => $sorting) {
-            $wrapper->addOrderBy(\sprintf('sort_%s', $i), trim(substr((string) $sorting, -4)));
-        }
-
-        $wrapper->from($root, $root);
+        $wrapper->orderBy($root . '.id');
+        $wrapper->addOrderBy('child.id_count');
 
         // wrap query into a sub select to restrict the association count from the outer query
         $wrapper->leftJoin(
             $root,
             '(' . $query->getSQL() . ')',
             'child',
-            'child.' . $foreignKey . ' = ' . $root . '.id AND id_count >= :offset AND id_count <= :limit'
+            'child.' . $this->quote($foreignKey) . ' = ' . $root . '.id AND id_count >= :offset'
+                . ($fieldCriteria->getLimit() !== null ? ' AND id_count <= :limit' : '')
         );
 
         // filter result to loaded root entities
@@ -1242,8 +1293,10 @@ class EntityReader implements EntityReaderInterface
         $limit = (int) $fieldCriteria->getOffset() + (int) $fieldCriteria->getLimit();
         $offset = (int) $fieldCriteria->getOffset() + 1;
 
-        $wrapper->setParameter('limit', $limit);
-        $wrapper->setParameter('offset', $offset);
+        if ($fieldCriteria->getLimit() !== null) {
+            $wrapper->setParameter('limit', $limit, ParameterType::INTEGER);
+        }
+        $wrapper->setParameter('offset', $offset, ParameterType::INTEGER);
 
         foreach ($query->getParameters() as $key => $value) {
             $type = $query->getParameterType($key);
@@ -1268,34 +1321,6 @@ class EntityReader implements EntityReaderInterface
         }
 
         return $grouped;
-    }
-
-    private function buildManyToManyLimitQuery(ManyToManyAssociationField $association): QueryBuilder
-    {
-        $table = EntityDefinitionQueryHelper::escape($association->getMappingDefinition()->getEntityName());
-
-        $sourceColumn = EntityDefinitionQueryHelper::escape($association->getMappingLocalColumn());
-        $referenceColumn = EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn());
-
-        $params = [
-            '#table#' => $table,
-            '#source_column#' => $sourceColumn,
-        ];
-
-        $query = new QueryBuilder($this->connection);
-        $query->select(
-            str_replace(
-                array_keys($params),
-                array_values($params),
-                '@n:=IF(@c=#table#.#source_column#, @n+1, IF(@c:=#table#.#source_column#,1,1)) as id_count'
-            ),
-            $table . '.' . $referenceColumn,
-            $table . '.' . $sourceColumn,
-        );
-        $query->from($table, $table);
-        $query->orderBy($table . '.' . $sourceColumn);
-
-        return $query;
     }
 
     private function buildOneToManyPropertyAccessor(EntityDefinition $definition, OneToManyAssociationField $association): string
@@ -1530,5 +1555,10 @@ class EntityReader implements EntityReaderInterface
         }
 
         return $collection;
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 }
