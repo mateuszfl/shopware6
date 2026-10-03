@@ -15,6 +15,16 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 final class PostgreSQLDialect extends AbstractDatabaseDialect
 {
+    public function unsupportedReplacementConflicts(string $table): SqlFragment
+    {
+        // DBAL's column-based index introspection omits expression-only indexes.
+        return new SqlFragment(
+            'SELECT COUNT(*) FROM pg_catalog.pg_index WHERE indrelid = CAST(? AS regclass) AND indisunique AND (indexprs IS NOT NULL OR indpred IS NOT NULL)',
+            [$this->quoteIdentifier($table)],
+            [ParameterType::STRING],
+        );
+    }
+
     public function capabilities(): DatabaseCapabilities
     {
         return new DatabaseCapabilities(true, true, true, true);
@@ -153,6 +163,45 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
     public function hexAggregate(string|array $column, string $separator = '||'): SqlFragment
     {
         return new SqlFragment('string_agg(' . $this->hex($column) . ', ?::text ORDER BY ' . $this->quoteColumn($column) . ')', [$separator], [ParameterType::STRING]);
+    }
+
+    public function insertConflictClause(array $conflictColumns, array $updateColumns, bool $ignoreDuplicates = false): string
+    {
+        if ($updateColumns !== []) {
+            if ($conflictColumns === []) {
+                throw DatabaseDialectException::invalidOperation('a PostgreSQL update on conflict requires an explicit conflict target');
+            }
+
+            return $this->upsertClause($conflictColumns, $updateColumns);
+        }
+
+        if (!$ignoreDuplicates) {
+            return '';
+        }
+
+        return $conflictColumns === [] ? ' ON CONFLICT DO NOTHING' : $this->upsertClause($conflictColumns, []);
+    }
+
+    public function jsonSetMembers(string $column, array $members): SqlFragment
+    {
+        $column = $this->quoteIdentifier($column);
+        if ($members === []) {
+            return new SqlFragment($column);
+        }
+
+        $expression = "COALESCE($column, '{}'::jsonb)";
+        $parameters = [];
+        foreach ($members as $member => $value) {
+            $expression = 'jsonb_set(' . $expression . ', ARRAY[?]::text[], ?::jsonb, true)';
+            $parameters[] = (string) $member;
+            $parameters[] = json_encode($value, \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION | \JSON_UNESCAPED_UNICODE);
+        }
+
+        return new SqlFragment(
+            "CASE WHEN $column IS NULL OR jsonb_typeof($column) = 'object' THEN $expression ELSE $column END",
+            $parameters,
+            array_fill(0, \count($parameters), ParameterType::STRING),
+        );
     }
 
     public function queryShape(): DatabaseQueryShape

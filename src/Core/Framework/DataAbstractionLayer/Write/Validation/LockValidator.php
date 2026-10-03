@@ -4,7 +4,8 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Write\Validation;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
-use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
@@ -87,6 +88,7 @@ class LockValidator implements EventSubscriberInterface
      */
     private function containsLockedEntities(array $writeCommands): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $ids = [];
         $locked = [];
 
@@ -118,8 +120,9 @@ class LockValidator implements EventSubscriberInterface
         foreach ($ids as $entityName => $primaryKeys) {
             $locked[$entityName] = $this->connection->createQueryBuilder()
                 ->select('1')
-                ->from(EntityDefinitionQueryHelper::escape($entityName))
-                ->where('`id` IN (:ids) AND `locked` = 1')
+                ->from($dialect->quoteIdentifier($entityName))
+                ->where($dialect->quoteIdentifier('id') . ' IN (:ids) AND ' . $dialect->quoteIdentifier('locked') . ' = :locked')
+                ->setParameter('locked', true, ParameterType::BOOLEAN)
                 ->setParameter('ids', $primaryKeys, ArrayParameterType::BINARY)
                 ->executeQuery()
                 ->rowCount() > 0;

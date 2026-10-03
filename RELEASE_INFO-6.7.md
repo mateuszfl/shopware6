@@ -2,6 +2,14 @@
 
 ## Core
 
+### DAL write callbacks follow the transaction outcome
+
+Success callbacks registered on `EntityWriteEvent` and `EntityDeleteEvent` now run after write validation and the outermost transaction managed by `RetryableTransaction` commits. Rolled-back savepoints and abandoned retry attempts discard their success callbacks. Exceptions raised by a success callback no longer retry an already committed write.
+
+Extensions that wrap DAL writes and need callbacks after the surrounding commit should use `RetryableTransaction::transactional()` or `RetryableTransaction::retryable()`. Raw DBAL transactions keep the gateway-local callback timing.
+
+Partial JSON writes now preserve literal member names containing dots, quotes or backslashes, and preserve JSON value types.
+
 ### DAL JSON filters preserve literal members and list value types
 
 JSON paths can address literal member names containing dots, quotes or backslashes by using a JSON double-quoted member, for example `payload."key.with.dot"`. List filters now preserve the supplied value's type: a numeric or boolean candidate matches the corresponding JSON value, while a string candidate remains a string.

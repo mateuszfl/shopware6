@@ -3,9 +3,7 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Doctrine;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception\DeadlockException;
 use Doctrine\DBAL\Exception\DriverException;
-use Doctrine\DBAL\Exception\LockWaitTimeoutException;
 use Doctrine\DBAL\Exception\RetryableException;
 use Doctrine\DBAL\Exception\TransactionRolledBack;
 use Shopware\Core\Framework\Log\Package;
@@ -15,6 +13,63 @@ use Shopware\Core\Framework\Telemetry\Metrics\Metric\ConfiguredMetric;
 #[Package('framework')]
 class RetryableTransaction
 {
+    /**
+     * @var \WeakMap<Connection, array{success: list<\Closure(): void>, error: list<\Closure(): void>, rollback: list<\Closure(): void>}>|null
+     */
+    private static ?\WeakMap $callbacks = null;
+
+    /**
+     * Defer external effects to the outermost transaction controlled by this helper.
+     * A rolled-back retry attempt discards its callbacks.
+     *
+     * @param \Closure(): void $success
+     * @param \Closure(): void $error
+     */
+    public static function onCommit(Connection $connection, \Closure $success, \Closure $error): void
+    {
+        if (self::$callbacks === null || !isset(self::$callbacks[$connection])) {
+            $success();
+
+            return;
+        }
+        $callbacks = self::$callbacks[$connection];
+        $callbacks['success'][] = $success;
+        $callbacks['error'][] = $error;
+        self::$callbacks[$connection] = $callbacks;
+    }
+
+    /**
+     * Restore attempt-local mutable state after rollback, including abandoned retries.
+     *
+     * @param \Closure(): void $rollback
+     */
+    public static function onRollback(Connection $connection, \Closure $rollback): void
+    {
+        if (self::$callbacks === null || !isset(self::$callbacks[$connection])) {
+            return;
+        }
+        $callbacks = self::$callbacks[$connection];
+        $callbacks['rollback'][] = $rollback;
+        self::$callbacks[$connection] = $callbacks;
+    }
+
+    /**
+     * Report a failed operation only if the enclosing managed transaction finally fails.
+     *
+     * @param \Closure(): void $error
+     */
+    public static function onError(Connection $connection, \Closure $error): void
+    {
+        if (self::$callbacks === null || !isset(self::$callbacks[$connection])) {
+            $error();
+
+            return;
+        }
+        $callbacks = self::$callbacks[$connection];
+        $callbacks['error'][] = $error;
+        self::$callbacks[$connection] = $callbacks;
+    }
+
     /**
      * Executes the given closure inside a DBAL transaction. In case of a deadlock (RetryableException) the transaction
      * is rolled back and the closure will be retried. Because it may run multiple times the closure should not cause
@@ -28,7 +83,7 @@ class RetryableTransaction
      */
     public static function retryable(Connection $connection, \Closure $closure)
     {
-        return self::retry($connection, $closure, 0, $connection->getTransactionNestingLevel());
+        return self::withCallbacks($connection, fn () => self::retry($connection, $closure, 0, $connection->getTransactionNestingLevel()));
     }
 
     /**
@@ -42,6 +97,18 @@ class RetryableTransaction
      * @return TReturn
      */
     public static function transactional(Connection $connection, \Closure $closure)
+    {
+        return self::withCallbacks($connection, fn () => self::executeTransaction($connection, $closure));
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param \Closure(Connection): TReturn $closure
+     *
+     * @return TReturn
+     */
+    private static function executeTransaction(Connection $connection, \Closure $closure)
     {
         $originalNestingLevel = $connection->getTransactionNestingLevel();
         try {
@@ -96,6 +163,7 @@ class RetryableTransaction
             // in condition above
             self::fixConnection($connection);
 
+            self::runRollbackCallbacks($connection);
             $deadlockRelatedException = self::deadlockRelatedException($e);
 
             if ($deadlockRelatedException) {
@@ -109,7 +177,83 @@ class RetryableTransaction
             // Randomize sleep to prevent same execution delay for multiple statements
             usleep(random_int(10, 20));
 
+            if (self::$callbacks !== null && isset(self::$callbacks[$connection])) {
+                self::$callbacks[$connection] = ['success' => [], 'error' => [], 'rollback' => []];
+            }
+
             return self::retry($connection, $closure, $counter, $transactionNestingLevel);
+        }
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param \Closure(): TReturn $operation
+     *
+     * @return TReturn
+     */
+    private static function withCallbacks(Connection $connection, \Closure $operation)
+    {
+        $scopes = self::$callbacks ??= new \WeakMap();
+        if (isset($scopes[$connection])) {
+            $checkpoint = $scopes[$connection];
+            try {
+                return $operation();
+            } catch (\Throwable $exception) {
+                self::runRollbackCallbacks($connection, \count($checkpoint['rollback']));
+                $scopes[$connection] = $checkpoint;
+
+                throw $exception;
+            }
+        }
+        if ($connection->getTransactionNestingLevel() > 0) {
+            return $operation();
+        }
+        self::$callbacks[$connection] = ['success' => [], 'error' => [], 'rollback' => []];
+        try {
+            $result = $operation();
+        } catch (\Throwable $exception) {
+            self::runRollbackCallbacks($connection);
+            $callbacks = self::takeCallbacks($connection, success: false);
+            foreach ($callbacks as $callback) {
+                $callback();
+            }
+
+            throw $exception;
+        }
+        $callbacks = self::takeCallbacks($connection, success: true);
+        foreach ($callbacks as $callback) {
+            $callback();
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<\Closure(): void>
+     */
+    private static function takeCallbacks(Connection $connection, bool $success): array
+    {
+        if (self::$callbacks === null || !isset(self::$callbacks[$connection])) {
+            return [];
+        }
+        $callbacks = self::$callbacks[$connection][$success ? 'success' : 'error'];
+        unset(self::$callbacks[$connection]);
+
+        return $callbacks;
+    }
+
+    private static function runRollbackCallbacks(Connection $connection, int $offset = 0): void
+    {
+        if (self::$callbacks === null || !isset(self::$callbacks[$connection])) {
+            return;
+        }
+        $callbacks = self::$callbacks[$connection];
+        $rollback = \array_slice($callbacks['rollback'], $offset);
+        $callbacks['rollback'] = \array_slice($callbacks['rollback'], 0, $offset);
+        self::$callbacks[$connection] = $callbacks;
+        foreach (array_reverse($rollback) as $callback) {
+            $callback();
         }
     }
 
@@ -117,8 +261,7 @@ class RetryableTransaction
     {
         return
             $e instanceof TransactionRolledBack
-            || $e instanceof DeadlockException
-            || $e instanceof LockWaitTimeoutException
+            || $e instanceof RetryableException
             // caused by the https://github.com/doctrine/dbal/issues/6651
             || ($e instanceof DriverException && preg_match('/SAVEPOINT [^\s]+ does not exist/', $e->getMessage()))
         ;

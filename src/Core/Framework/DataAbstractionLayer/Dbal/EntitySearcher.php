@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\AutoIncrementField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
@@ -70,7 +71,7 @@ class EntitySearcher implements EntitySearcherInterface
 
         foreach ($fields as $field) {
             $query->addSelect(
-                EntityDefinitionQueryHelper::escape($table) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName())
+                EntityDefinitionQueryHelper::escape($table, $this->connection) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection)
             );
         }
 
@@ -124,6 +125,13 @@ class EntitySearcher implements EntitySearcherInterface
                     continue;
                 }
 
+                if (\is_resource($value)) {
+                    $bytes = stream_get_contents($value);
+                    if ($bytes === false) {
+                        throw DataAbstractionLayerException::unreadableHydrationValue($storageName);
+                    }
+                    $value = $bytes;
+                }
                 $value = $field->getSerializer()->decode($field, $value);
 
                 $data[$field->getPropertyName()] = $value;
@@ -174,7 +182,7 @@ class EntitySearcher implements EntitySearcherInterface
 
             $rankingOrder[] = 'inner_q.' . EntityDefinitionQueryHelper::escape($storageName) . ' ASC';
             $query->addGroupBy(
-                EntityDefinitionQueryHelper::escape($table) . '.' . EntityDefinitionQueryHelper::escape($storageName)
+                EntityDefinitionQueryHelper::escape($table, $this->connection) . '.' . EntityDefinitionQueryHelper::escape($storageName)
             );
         }
 

@@ -14,6 +14,9 @@ use Symfony\Contracts\EventDispatcher\Event;
  * the success and error callbacks. You can call the `addSuccess` or `addError` methods with any PHP callable.
  *
  * You can use this event to capture state and perform actions and sync data after an entity is written. It could be used for example, to synchronize images to a CDN when they are written, updated or deleted. This event is useful when you need the before state of the entity. For example, the old filename.
+ * Success callbacks run after validation and the outermost transaction managed by RetryableTransaction commits.
+ * Callbacks from rolled-back savepoints or abandoned retry attempts are discarded. Use RetryableTransaction for
+ * surrounding transactions that require this timing; raw DBAL transactions retain the gateway-local timing.
  */
 #[Package('framework')]
 class EntityWriteEvent extends Event implements ShopwareEvent

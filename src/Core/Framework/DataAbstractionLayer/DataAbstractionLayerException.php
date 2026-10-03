@@ -155,6 +155,16 @@ class DataAbstractionLayerException extends HttpException
     public const FIELD_CANNOT_BE_EXCLUDED = 'FRAMEWORK__DAL_FIELD_CANNOT_BE_EXCLUDED';
     public const CANNOT_EXCLUDE_UNKNOWN_FIELD = 'FRAMEWORK__DAL_CANNOT_EXCLUDE_UNKNOWN_FIELD';
 
+    public static function invalidWriteOperation(string $reason): self
+    {
+        return new self(
+            Response::HTTP_BAD_REQUEST,
+            'FRAMEWORK__INVALID_WRITE_OPERATION',
+            'Invalid database write operation: {{ reason }}.',
+            ['reason' => $reason],
+        );
+    }
+
     public static function criteriaFieldsAndExcludedFieldsAreMutuallyExclusive(): self
     {
         return new self(

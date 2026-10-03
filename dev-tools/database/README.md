@@ -56,7 +56,9 @@ Bound JSON/config/custom-field/price selectors, list filters, nested aggregation
 and cheapest-price reads have their own cross-engine suite. See
 [DAL_READ_CONTRACT.md](DAL_READ_CONTRACT.md) and
 [JSON_READ_CONTRACT.md](JSON_READ_CONTRACT.md) for the supported behaviors,
-commands and remaining work. Production writes, full repository search, schema
+commands and remaining work. Production DAL writes, batch conflicts, partial
+JSON updates and transaction effects are verified by
+[DAL_WRITE_CONTRACT.md](DAL_WRITE_CONTRACT.md). Full repository search, schema
 generation and index producers are ported separately.
 
 ## Verification

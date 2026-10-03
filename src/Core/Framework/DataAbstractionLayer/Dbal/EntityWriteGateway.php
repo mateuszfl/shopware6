@@ -3,9 +3,13 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Connections\PrimaryReadReplicaConnection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\Exception\RetryableException;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\QueryBuilder as DbalQueryBuilderAlias;
+use Shopware\Core\Framework\Adapter\Database\DatabaseDialect;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
@@ -15,7 +19,10 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityTranslationDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityDeleteEvent;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWriteEvent;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\BlobField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StorageAware;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
@@ -53,6 +60,8 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
 {
     private ?PrimaryKeyBag $primaryKeyBag = null;
 
+    private readonly DatabaseDialect $dialect;
+
     public function __construct(
         private readonly int $batchSize,
         private readonly Connection $connection,
@@ -60,11 +69,15 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
         private readonly ExceptionHandlerRegistry $exceptionHandlerRegistry,
         private readonly DefinitionInstanceRegistry $definitionInstanceRegistry
     ) {
+        $this->dialect = (new DatabasePlatformResolver($connection))->dialect();
     }
 
     #[ParameterNameChange(version: 'v6.8.0', parameterName: 'parameters', newName: 'parameterBag', description: 'Matches the parameter name of the interface.')]
     public function prefetchExistences(WriteParameterBag $parameters): void
     {
+        if ($this->connection instanceof PrimaryReadReplicaConnection) {
+            $this->connection->ensureConnectedToPrimary();
+        }
         $this->primaryKeyBag = $parameters->getPrimaryKeyBag();
         $primaryKeyBag = $this->primaryKeyBag;
 
@@ -106,24 +119,42 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
      */
     public function execute(array $commands, WriteContext $context): void
     {
+        if ($this->connection instanceof PrimaryReadReplicaConnection) {
+            $this->connection->ensureConnectedToPrimary();
+        }
         $beforeWriteEvent = EntityWriteEvent::create($context, $commands);
+        $entityDeleteEvent = EntityDeleteEvent::create($context, $commands);
 
         $this->eventDispatcher->dispatch($beforeWriteEvent);
+        if ($entityDeleteEvent->filled()) {
+            $this->eventDispatcher->dispatch($entityDeleteEvent);
+        }
 
         try {
             RetryableTransaction::retryable($this->connection, function () use ($commands, $context): void {
                 $this->executeCommands($commands, $context);
             });
-
-            $beforeWriteEvent->success();
         } catch (\Throwable $e) {
-            $event = new WriteCommandExceptionEvent($e, $commands, $context->getContext());
-            $this->eventDispatcher->dispatch($event);
-
-            $beforeWriteEvent->error();
+            RetryableTransaction::onError($this->connection, function () use ($e, $commands, $context, $entityDeleteEvent, $beforeWriteEvent): void {
+                $event = new WriteCommandExceptionEvent($e, $commands, $context->getContext());
+                $this->eventDispatcher->dispatch($event);
+                $entityDeleteEvent->error();
+                $beforeWriteEvent->error();
+            });
 
             throw $e;
         }
+        RetryableTransaction::onCommit(
+            $this->connection,
+            static function () use ($entityDeleteEvent, $beforeWriteEvent): void {
+                $entityDeleteEvent->success();
+                $beforeWriteEvent->success();
+            },
+            static function () use ($entityDeleteEvent, $beforeWriteEvent): void {
+                $entityDeleteEvent->error();
+                $beforeWriteEvent->error();
+            },
+        );
     }
 
     /**
@@ -131,11 +162,6 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
      */
     private function executeCommands(array $commands, WriteContext $context): void
     {
-        $entityDeleteEvent = EntityDeleteEvent::create($context, $commands);
-        if ($entityDeleteEvent->filled()) {
-            $this->eventDispatcher->dispatch($entityDeleteEvent);
-        }
-
         // throws exception on violation and then aborts/rollbacks this transaction
         $event = new PreWriteValidationEvent($context, $commands);
         $this->eventDispatcher->dispatch($event);
@@ -174,8 +200,8 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
                     if ($command instanceof DeleteCommand) {
                         $executeInserts();
 
-                        RetryableQuery::retryable($this->connection, function () use ($command, $table): void {
-                            $this->connection->delete(EntityDefinitionQueryHelper::escape($table), $command->getPrimaryKey());
+                        RetryableQuery::retryable($this->connection, function () use ($command, $table, $definition): void {
+                            $this->connection->delete($this->dialect->quoteIdentifier($table), $this->escapeColumnKeys($command->getPrimaryKey()), $this->parameterTypes($definition, $command->getPrimaryKey()));
                         });
 
                         continue;
@@ -189,7 +215,8 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
                     }
 
                     if ($definition instanceof MappingEntityDefinition && $command instanceof InsertCommand) {
-                        $mappings->addInsert($definition->getEntityName(), $command->getPayload());
+                        $mappings->setConflictTarget($table, array_keys($command->getPrimaryKey()));
+                        $mappings->addInsert($table, $command->getPayload(), $this->parameterTypes($definition, $command->getPayload(), escaped: false));
 
                         continue;
                     }
@@ -197,11 +224,12 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
                     if ($command instanceof UpdateCommand) {
                         $executeInserts();
 
-                        RetryableQuery::retryable($this->connection, function () use ($command, $table): void {
+                        RetryableQuery::retryable($this->connection, function () use ($command, $table, $definition): void {
                             $this->connection->update(
-                                EntityDefinitionQueryHelper::escape($table),
+                                $this->dialect->quoteIdentifier($table),
                                 $this->escapeColumnKeys($command->getPayload()),
-                                $command->getPrimaryKey()
+                                $this->escapeColumnKeys($command->getPrimaryKey()),
+                                $this->parameterTypes($definition, $command->getPayload() + $command->getPrimaryKey())
                             );
                         });
 
@@ -209,13 +237,16 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
                     }
 
                     if ($command instanceof InsertCommand) {
-                        $inserts->addInsert($definition->getEntityName(), $command->getPayload());
+                        $inserts->addInsert($table, $command->getPayload(), $this->parameterTypes($definition, $command->getPayload(), escaped: false));
 
                         continue;
                     }
 
                     throw DataAbstractionLayerException::unsupportedCommandType($command);
                 } catch (\Exception $e) {
+                    if ($e instanceof RetryableException) {
+                        throw $e;
+                    }
                     $command->setFailed(true);
 
                     $innerException = $this->exceptionHandlerRegistry->matchException($e);
@@ -231,15 +262,15 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
 
             $mappings->execute();
             $inserts->execute();
-            $entityDeleteEvent->success();
         } catch (Exception $e) {
+            if ($e instanceof RetryableException) {
+                throw $e;
+            }
             $innerException = $this->exceptionHandlerRegistry->matchException($e);
             if ($innerException !== null) {
                 $e = $innerException;
             }
             $context->getExceptions()->add($e);
-
-            $entityDeleteEvent->error();
 
             throw $e;
         }
@@ -269,8 +300,8 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
         }
 
         $query = $this->connection->createQueryBuilder();
-        $query->from(EntityDefinitionQueryHelper::escape($definition->getEntityName()));
-        $query->addSelect('1 as `exists`');
+        $query->from($this->dialect->quoteIdentifier($definition->getEntityName()));
+        $query->addSelect('1 as ' . $this->dialect->quoteIdentifier('exists'));
 
         if ($definition->isChildrenAware()) {
             $query->addSelect('parent_id');
@@ -279,17 +310,17 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
 
             if ($parent !== null) {
                 $query->addSelect(
-                    EntityDefinitionQueryHelper::escape($parent->getStorageName())
-                    . ' as `parent`'
+                    $this->dialect->quoteIdentifier($parent->getStorageName())
+                    . ' as ' . $this->dialect->quoteIdentifier('parent')
                 );
             }
         }
 
         foreach ($pkFields as $storageName => $_) {
-            $query->addSelect(EntityDefinitionQueryHelper::escape($storageName));
+            $query->addSelect($this->dialect->quoteIdentifier($storageName));
         }
         if ($versionField) {
-            $query->addSelect(EntityDefinitionQueryHelper::escape($versionField->getStorageName()));
+            $query->addSelect($this->dialect->quoteIdentifier($versionField->getStorageName()));
         }
 
         foreach (array_chunk($pks, 500, true) as $chunk) {
@@ -325,7 +356,7 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
             }
 
             $placeholders = $this->getPlaceholders(\count($pkFields), $tupleCount);
-            $columns = '`' . implode('`,`', array_keys($pkFields)) . '`';
+            $columns = implode(',', array_map($this->dialect->quoteIdentifier(...), array_keys($pkFields)));
             if (\count($pkFields) > 1) {
                 $columns = '(' . $columns . ')';
             }
@@ -338,9 +369,9 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
                 $params[] = Uuid::fromHexToBytes($parameters->getContext()->getContext()->getVersionId());
             }
 
-            $query->setParameters($params);
+            $query->setParameters($params, array_fill(0, \count($params), ParameterType::BINARY));
 
-            $result = $query->executeQuery()->fetchAllAssociative();
+            $result = array_map(self::normalizeState(...), $query->executeQuery()->fetchAllAssociative());
 
             $primaryKeyBag = $parameters->getPrimaryKeyBag();
 
@@ -364,105 +395,65 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
         }
     }
 
-    /**
-     * @param array<mixed> $array
-     */
-    private function isAssociative(array $array): bool
-    {
-        foreach ($array as $key => $_value) {
-            if (!\is_int($key)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private function executeJsonUpdate(JsonUpdateCommand $command): void
     {
-        /*
-         * mysql json functions are tricky.
-         *
-         * TL;DR: cast objects and arrays to json
-         *
-         * This works:
-         *
-         * SELECT JSON_SET('{"a": "b"}', '$.a', 7)
-         * SELECT JSON_SET('{"a": "b"}', '$.a', "str")
-         *
-         * This does NOT work:
-         *
-         * SELECT JSON_SET('{"a": "b"}', '$.a', '{"foo": "bar"}')
-         *
-         * Instead, you have to do this, because mysql cannot differentiate between a string and a json string:
-         *
-         * SELECT JSON_SET('{"a": "b"}', '$.a', CAST('{"foo": "bar"}' AS json))
-         * SELECT JSON_SET('{"a": "b"}', '$.a', CAST('["foo", "bar"]' AS json))
-         *
-         * Yet this does NOT work:
-         *
-         * SELECT JSON_SET('{"a": "b"}', '$.a', CAST("str" AS json))
-         *
-         */
+        $fragment = $this->dialect->jsonSetMembers($command->getStorageName(), $command->getPayload());
+        $conditions = [];
+        foreach ($command->getPrimaryKey() as $column => $_) {
+            $conditions[] = $this->dialect->quoteIdentifier($column) . ' = ?';
+        }
+        $sql = 'UPDATE ' . $this->dialect->quoteIdentifier($command->getEntityName())
+            . ' SET ' . $this->dialect->quoteIdentifier($command->getStorageName()) . ' = ' . $fragment->sql
+            . ' WHERE ' . implode(' AND ', $conditions);
+        RetryableQuery::retryable($this->connection, function () use ($sql, $fragment, $command): void {
+            $this->connection->executeStatement(
+                $sql,
+                array_merge(array_values($fragment->parameters), array_values($command->getPrimaryKey())),
+                array_merge(array_values($fragment->types), array_fill(0, \count($command->getPrimaryKey()), ParameterType::BINARY))
+            );
+        });
+    }
 
-        $values = [];
-        $sets = [];
+    /**
+     * @param array<string, mixed> $values
+     *
+     * @return array<string, ParameterType>
+     */
+    private function parameterTypes(EntityDefinition $definition, array $values, bool $escaped = true): array
+    {
         $types = [];
+        foreach ($values as $column => $value) {
+            $field = $definition->getFields()->getByStorageName($column);
+            $types[$escaped ? $this->dialect->quoteIdentifier($column) : $column] = match (true) {
+                $value === null => ParameterType::NULL,
+                $field instanceof IdField, $field instanceof FkField, $field instanceof BlobField => ParameterType::BINARY,
+                $field instanceof BoolField => ParameterType::BOOLEAN,
+                \is_int($value) => ParameterType::INTEGER,
+                default => ParameterType::STRING,
+            };
+        }
 
-        $query = new QueryBuilder($this->connection);
-        $query->update('`' . $command->getEntityName() . '`');
+        return $types;
+    }
 
-        foreach ($command->getPayload() as $attribute => $value) {
-            // add path and value for each attribute value pair
-            $values[] = '$."' . $attribute . '"';
-            $types[] = ParameterType::STRING;
-            if (\is_array($value) || \is_object($value)) {
-                $types[] = ParameterType::STRING;
-                $values[] = json_encode($value, \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION | \JSON_UNESCAPED_UNICODE);
-                // does the same thing as CAST(?, json) but works on mariadb
-                $identityValue = \is_object($value) || $this->isAssociative($value) ? '{}' : '[]';
-                $sets[] = '?, JSON_MERGE("' . $identityValue . '", ?)';
-            } else {
-                if (!\is_bool($value)) {
-                    $values[] = $value;
+    /**
+     * @param array<string, mixed> $state
+     *
+     * @return array<string, mixed>
+     */
+    private static function normalizeState(array $state): array
+    {
+        foreach ($state as $column => $value) {
+            if (\is_resource($value)) {
+                $bytes = stream_get_contents($value);
+                if ($bytes === false) {
+                    throw DataAbstractionLayerException::unreadableHydrationValue($column);
                 }
-
-                $set = '?, ?';
-
-                if (\is_float($value)) {
-                    $types[] = ParameterType::STRING;
-                    $set = '?, ? + 0.0';
-                } elseif (\is_int($value)) {
-                    $types[] = ParameterType::INTEGER;
-                } elseif (\is_bool($value)) {
-                    $set = '?, ' . ($value ? 'true' : 'false');
-                } else {
-                    $types[] = ParameterType::STRING;
-                }
-
-                $sets[] = $set;
+                $state[$column] = $bytes;
             }
         }
 
-        $storageName = $command->getStorageName();
-        $query->set(
-            $storageName,
-            \sprintf(
-                'JSON_SET(IFNULL(%s, "{}"), %s)',
-                EntityDefinitionQueryHelper::escape($storageName),
-                implode(', ', $sets)
-            )
-        );
-
-        $identifier = $command->getPrimaryKey();
-        foreach ($identifier as $key => $_value) {
-            $query->andWhere(EntityDefinitionQueryHelper::escape($key) . ' = ?');
-        }
-        $query->setParameters([...$values, ...array_values($identifier)], $types);
-
-        RetryableQuery::retryable($this->connection, static function () use ($query): void {
-            $query->executeStatement();
-        });
+        return $state;
     }
 
     /**
@@ -474,7 +465,7 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
     {
         $escaped = [];
         foreach ($payload as $key => $value) {
-            $escaped[EntityDefinitionQueryHelper::escape($key)] = $value;
+            $escaped[$this->dialect->quoteIdentifier($key)] = $value;
         }
 
         return $escaped;
@@ -510,11 +501,11 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
             $query = $this->connection->createQueryBuilder();
 
             $query->addSelect('*');
-            $query->from(EntityDefinitionQueryHelper::escape($entity));
+            $query->from($this->dialect->quoteIdentifier($entity));
 
             $this->addPrimaryCondition($query, $ids);
 
-            $states[$entity] = $query->executeQuery()->fetchAllAssociative();
+            $states[$entity] = array_map(self::normalizeState(...), $query->executeQuery()->fetchAllAssociative());
         }
 
         foreach ($commands as $command) {
@@ -546,9 +537,9 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
 
             foreach ($primaryKey as $field => $value) {
                 ++$i;
-                $field = EntityDefinitionQueryHelper::escape($field);
+                $field = $this->dialect->quoteIdentifier($field);
                 $where[] = $field . ' = :param' . $i;
-                $query->setParameter('param' . $i, $value);
+                $query->setParameter('param' . $i, $value, ParameterType::BINARY);
             }
 
             $all[] = implode(' AND ', $where);
@@ -680,7 +671,7 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
     private function fetchFromDatabase(EntityDefinition $definition, array $primaryKey): array
     {
         $query = $this->connection->createQueryBuilder();
-        $query->from(EntityDefinitionQueryHelper::escape($definition->getEntityName()));
+        $query->from($this->dialect->quoteIdentifier($definition->getEntityName()));
 
         foreach ($definition->getPrimaryKeys() as $field) {
             if (!$field instanceof StorageAware) {
@@ -696,11 +687,11 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
             }
 
             $param = 'param_' . Uuid::randomHex();
-            $query->andWhere(EntityDefinitionQueryHelper::escape($field->getStorageName()) . ' = :' . $param);
-            $query->setParameter($param, $primaryKey[$field->getStorageName()]);
+            $query->andWhere($this->dialect->quoteIdentifier($field->getStorageName()) . ' = :' . $param);
+            $query->setParameter($param, $primaryKey[$field->getStorageName()], ParameterType::BINARY);
         }
 
-        $query->addSelect('1 as `exists`');
+        $query->addSelect('1 as ' . $this->dialect->quoteIdentifier('exists'));
 
         if ($definition->isChildrenAware()) {
             $query->addSelect('parent_id');
@@ -709,8 +700,8 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
 
             if ($parent !== null) {
                 $query->addSelect(
-                    EntityDefinitionQueryHelper::escape($parent->getStorageName())
-                    . ' as `parent`'
+                    $this->dialect->quoteIdentifier($parent->getStorageName())
+                    . ' as ' . $this->dialect->quoteIdentifier('parent')
                 );
             }
         }
@@ -720,7 +711,7 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
             $exists = [];
         }
 
-        return $exists;
+        return self::normalizeState($exists);
     }
 
     /**

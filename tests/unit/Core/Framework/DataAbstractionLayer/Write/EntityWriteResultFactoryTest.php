@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Write;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -51,7 +52,7 @@ class EntityWriteResultFactoryTest extends TestCase
 
         $factory = new EntityWriteResultFactory(
             $registry,
-            static::createStub(Connection::class)
+            $this->connection()
         );
 
         $queue = new WriteCommandQueue();
@@ -220,7 +221,7 @@ class EntityWriteResultFactoryTest extends TestCase
 
         $result = (new EntityWriteResultFactory(
             $registry,
-            static::createStub(Connection::class)
+            $this->connection()
         ))->build($queue);
 
         static::assertCount(1, $result['country']);
@@ -265,7 +266,7 @@ class EntityWriteResultFactoryTest extends TestCase
 
         $result = (new EntityWriteResultFactory(
             $registry,
-            static::createStub(Connection::class)
+            $this->connection()
         ))->build($queue);
 
         static::assertCount(1, $result[TestJsonDefinition::ENTITY_NAME]);
@@ -286,7 +287,7 @@ class EntityWriteResultFactoryTest extends TestCase
 
         $factory = new EntityWriteResultFactory(
             $registry,
-            static::createStub(Connection::class)
+            $this->connection()
         );
 
         $ids = new IdsCollection();
@@ -308,7 +309,7 @@ class EntityWriteResultFactoryTest extends TestCase
 
         $factory = new EntityWriteResultFactory(
             $registry,
-            static::createStub(Connection::class)
+            $this->connection()
         );
 
         $ids = new IdsCollection();
@@ -322,6 +323,15 @@ class EntityWriteResultFactoryTest extends TestCase
         $parentResult = $results[TestParentDefinition::ENTITY_NAME][0];
         static::assertSame($ids->get('parent-1'), $parentResult->getPrimaryKey());
         static::assertSame(EntityWriteResult::OPERATION_UPDATE, $parentResult->getOperation());
+    }
+
+    private function connection(): Connection
+    {
+        $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+
+        return $connection;
     }
 }
 

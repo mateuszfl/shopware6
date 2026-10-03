@@ -4,6 +4,7 @@ namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Doctrine;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -282,6 +283,13 @@ class MultiInsertQueryQueueTest extends TestCase
         new MultiInsertQueryQueue($connection, 0);
     }
 
+    public function testEmptyConflictTargetIsRejected(): void
+    {
+        $queue = new MultiInsertQueryQueue(static::createStub(Connection::class));
+        $this->expectExceptionObject(DataAbstractionLayerException::invalidWriteOperation('a conflict target cannot be empty'));
+        $queue->setConflictTarget('table', []);
+    }
+
     /**
      * Records the statements the queue executes, so the generated SQL can be asserted afterwards.
      *
@@ -290,6 +298,8 @@ class MultiInsertQueryQueueTest extends TestCase
     private function createRecordingConnection(array &$executed): Connection
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('transactional')->willReturnCallback(
             static fn (\Closure $callback): mixed => $callback($connection)
         );

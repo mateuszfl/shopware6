@@ -2,13 +2,18 @@
 
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer;
 
+use Doctrine\DBAL\Driver\PDO\Exception as PdoException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\DBAL\Query;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Payment\PaymentException;
 use Shopware\Core\Checkout\Shipping\ShippingException;
 use Shopware\Core\Content\ImportExport\ImportExportException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\ExceptionHandlerInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\TechnicalNameExceptionHandler;
+use Shopware\Core\Framework\HttpException;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -69,6 +74,29 @@ class TechnicalNameExceptionHandlerTest extends TestCase
         static::assertInstanceOf(ImportExportException::class, $e);
         static::assertSame(ImportExportException::DUPLICATE_TECHNICAL_NAME, $e->getErrorCode());
         static::assertSame('The technical name "import_export_test" is not unique.', $e->getMessage());
+    }
+
+    #[DataProvider('postgresqlConstraints')]
+    public function testPostgreSqlUniqueConstraintsUseDomainExceptions(string $table, string $constraint, string $expectedCode): void
+    {
+        $driver = new PdoException('duplicate key value violates unique constraint "' . $constraint . '"
+DETAIL: Key (technical_name)=(literal, name) already exists.', '23505');
+        $exception = new UniqueConstraintViolationException($driver, new Query('INSERT INTO "' . $table . '" VALUES (?)', [], []));
+        $mapped = (new TechnicalNameExceptionHandler())->matchException($exception);
+        static::assertNotNull($mapped);
+        static::assertInstanceOf(HttpException::class, $mapped);
+        static::assertSame($expectedCode, $mapped->getErrorCode());
+        static::assertSame('The technical name "literal, name" is not unique.', $mapped->getMessage());
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function postgresqlConstraints(): iterable
+    {
+        yield 'payment index scoped by table' => ['payment_method', 'uniq.technical_name', PaymentException::PAYMENT_METHOD_DUPLICATE_TECHNICAL_NAME];
+        yield 'shipping index scoped by table' => ['shipping_method', 'uniq.technical_name', ShippingException::SHIPPING_METHOD_DUPLICATE_TECHNICAL_NAME];
+        yield 'import profile named index' => ['import_export_profile', 'uniq.import_export_profile.technical_name', ImportExportException::DUPLICATE_TECHNICAL_NAME];
     }
 
     public function testUnrelatedException(): void

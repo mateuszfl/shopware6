@@ -4,8 +4,10 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Write;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabaseDialect;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
-use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityWriteResult;
@@ -33,13 +35,13 @@ use Shopware\Core\Framework\Uuid\Uuid;
 #[Package('framework')]
 class EntityWriteResultFactory
 {
-    /**
-     * @internal
-     */
+    private readonly DatabaseDialect $dialect;
+
     public function __construct(
         private readonly DefinitionInstanceRegistry $registry,
         private readonly Connection $connection
     ) {
+        $this->dialect = (new DatabasePlatformResolver($connection))->dialect();
     }
 
     /**
@@ -294,8 +296,8 @@ class EntityWriteResultFactory
     private function fetchParentIds(EntityDefinition $definition, array $rawData): array
     {
         $fetchQuery = \sprintf(
-            'SELECT DISTINCT LOWER(HEX(parent_id)) as id FROM %s WHERE id IN (:ids)',
-            EntityDefinitionQueryHelper::escape($definition->getEntityName())
+            'SELECT DISTINCT LOWER(' . $this->dialect->hex('parent_id') . ') as id FROM %s WHERE id IN (:ids)',
+            $this->dialect->quoteIdentifier($definition->getEntityName())
         );
 
         $parentIds = $this->connection->fetchAllAssociative(
@@ -576,9 +578,9 @@ class EntityWriteResultFactory
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(' . EntityDefinitionQueryHelper::escape($fkField->getStorageName()) . '))'
+            'LOWER(' . $this->dialect->hex($fkField->getStorageName()) . ')'
         );
-        $query->from(EntityDefinitionQueryHelper::escape($definition->getEntityName()));
+        $query->from($this->dialect->quoteIdentifier($definition->getEntityName()));
 
         foreach ($definition->getPrimaryKeys() as $index => $primaryKey) {
             $property = $primaryKey->getPropertyName();
@@ -599,10 +601,10 @@ class EntityWriteResultFactory
             $key = 'primaryKey' . $index;
 
             $query->andWhere(
-                EntityDefinitionQueryHelper::escape($primaryKey->getStorageName()) . ' = :' . $key
+                $this->dialect->quoteIdentifier($primaryKey->getStorageName()) . ' = :' . $key
             );
 
-            $query->setParameter($key, Uuid::fromHexToBytes($rawData[$property]));
+            $query->setParameter($key, Uuid::fromHexToBytes($rawData[$property]), ParameterType::BINARY);
         }
 
         $fk = $query->executeQuery()->fetchOne();

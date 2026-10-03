@@ -21,6 +21,9 @@
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/JsonAccessorContractTest.php</file>
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/JsonCriteriaContractTest.php</file>
         </testsuite>
+        <testsuite name="database-dal-write">
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/EntityWriteContractTest.php</file>
+        </testsuite>
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>

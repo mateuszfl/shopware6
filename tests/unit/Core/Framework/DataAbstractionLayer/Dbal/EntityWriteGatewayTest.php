@@ -2,6 +2,8 @@
 
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Dbal;
 
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Context;
@@ -40,6 +42,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class EntityWriteGatewayTest extends TestCase
 {
     private readonly EventDispatcherInterface $dispatcher;
+
+    private EntityDefinition $definition;
 
     protected function setUp(): void
     {
@@ -96,12 +100,25 @@ class EntityWriteGatewayTest extends TestCase
 
     private function createGateway(): EntityWriteGateway
     {
+        $registry = static::createStub(DefinitionInstanceRegistry::class);
+        $registry->method('getByEntityName')->willReturnCallback(fn (): EntityDefinition => $this->definition);
+
         return new EntityWriteGateway(
             100,
-            new FakeConnection([]),
+            new class([]) extends FakeConnection {
+                public function getParams(): array
+                {
+                    return ['driver' => 'pdo_mysql'];
+                }
+
+                public function getDatabasePlatform(): AbstractPlatform
+                {
+                    return new MySQLPlatform();
+                }
+            },
             $this->dispatcher,
             static::createStub(ExceptionHandlerRegistry::class),
-            static::createStub(DefinitionInstanceRegistry::class)
+            $registry
         );
     }
 
@@ -123,6 +140,7 @@ class EntityWriteGatewayTest extends TestCase
             }
         };
 
+        $this->definition = $definition;
         $registry = new StaticDefinitionInstanceRegistry(
             [$definition],
             static::createStub(ValidatorInterface::class),

@@ -16,6 +16,11 @@ interface DatabaseDialect
 {
     public function capabilities(): DatabaseCapabilities;
 
+    /**
+     * Query counting conflicts that cannot use the audited delete/insert replacement strategy.
+     */
+    public function unsupportedReplacementConflicts(string $table): SqlFragment;
+
     public function quoteIdentifier(string $identifier): string;
 
     /**
@@ -86,6 +91,19 @@ interface DatabaseDialect
      * @param array<string, ParameterType> $types
      */
     public function upsert(string $table, array $values, array $conflictColumns, array $updateColumns, array $types = []): SqlFragment;
+
+    /**
+     * @param list<string> $conflictColumns
+     * @param list<string> $updateColumns
+     */
+    public function insertConflictClause(array $conflictColumns, array $updateColumns, bool $ignoreDuplicates = false): string;
+
+    /**
+     * Atomically replace literal top-level members, retaining other members and scalar/array roots.
+     *
+     * @param array<string, mixed> $members
+     */
+    public function jsonSetMembers(string $column, array $members): SqlFragment;
 
     public function queryShape(): DatabaseQueryShape;
 }

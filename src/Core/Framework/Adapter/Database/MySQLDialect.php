@@ -15,6 +15,12 @@ use Shopware\Core\Framework\Log\Package;
 #[Package('framework')]
 final class MySQLDialect extends AbstractDatabaseDialect
 {
+    public function unsupportedReplacementConflicts(string $table): SqlFragment
+    {
+        // Native REPLACE resolves all unique indexes, including functional indexes.
+        return new SqlFragment('SELECT 0');
+    }
+
     public function capabilities(): DatabaseCapabilities
     {
         return new DatabaseCapabilities(false, false, false, false);
@@ -105,6 +111,33 @@ final class MySQLDialect extends AbstractDatabaseDialect
     public function hexAggregate(string|array $column, string $separator = '||'): SqlFragment
     {
         return new SqlFragment('GROUP_CONCAT(' . $this->hex($column) . ' ORDER BY ' . $this->quoteColumn($column) . ' SEPARATOR ?)', [$separator], [ParameterType::STRING]);
+    }
+
+    public function insertConflictClause(array $conflictColumns, array $updateColumns, bool $ignoreDuplicates = false): string
+    {
+        return $updateColumns === [] ? '' : $this->upsertClause($conflictColumns, $updateColumns);
+    }
+
+    public function jsonSetMembers(string $column, array $members): SqlFragment
+    {
+        $column = $this->quoteIdentifier($column);
+        if ($members === []) {
+            return new SqlFragment($column);
+        }
+
+        $arguments = [];
+        $parameters = [];
+        foreach ($members as $member => $value) {
+            $arguments[] = '?, JSON_EXTRACT(?, \'$\')';
+            $parameters[] = '$.' . json_encode((string) $member, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
+            $parameters[] = json_encode($value, \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION | \JSON_UNESCAPED_UNICODE);
+        }
+
+        return new SqlFragment(
+            "JSON_SET(COALESCE($column, '{}'), " . implode(', ', $arguments) . ')',
+            $parameters,
+            array_fill(0, \count($parameters), ParameterType::STRING),
+        );
     }
 
     public function queryShape(): DatabaseQueryShape
