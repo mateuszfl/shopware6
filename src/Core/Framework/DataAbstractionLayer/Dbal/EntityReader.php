@@ -1039,17 +1039,22 @@ class EntityReader implements EntityReaderInterface
         $orderBy = $query->getOrderByPairs();
         $query->resetOrderBy();
         $query->select($root . '.' . $localColumn . ' as local_id', $root . '.' . $referenceColumn . ' as reference_id');
-        if ($scoreExpression !== null) {
-            $query->addSelect($scoreExpression . ' as ' . Criteria::SCORE_FIELD);
+        if ($scoreExpression !== null || $query->hasState(CriteriaQueryBuilder::COUNT_SORTING)) {
+            if ($scoreExpression !== null) {
+                $query->addSelect($scoreExpression . ' as ' . Criteria::SCORE_FIELD);
+            }
             $query->addGroupBy($root . '.' . $localColumn, $root . '.' . $referenceColumn);
+            foreach ($association->getToManyReferenceDefinition()->getPrimaryKeys() as $primary) {
+                if ($primary instanceof StorageAware) {
+                    $query->addGroupBy($this->quote($association->getToManyReferenceDefinition()->getEntityName()) . '.' . $this->quote($primary->getStorageName()));
+                }
+            }
         }
 
         $windowOrder = [];
         foreach ($orderBy as $index => [$expression, $direction]) {
             if ($expression === Criteria::SCORE_FIELD && $scoreExpression !== null) {
                 $expression = $scoreExpression;
-            } elseif ($scoreExpression !== null) {
-                $query->addGroupBy($expression);
             }
             $query->addSelect($expression . ' as sort_' . $index);
             $windowOrder[] = 'sort_' . $index . ' ' . $direction;
@@ -1191,64 +1196,38 @@ class EntityReader implements EntityReaderInterface
 
         $primaryKeyAccessor = $this->quote($association->getReferenceDefinition()->getEntityName()) . '.id';
 
-        $orderByParts = $query->getOrderByParts();
+        $orderBy = $query->getOrderByPairs();
         $scoreExpression = null;
-
-        if ($query->hasState(Criteria::SCORE_FIELD)) {
-            foreach ($query->getSelectParts() as $select) {
-                if (!str_ends_with($select, ' as ' . Criteria::SCORE_FIELD)) {
-                    continue;
-                }
-
+        foreach ($query->getSelectParts() as $select) {
+            if (str_ends_with($select, ' as ' . Criteria::SCORE_FIELD)) {
                 $scoreExpression = substr($select, 0, -\strlen(' as ' . Criteria::SCORE_FIELD));
-
-                break;
             }
-
-            \assert($scoreExpression !== null, 'A query with the _score state must select the _score expression.');
         }
-
-        $windowOrderByParts = $orderByParts;
-        if ($scoreExpression !== null) {
-            $windowOrderByParts = array_map(
-                static fn (string $sorting): string => str_replace(Criteria::SCORE_FIELD, $scoreExpression, $sorting),
-                $orderByParts
-            );
-        }
-
-        // Always end the window ordering with the reference primary key so ROW_NUMBER() produces a deterministic
-        // total order within each partition. The criteria sortings may be absent or non-unique (e.g. sorting by a
-        // shared `name`); without a unique tie-breaker the row numbering is undefined within a parent and paginated
-        // reads (limit/offset) of the association can return overlapping rows across separate queries.
-        $windowOrderBy = implode(', ', [...$windowOrderByParts, $primaryKeyAccessor]);
-
-        // ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) guarantees that rows are numbered in the declared sort
-        // order within each parent entity, regardless of how the database engine executes the surrounding query, which
-        // is essential when the sort references a joined table: a declarative window function always sees the fully
-        // joined and sorted rowset, so id_count = 1 reliably identifies the top-ranked child.
-        $query->select(
-            "ROW_NUMBER() OVER (PARTITION BY {$sqlAccessor} ORDER BY {$windowOrderBy}) as id_count",
-
-            // add select for foreign key for join condition
-            $sqlAccessor,
-
-            // add primary key select to group concat them
-            $primaryKeyAccessor,
-        );
-
-        if ($scoreExpression !== null) {
-            $query->addSelect($scoreExpression . ' as ' . Criteria::SCORE_FIELD);
-            $query->addGroupBy($primaryKeyAccessor);
-        }
-
-        foreach ($orderByParts as $i => $sorting) {
-            if ($scoreExpression !== null) {
-                $sorting = str_replace(Criteria::SCORE_FIELD, $scoreExpression, $sorting);
+        $query->resetOrderBy();
+        $query->select($sqlAccessor . ' as ' . $this->quote($foreignKey), $primaryKeyAccessor . ' as id');
+        if ($scoreExpression !== null || $query->hasState(CriteriaQueryBuilder::COUNT_SORTING)) {
+            foreach ($association->getReferenceDefinition()->getPrimaryKeys() as $primary) {
+                if ($primary instanceof StorageAware) {
+                    $query->addGroupBy($this->quote($association->getReferenceDefinition()->getEntityName()) . '.' . $this->quote($primary->getStorageName()));
+                }
             }
-
-            // Strip the ASC/DESC at the end of the sort
-            $query->addSelect(\sprintf('%s as sort_%d', substr((string) $sorting, 0, -4), $i));
         }
+        $windowOrder = [];
+        foreach ($orderBy as $index => [$expression, $direction]) {
+            if ($expression === Criteria::SCORE_FIELD && $scoreExpression !== null) {
+                $expression = $scoreExpression;
+            }
+            $query->addSelect($expression . ' as sort_' . $index);
+            $windowOrder[] = 'sort_' . $index . ' ' . $direction;
+        }
+        $windowOrder[] = 'id';
+        $ordering = implode(', ', $windowOrder);
+        $deduplicated = new QueryBuilder($this->connection);
+        $deduplicated->select('child_values.*', 'ROW_NUMBER() OVER (PARTITION BY ' . $this->quote($foreignKey) . ', id ORDER BY ' . $ordering . ') as duplicate_position');
+        $deduplicated->from('(' . $query->getSQL() . ')', 'child_values');
+        $ranked = new QueryBuilder($this->connection);
+        $ranked->select('unique_children.*', 'ROW_NUMBER() OVER (PARTITION BY ' . $this->quote($foreignKey) . ' ORDER BY ' . $ordering . ') as id_count');
+        $ranked->from('(' . $deduplicated->getSQL() . ')', 'unique_children')->andWhere('duplicate_position = 1');
 
         $root = $this->quote($definition->getEntityName());
 
@@ -1267,7 +1246,7 @@ class EntityReader implements EntityReaderInterface
         // wrap query into a sub select to restrict the association count from the outer query
         $wrapper->leftJoin(
             $root,
-            '(' . $query->getSQL() . ')',
+            '(' . $ranked->getSQL() . ')',
             'child',
             'child.' . $this->quote($foreignKey) . ' = ' . $root . '.id AND id_count >= :offset'
                 . ($fieldCriteria->getLimit() !== null ? ' AND id_count <= :limit' : '')

@@ -24,6 +24,9 @@
         <testsuite name="database-dal-write">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/EntityWriteContractTest.php</file>
         </testsuite>
+        <testsuite name="database-dal-search">
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/CriteriaSearchAggregationContractTest.php</file>
+        </testsuite>
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>

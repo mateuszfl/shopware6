@@ -55,11 +55,11 @@ class SqlQueryParser
 
         foreach ($queries as $query) {
             $parsed = $this->parse($query->getQuery(), $definition, $context, $root);
+            $score = $this->getKey();
+            $result->addParameter($score, (string) $query->getScore(), ParameterType::STRING);
 
             foreach ($parsed->getWheres() as $where) {
                 if ($query->getScoreField()) {
-                    $result = new ParseResult();
-
                     $field = $this->queryHelper->getFieldAccessor(
                         $query->getScoreField(),
                         $definition,
@@ -69,14 +69,14 @@ class SqlQueryParser
                     );
 
                     $result->addWhere(
-                        \sprintf('CASE WHEN %s THEN %s * %s ELSE 0 END', $where, $this->connection->quote((string) $query->getScore()), $field)
+                        \sprintf('CASE WHEN %s THEN CAST(:%s AS DECIMAL(30, 10)) * %s ELSE 0 END', $where, $score, $field)
                     );
 
                     continue;
                 }
 
                 $result->addWhere(
-                    \sprintf('CASE WHEN %s THEN %s ELSE 0 END', $where, $this->connection->quote((string) $query->getScore()))
+                    \sprintf('CASE WHEN %s THEN CAST(:%s AS DECIMAL(30, 10)) ELSE 0 END', $where, $score)
                 );
             }
 

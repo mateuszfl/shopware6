@@ -81,10 +81,15 @@ class EntitySearcher implements EntitySearcherInterface
             $this->queryHelper->addIdCondition($criteria, $definition, $query);
         }
 
-        if ($query->hasState(Criteria::SCORE_FIELD) && $criteria->getGroupFields() !== []) {
-            $query = $this->buildScoreRankedQuery($query, $definition, $criteria, $context, $table, $fields);
+        if ($criteria->getGroupFields() !== []) {
+            $query = $this->buildRankedQuery($query, $definition, $criteria, $context, $table, $fields);
         } else {
             $this->queryHelper->addGroupBy($definition, $criteria, $context, $query, $table);
+            foreach ($definition->getPrimaryKeys() as $primary) {
+                if ($primary instanceof StorageAware) {
+                    $query->addOrderBy($this->quote($table) . '.' . $this->quote($primary->getStorageName()));
+                }
+            }
         }
 
         // add pagination
@@ -163,68 +168,73 @@ class EntitySearcher implements EntitySearcherInterface
     }
 
     /**
-     * Wraps a scored query with ROW_NUMBER() OVER(PARTITION BY ... ORDER BY _score DESC)
-     * to guarantee the highest-scoring row is selected for each group.
-     *
-     * Grouping the scored query directly would aggregate the score over all entities of a group instead, so that
-     * a group would score higher the more entities it contains - product variants grouped by `displayGroup` for
-     * example, where a product with three variants scored three times as high as a comparable single product.
+     * Select one entity per requested group, ordered by score, the complete sorting tuple and primary key.
+     * Aggregate joins per physical entity first, so additional joined rows cannot consume a group slot.
      *
      * @param array<string, Field> $fields keyed by storage name
      */
-    private function buildScoreRankedQuery(QueryBuilder $query, EntityDefinition $definition, Criteria $criteria, Context $context, string $table, array $fields): QueryBuilder
+    private function buildRankedQuery(QueryBuilder $query, EntityDefinition $definition, Criteria $criteria, Context $context, string $table, array $fields): QueryBuilder
     {
-        $rankingOrder = [];
-        foreach ($fields as $storageName => $field) {
-            if (!$field->is(PrimaryKey::class)) {
+        $primaryOrder = [];
+        foreach ($definition->getPrimaryKeys() as $primary) {
+            if (!$primary instanceof StorageAware) {
                 continue;
             }
-
-            $rankingOrder[] = 'inner_q.' . EntityDefinitionQueryHelper::escape($storageName) . ' ASC';
-            $query->addGroupBy(
-                EntityDefinitionQueryHelper::escape($table, $this->connection) . '.' . EntityDefinitionQueryHelper::escape($storageName)
-            );
+            $storageName = $primary->getStorageName();
+            $query->addGroupBy($this->quote($table) . '.' . $this->quote($storageName));
+            if (!isset($fields[$storageName])) {
+                $query->addSelect($this->quote($table) . '.' . $this->quote($storageName));
+            }
+            $primaryOrder[] = 'inner_q.' . $this->quote($storageName) . ' ASC';
         }
 
         $partitionColumns = [];
         foreach (array_values($criteria->getGroupFields()) as $i => $grouping) {
             $accessor = $this->queryHelper->getFieldAccessor($grouping->getField(), $definition, $table, $context, $query);
             $alias = '_group_' . $i;
-            $query->addSelect($accessor . ' as `' . $alias . '`');
-            $partitionColumns[] = 'inner_q.`' . $alias . '`';
+            $query->addSelect($accessor . ' as ' . $this->quote($alias));
+            $query->addGroupBy($this->quote($alias));
+            $partitionColumns[] = 'inner_q.' . $this->quote($alias);
         }
 
         $outer = new QueryBuilder($this->connection);
-
+        $rankingOrder = $query->hasState(Criteria::SCORE_FIELD) ? ['inner_q._score DESC'] : [];
         foreach ($query->getOrderByPairs() as $i => [$expression, $direction]) {
-            // the outer query cannot reach the table aliases the expression is built from, so it travels as a column
             $alias = Criteria::SCORE_FIELD;
             if ($expression !== Criteria::SCORE_FIELD) {
                 $alias = '_sort_' . $i;
-                $query->addSelect($expression . ' as ' . EntityDefinitionQueryHelper::escape($alias));
+                $query->addSelect($expression . ' as ' . $this->quote($alias));
             }
-
-            $outer->addOrderBy('ranked.' . EntityDefinitionQueryHelper::escape($alias), $direction);
+            $rankingOrder[] = 'inner_q.' . $this->quote($alias) . ' ' . $direction;
+            $outer->addOrderBy('ranked.' . $this->quote($alias), $direction);
         }
-
+        $rankingOrder = [...$rankingOrder, ...$primaryOrder];
+        foreach ($primaryOrder as $order) {
+            $outer->addOrderBy(str_replace('inner_q.', 'ranked.', substr($order, 0, -4)));
+        }
         $query->resetOrderBy();
 
-        $innerSql = $query->getSQL();
-
-        foreach ([...array_keys($fields), Criteria::SCORE_FIELD] as $column) {
-            $outer->addSelect('ranked.' . EntityDefinitionQueryHelper::escape($column));
+        $columns = array_keys($fields);
+        if ($query->hasState(Criteria::SCORE_FIELD)) {
+            $columns[] = Criteria::SCORE_FIELD;
         }
-
+        foreach ($columns as $column) {
+            $outer->addSelect('ranked.' . $this->quote($column));
+        }
         $outer->from(\sprintf(
-            '(SELECT inner_q.*, ROW_NUMBER() OVER(PARTITION BY %s ORDER BY inner_q._score DESC, %s) as _rn FROM (%s) inner_q)',
+            '(SELECT inner_q.*, ROW_NUMBER() OVER(PARTITION BY %s ORDER BY %s) as _rn FROM (%s) inner_q)',
             implode(', ', $partitionColumns),
             implode(', ', $rankingOrder),
-            $innerSql
+            $query->getSQL()
         ), 'ranked')->andWhere('ranked._rn = 1');
-
         $outer->setParameters($query->getParameters(), $query->getParameterTypes());
 
         return $outer;
+    }
+
+    private function quote(string $identifier): string
+    {
+        return EntityDefinitionQueryHelper::escape($identifier, $this->connection);
     }
 
     private function addTotalCountMode(Criteria $criteria, QueryBuilder $query): void

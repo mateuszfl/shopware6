@@ -16,6 +16,7 @@ use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\CriteriaQueryBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityAggregator;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntitySearcher;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\ConfigJsonFieldAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\CustomFieldsAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\DefaultFieldAccessorBuilder;
@@ -62,6 +63,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\Filter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Grouping\FieldGrouping;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\SqlQueryParser;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\FieldSorting;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\EntityScoreQueryBuilder;
@@ -247,6 +249,21 @@ class JsonCriteriaContractTest extends TestCase
         static::assertSame(10.02, (float) $result->getMin());
         static::assertSame(13.02, (float) $result->getMax());
         static::assertSame(46.08, $result->getSum());
+    }
+
+    public function testSearcherGroupsBoundJsonAccessorsAndCountsCompleteGroups(): void
+    {
+        $searcher = new EntitySearcher($this->connection, $this->helper, $this->builder);
+        $criteria = (new Criteria())->addGroupField(new FieldGrouping('payload.group'))
+            ->addSorting(new FieldSorting('payload.amount', 'asc'))
+            ->setLimit(1)->setTotalCountMode(Criteria::TOTAL_COUNT_MODE_EXACT);
+        $result = $searcher->search($this->definition, $criteria, $this->context);
+        static::assertSame([self::id(2)], $result->getIds());
+        static::assertSame(2, $result->getTotal());
+        $criteria->setOffset(1);
+        $result = $searcher->search($this->definition, $criteria, $this->context);
+        static::assertSame([self::id(1)], $result->getIds());
+        static::assertSame(2, $result->getTotal());
     }
 
     public function testPricesSelectTaxListPercentageCurrencyFallbackAndCashRounding(): void

@@ -36,7 +36,6 @@ Task 008 adds bound nested JSON/config/custom-field/price accessors, typed scala
 | Owner | Remaining behavior | Why outside this read contract |
 | --- | --- | --- |
 | Write task 009 | Entity write gateways, serializer encode paths, `StatementHelper` parameter types, version cleanup deletes | The fixture seeds rows through DBAL; it does not claim production DAL writes. |
-| Search/aggregation task 010 | Full repository search, `JoinGroupBuilder`, search terms/scoring on associated fields, arbitrary grouped filters and remaining non-JSON aggregation SQL | Elementary filters and explicit scalar scoring needed for relation pagination, plus task 008's JSON filtering/sorting/nested aggregation, are covered. The existing inverse N:M relation without `CascadeDelete` collects logical IDs across mapping versions, then target hydration selects the context version; task 010 must evaluate this contract consistently across unrestricted and restricted query shapes. |
 | Schema task 011 | SchemaBuilder, definition validation against a complete schema, migration query generation and `sw_type_ci` collation setup | Only deprecated helper metadata lookups and isolated fixture schema are covered. JSON scalar text selectors require the documented collation in the application search path. |
 | Indexing task 012 | `ChildCountUpdater`, `InheritanceUpdater`, `ManyToManyIdFieldUpdater`, `TreeUpdater`, cheapest-price producers and consumers' full/incremental index results | These helpers execute denormalizing writes, UPDATE joins and JSON aggregation; iterator and cheapest-price read correctness alone do not prove index correctness. Preserve task 008's cheapest-price shape and rule/currency priority contract. |
 | Framework task 016 | Scheduled version cleanup and runtime framework consumers | Lifecycle/queue execution is not part of entity hydration. |
@@ -44,6 +43,12 @@ Task 008 adds bound nested JSON/config/custom-field/price accessors, typed scala
 | Storefront task 018 | Theme indexer `INSERT IGNORE` | It is a Storefront index write. |
 
 The implementation supports the basic read contract, not a full PostgreSQL Shopware installation. Later tasks must finish these paths before runtime completion can be claimed.
+
+Criteria search, grouped filters, scoring, count sorting, aggregation and the
+inverse N:M version boundary are now verified by
+[DAL_SEARCH_CONTRACT.md](DAL_SEARCH_CONTRACT.md). Both association strategies
+deduplicate nested joined rows before pagination and preserve the complete
+primary key when count sorting or scoring requires grouping.
 
 ## Release documentation decision
 

@@ -4,7 +4,6 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
-use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\FragmentFieldAccessorBuilderInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldResolver\CriteriaPartResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StorageAware;
@@ -26,6 +25,8 @@ use Shopware\Core\Framework\Log\Package;
 class CriteriaQueryBuilder
 {
     public const GROUPED_QUERY = 'grouped_query';
+
+    public const COUNT_SORTING = 'count_sorting';
 
     public function __construct(
         private readonly SqlQueryParser $parser,
@@ -66,6 +67,8 @@ class CriteriaQueryBuilder
 
         $this->criteriaPartResolver->resolve($criteria->getSorting(), $definition, $query, $context);
 
+        $this->criteriaPartResolver->resolve($criteria->getGroupFields(), $definition, $query, $context);
+
         // do not use grouped filters, because the grouped filters are mapped flat and the logical OR/AND are removed
         $filter = new AndFilter(array_merge(
             $criteria->getFilters(),
@@ -75,10 +78,6 @@ class CriteriaQueryBuilder
         $this->addFilter($definition, $filter, $query, $context);
 
         $this->addQueries($definition, $criteria, $query, $context);
-
-        if ($criteria->getLimit() === 1 && !$query->hasState(Criteria::SCORE_FIELD)) {
-            $query->removeState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN);
-        }
 
         $this->addSortings($definition, $criteria, $criteria->getSorting(), $query, $context);
 
@@ -108,7 +107,12 @@ class CriteriaQueryBuilder
      */
     public function addSortings(EntityDefinition $definition, Criteria $criteria, array $sortings, QueryBuilder $query, Context $context): void
     {
+        if (array_any($sortings, static fn (FieldSorting $sorting) => $sorting instanceof CountSorting)) {
+            $query->addState(self::COUNT_SORTING);
+            $query->addState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN);
+        }
         foreach ($sortings as $sorting) {
+            $direction = mb_strtoupper($sorting->getDirection());
             $this->validateSortingDirection($sorting->getDirection());
 
             if ($sorting->getField() === Criteria::SCORE_FIELD) {
@@ -119,36 +123,31 @@ class CriteriaQueryBuilder
                 // Only add manual _score sorting if the query contains a _score calculation and selection (i.e. the
                 // criteria has a term or queries). Otherwise the SQL selection would fail because no _score field
                 // exists in any entity.
-                $query->addOrderBy(Criteria::SCORE_FIELD, $sorting->getDirection());
+                $query->addOrderBy(Criteria::SCORE_FIELD, $direction);
                 $query->addState(Criteria::SCORE_FIELD);
 
                 continue;
             }
 
             $accessor = $this->helper->getFieldAccessor($sorting->getField(), $definition, $definition->getEntityName(), $context, $query);
-            $field = $this->helper->getField($sorting->getField(), $definition, $definition->getEntityName());
-
             if ($sorting instanceof CountSorting) {
-                $query->addOrderBy(\sprintf('COUNT(%s)', $accessor), $sorting->getDirection());
+                $query->addOrderBy(\sprintf('COUNT(%s)', $accessor), $direction);
 
                 continue;
             }
 
-            if ($sorting->getNaturalSorting()) {
-                $query->addOrderBy('LENGTH(' . $accessor . ')', $sorting->getDirection());
-            }
-
             if (!$this->hasGroupBy($criteria, $query)) {
-                if ($field?->getAccessorBuilder() instanceof FragmentFieldAccessorBuilderInterface) {
-                    $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $sorting->getDirection());
+                $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $direction);
+                if ($sorting->getNaturalSorting()) {
+                    $query->addOrderBy('CHAR_LENGTH(' . $accessor . ')', $direction);
                 }
-                $query->addOrderBy($accessor, $sorting->getDirection());
+                $query->addOrderBy($accessor, $direction);
 
                 continue;
             }
 
             if (!\in_array($sorting->getField(), ['product.cheapestPrice', 'cheapestPrice'], true)) {
-                if ($sorting->getDirection() === FieldSorting::ASCENDING) {
+                if ($direction === FieldSorting::ASCENDING) {
                     $accessor = 'MIN(' . $accessor . ')';
                 } else {
                     $accessor = 'MAX(' . $accessor . ')';
@@ -156,10 +155,11 @@ class CriteriaQueryBuilder
             } else {
                 $accessor = 'MIN(' . $accessor . ')';
             }
-            if ($field?->getAccessorBuilder() instanceof FragmentFieldAccessorBuilderInterface) {
-                $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $sorting->getDirection());
+            $query->addOrderBy('CASE WHEN ' . $accessor . ' IS NULL THEN 0 ELSE 1 END', $direction);
+            if ($sorting->getNaturalSorting()) {
+                $query->addOrderBy('CHAR_LENGTH(' . $accessor . ')', $direction);
             }
-            $query->addOrderBy($accessor, $sorting->getDirection());
+            $query->addOrderBy($accessor, $direction);
         }
     }
 
@@ -211,7 +211,8 @@ class CriteriaQueryBuilder
             $distincts[$scoreQuery->getScoreField()] = \sprintf('COUNT(DISTINCT %s)', $field);
         }
 
-        $select = 'SUM(' . implode(' + ', $queries->getWheres()) . ') / ' . \sprintf('COUNT(%s.%s)', $definition->getEntityName(), $primary->getStorageName());
+        $primaryAccessor = $this->helper->getFieldAccessor($primary->getPropertyName(), $definition, $definition->getEntityName(), $context, $query);
+        $select = 'SUM(' . implode(' + ', $queries->getWheres()) . ') * 1.0 / COUNT(' . $primaryAccessor . ')';
 
         if ($distincts !== []) {
             $select .= ' * (' . implode(' + ', $distincts) . ')';
@@ -269,7 +270,7 @@ class CriteriaQueryBuilder
 
     private function hasGroupBy(Criteria $criteria, QueryBuilder $query): bool
     {
-        if ($query->hasState(EntityReader::TO_MANY_ASSOCIATION_LIMIT_QUERY)) {
+        if ($query->hasState(EntityReader::TO_MANY_ASSOCIATION_LIMIT_QUERY) && !$query->hasState(self::COUNT_SORTING) && !$query->hasState(Criteria::SCORE_FIELD)) {
             return false;
         }
 

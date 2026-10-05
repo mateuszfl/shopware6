@@ -143,6 +143,13 @@ class QueryBuilder extends DBALQueryBuilder
         return parent::addOrderBy($sort, $order);
     }
 
+    public function resetOrderBy(): self
+    {
+        $this->orderBy = [];
+
+        return parent::resetOrderBy();
+    }
+
     /**
      * This method is a hacky way to fix deprecations in the Doctrine DBAL QueryBuilder. It's usage is strongly discouraged.
      *

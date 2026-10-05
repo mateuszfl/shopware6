@@ -3,6 +3,8 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -108,7 +110,7 @@ class EntityAggregator implements EntityAggregatorInterface
             case DateHistogramAggregation::PER_DAY:
                 return $date->format('Y-m-d 00:00:00');
             case DateHistogramAggregation::PER_WEEK:
-                return $date->format('Y W');
+                return $date->format('o W');
             case DateHistogramAggregation::PER_MONTH:
                 return $date->format('Y-m-01 00:00:00');
             case DateHistogramAggregation::PER_QUARTER:
@@ -169,7 +171,7 @@ class EntityAggregator implements EntityAggregatorInterface
         // The association is therefore referenced twice in the query and would have to be created as a sub-join in each case.
         // But since only the filters are considered, the association is referenced only once.
         // In this case we add the aggregation field as path to the criteria builder and the join group builder will consider this path for the sub-join logic
-        $paths = array_filter([$this->findToManyPath($aggregation, $definition)]);
+        $paths = array_values(array_unique(array_filter(array_map(fn (string $field) => $this->findToManyPath($field, $definition), $aggregation->getFields()))));
 
         $query = $this->criteriaQueryBuilder->build($query, $definition, $clone, $context, $paths);
         $query->resetOrderBy();
@@ -183,7 +185,7 @@ class EntityAggregator implements EntityAggregatorInterface
         $table = $definition->getEntityName();
 
         if ($scoreCriteria->getQueries() !== []) {
-            $escapedTable = EntityDefinitionQueryHelper::escape($table);
+            $escapedTable = EntityDefinitionQueryHelper::escape($table, $this->connection);
             $scoreQuery = new QueryBuilder($this->connection);
 
             $scoreQuery = $this->criteriaQueryBuilder->build($scoreQuery, $definition, $scoreCriteria, $context, $paths);
@@ -192,13 +194,15 @@ class EntityAggregator implements EntityAggregatorInterface
 
             $join = '';
             foreach ($pks as $pk) {
-                $scoreQuery->addGroupBy($pk);
+                $scoreQuery->addGroupBy($escapedTable . '.' . EntityDefinitionQueryHelper::escape($pk, $this->connection));
 
-                $pk = EntityDefinitionQueryHelper::escape($pk);
+                $pk = EntityDefinitionQueryHelper::escape($pk, $this->connection);
                 $scoreQuery->addSelect($escapedTable . '.' . $pk);
 
                 $join .= \sprintf('score_table.%s = %s.%s AND ', $pk, $escapedTable, $pk);
             }
+
+            $scoreQuery->resetOrderBy();
 
             // Remove remaining AND
             $join = substr($join, 0, -4);
@@ -208,7 +212,7 @@ class EntityAggregator implements EntityAggregatorInterface
             }
 
             $query->join(
-                EntityDefinitionQueryHelper::escape($table),
+                EntityDefinitionQueryHelper::escape($table, $this->connection),
                 '(' . $scoreQuery->getSQL() . ')',
                 'score_table',
                 $join
@@ -223,14 +227,15 @@ class EntityAggregator implements EntityAggregatorInterface
 
         $this->extendQuery($aggregation, $query, $definition, $context);
 
+        $query = $this->rankBuckets($aggregation, $query);
         $rows = $query->executeQuery()->fetchAllAssociative();
 
         return $this->hydrateResult($aggregation, $definition, $rows, $context);
     }
 
-    private function findToManyPath(Aggregation $aggregation, EntityDefinition $definition): ?string
+    private function findToManyPath(string $accessor, EntityDefinition $definition): ?string
     {
-        $fields = EntityDefinitionQueryHelper::getFieldsOfAccessor($definition, $aggregation->getField(), false);
+        $fields = EntityDefinitionQueryHelper::getFieldsOfAccessor($definition, $accessor, false);
 
         if ($fields === []) {
             return null;
@@ -251,6 +256,8 @@ class EntityAggregator implements EntityAggregatorInterface
 
             if ($field instanceof ManyToManyAssociationField || $field instanceof OneToManyAssociationField) {
                 $found = true;
+
+                break;
             }
         }
 
@@ -307,35 +314,20 @@ class EntityAggregator implements EntityAggregatorInterface
     ): void {
         $accessor = $this->queryHelper->getFieldAccessor($aggregation->getField(), $definition, $definition->getEntityName(), $context, $query);
 
-        // @deprecated tag:v6.8.0 - time zone support always enabled, remove if, but keep content
-        if (($this->timeZoneSupportEnabled || Feature::isActive('v6.8.0.0')) && $aggregation->getTimeZone()) {
-            $accessor = 'CONVERT_TZ(' . $accessor . ', "UTC", "' . $aggregation->getTimeZone() . '")';
+        // @deprecated tag:v6.8.0 - time zone support always enabled
+        $timeZone = ($this->timeZoneSupportEnabled || Feature::isActive('v6.8.0.0')) ? $aggregation->getTimeZone() : null;
+        $bucket = (new DatabasePlatformResolver($this->connection))->dialect()->dateBucket($accessor, $aggregation->getInterval(), $timeZone);
+        foreach ($bucket->parameters as $parameter => $value) {
+            $query->setParameter($parameter, $value, $bucket->types[$parameter]);
         }
-
-        $groupBy = match ($aggregation->getInterval()) {
-            DateHistogramAggregation::PER_MINUTE => 'DATE_FORMAT(' . $accessor . ', \'%Y-%m-%d %H:%i\')',
-            DateHistogramAggregation::PER_HOUR => 'DATE_FORMAT(' . $accessor . ', \'%Y-%m-%d %H\')',
-            DateHistogramAggregation::PER_DAY => 'DATE_FORMAT(' . $accessor . ', \'%Y-%m-%d\')',
-            DateHistogramAggregation::PER_WEEK => 'DATE_FORMAT(' . $accessor . ', \'%Y-%v\')',
-            DateHistogramAggregation::PER_MONTH => 'DATE_FORMAT(' . $accessor . ', \'%Y-%m\')',
-            DateHistogramAggregation::PER_QUARTER => 'CONCAT(DATE_FORMAT(' . $accessor . ', \'%Y\'), \'-\', QUARTER(' . $accessor . '))',
-            DateHistogramAggregation::PER_YEAR => 'DATE_FORMAT(' . $accessor . ', \'%Y\')',
-            default => throw throw DataAbstractionLayerException::invalidDateFormat($aggregation->getInterval(), DateHistogramAggregation::ALLOWED_INTERVALS),
-        };
-        $query->addGroupBy($groupBy);
-
         $key = $aggregation->getName() . '.key';
-        $query->addSelect(\sprintf('MIN(%s) as %s', $accessor, EntityDefinitionQueryHelper::escape($key, $this->connection)));
+        $query->addSelect($bucket->sql . ' as ' . EntityDefinitionQueryHelper::escape($key, $this->connection));
+        $query->addGroupBy(EntityDefinitionQueryHelper::escape($key, $this->connection));
+        $query->addState(CriteriaQueryBuilder::GROUPED_QUERY);
 
-        $key = $aggregation->getName() . '.count';
         $countAccessor = $this->queryHelper->getFieldAccessor('id', $definition, $definition->getEntityName(), $context, $query);
-        $query->addSelect(\sprintf('COUNT(%s) as %s', $countAccessor, EntityDefinitionQueryHelper::escape($key, $this->connection)));
-
-        if ($aggregation->getSorting()) {
-            $this->addSorting($aggregation->getSorting(), $definition, $query, $context);
-        } else {
-            $query->addOrderBy($accessor);
-        }
+        $query->addSelect(\sprintf('COUNT(%s) as %s', $countAccessor, EntityDefinitionQueryHelper::escape($aggregation->getName() . '.count', $this->connection)));
+        $this->addBucketSorting($aggregation, $definition, $query, $context);
 
         if ($aggregation->getAggregation()) {
             $this->extendQuery($aggregation->getAggregation(), $query, $definition, $context);
@@ -357,23 +349,20 @@ class EntityAggregator implements EntityAggregatorInterface
 
         $field = $this->queryHelper::getField($aggregation->getField(), $definition, $definition->getEntityName());
         if ($field instanceof FkField || $field instanceof IdField) {
-            $keyAccessor = 'LOWER(HEX(' . $keyAccessor . '))';
+            $keyAccessor = (new DatabasePlatformResolver($this->connection))->dialect()->hexExpression($keyAccessor);
         }
 
         $query->addSelect(\sprintf('%s as %s', $keyAccessor, EntityDefinitionQueryHelper::escape($key, $this->connection)));
+        $canonical = (new DatabasePlatformResolver($this->connection))->dialect()->binaryText($keyAccessor);
+        $query->addSelect('MIN(' . $canonical . ') as ' . EntityDefinitionQueryHelper::escape($aggregation->getName() . '.c', $this->connection));
 
         $key = $aggregation->getName() . '.count';
 
         $countAccessor = $this->queryHelper->getFieldAccessor('id', $definition, $definition->getEntityName(), $context, $query);
         $query->addSelect(\sprintf('COUNT(%s) as %s', $countAccessor, EntityDefinitionQueryHelper::escape($key, $this->connection)));
 
-        if ($aggregation->getLimit()) {
-            $query->setMaxResults($aggregation->getLimit());
-        }
-
-        if ($aggregation->getSorting()) {
-            $this->addSorting($aggregation->getSorting(), $definition, $query, $context);
-        }
+        // Limits belong to complete buckets, not the flattened rows of nested aggregations.
+        $this->addBucketSorting($aggregation, $definition, $query, $context);
 
         if ($aggregation->getAggregation()) {
             $this->extendQuery($aggregation->getAggregation(), $query, $definition, $context);
@@ -473,14 +462,18 @@ class EntityAggregator implements EntityAggregatorInterface
             throw DataAbstractionLayerException::notSupportedFieldForAggregation(RangeAggregation::class, $aggregation->getField(), $field::class, self::$allowedRangeAggregationFields);
         }
         // build SUM() with range criteria for each range and add it to select
-        foreach ($aggregation->getRanges() as $range) {
+        foreach ($aggregation->getRanges() as $index => $range) {
             $id = $range['key'] ?? (($range['from'] ?? '*') . '-' . ($range['to'] ?? '*'));
             $conditions = [];
             if (isset($range['from'])) {
-                $conditions[] = \sprintf('%s >= %s', $accessor, (string) $range['from']);
+                $parameter = 'range_' . bin2hex($aggregation->getName()) . '_' . $index . '_from';
+                $conditions[] = $accessor . ' >= :' . $parameter;
+                $query->setParameter($parameter, (string) $range['from'], ParameterType::STRING);
             }
             if (isset($range['to'])) {
-                $conditions[] = \sprintf('%s < %s', $accessor, (string) $range['to']);
+                $parameter = 'range_' . bin2hex($aggregation->getName()) . '_' . $index . '_to';
+                $conditions[] = $accessor . ' < :' . $parameter;
+                $query->setParameter($parameter, (string) $range['to'], ParameterType::STRING);
             }
 
             $query->addSelect(\sprintf('SUM(CASE WHEN %s THEN 1 ELSE 0 END) as %s', $conditions === [] ? '1 = 1' : implode(' AND ', $conditions), EntityDefinitionQueryHelper::escape($aggregation->getName() . '.' . $id, $this->connection)));
@@ -496,7 +489,7 @@ class EntityAggregator implements EntityAggregatorInterface
         $accessor = $this->queryHelper->getFieldAccessor($aggregation->getField(), $definition, $definition->getEntityName(), $context, $query);
         $query->addGroupBy($accessor);
 
-        $accessor = 'LOWER(HEX(' . $accessor . '))';
+        $accessor = (new DatabasePlatformResolver($this->connection))->dialect()->hexExpression($accessor);
         $query->addSelect(\sprintf('%s as %s', $accessor, EntityDefinitionQueryHelper::escape($aggregation->getName(), $this->connection)));
     }
 
@@ -611,7 +604,8 @@ class EntityAggregator implements EntityAggregatorInterface
 
         $grouped = $this->groupBuckets($aggregation, $rows);
 
-        foreach ($grouped as $value => $group) {
+        foreach ($grouped as $group) {
+            $value = $group['value'];
             $count = $group['count'];
             $nested = null;
 
@@ -619,12 +613,9 @@ class EntityAggregator implements EntityAggregatorInterface
                 $nested = $this->hydrateResult($aggregation->getAggregation(), $definition, $group['buckets'], $context);
             }
 
-            $date = new \DateTime($value);
-
-            if ($aggregation->getFormat()) {
-                $value = $date->format($aggregation->getFormat());
-            } else {
-                $value = self::formatDate($aggregation->getInterval(), $date);
+            if ($value !== null) {
+                $date = new \DateTime($value, new \DateTimeZone('UTC'));
+                $value = $aggregation->getFormat() ? $date->format($aggregation->getFormat()) : self::formatDate($aggregation->getInterval(), $date);
             }
 
             $buckets[] = new Bucket($value, $count, $nested);
@@ -646,7 +637,8 @@ class EntityAggregator implements EntityAggregatorInterface
 
         $grouped = $this->groupBuckets($aggregation, $rows);
 
-        foreach ($grouped as $value => $group) {
+        foreach ($grouped as $group) {
+            $value = $group['value'];
             $count = $group['count'];
             $nested = null;
 
@@ -654,60 +646,124 @@ class EntityAggregator implements EntityAggregatorInterface
                 $nested = $this->hydrateResult($aggregation->getAggregation(), $definition, $group['buckets'], $context);
             }
 
-            $buckets[] = new Bucket((string) $value, $count, $nested);
+            $buckets[] = new Bucket($value, $count, $nested);
         }
 
         return new TermsResult($aggregation->getName(), $buckets);
     }
 
-    private function addSorting(
-        FieldSorting $sorting,
+    private function addBucketSorting(
+        TermsAggregation|DateHistogramAggregation $aggregation,
         EntityDefinition $definition,
         QueryBuilder $query,
         Context $context
     ): void {
-        if ($sorting->getField() !== '_count') {
-            $this->criteriaQueryBuilder->addSortings($definition, new Criteria(), [$sorting], $query, $context);
-
+        $sorting = $aggregation->getSorting();
+        if ($sorting !== null && !\in_array(mb_strtoupper($sorting->getDirection()), [FieldSorting::ASCENDING, FieldSorting::DESCENDING], true)) {
+            throw DataAbstractionLayerException::invalidSortingDirection($sorting->getDirection());
+        }
+        if ($sorting === null || $sorting->getField() === '_count') {
             return;
         }
+        $accessor = $this->queryHelper->getFieldAccessor($sorting->getField(), $definition, $definition->getEntityName(), $context, $query);
+        $function = mb_strtoupper($sorting->getDirection()) === FieldSorting::ASCENDING ? 'MIN' : 'MAX';
+        $query->addSelect($function . '(' . $accessor . ') as ' . EntityDefinitionQueryHelper::escape($aggregation->getName() . '.sort', $this->connection));
+    }
 
-        $countAccessor = $this->queryHelper->getFieldAccessor('id', $definition, $definition->getEntityName(), $context, $query);
-        $countAccessor = \sprintf('COUNT(%s)', $countAccessor);
+    private function rankBuckets(Aggregation $aggregation, QueryBuilder $query): QueryBuilder
+    {
+        $outer = new QueryBuilder($this->connection);
+        $outer->select('buckets.*')->from('(' . $query->getSQL() . ')', 'buckets');
+        $outer->setParameters($query->getParameters(), $query->getParameterTypes());
+        $current = $aggregation;
+        $hasBuckets = false;
+        while ($current instanceof BucketAggregation) {
+            if ($current instanceof TermsAggregation || $current instanceof DateHistogramAggregation) {
+                $hasBuckets = true;
+                $name = $current->getName();
+                $key = 'buckets.' . EntityDefinitionQueryHelper::escape($name . '.key', $this->connection);
+                $keyOrder = 'CASE WHEN ' . $key . ' IS NULL THEN 0 ELSE 1 END ASC, ' . $key . ' ASC';
+                $outer->addSelect('DENSE_RANK() OVER (ORDER BY ' . $keyOrder . ') as ' . EntityDefinitionQueryHelper::escape($name . '.kr', $this->connection));
+                $sorting = $current->getSorting();
+                $order = $keyOrder;
+                if ($sorting !== null) {
+                    $column = 'buckets.' . EntityDefinitionQueryHelper::escape($name . ($sorting->getField() === '_count' ? '.count' : '.sort'), $this->connection);
+                    $direction = mb_strtoupper($sorting->getDirection());
+                    $order = 'CASE WHEN ' . $column . ' IS NULL THEN 0 ELSE 1 END ' . $direction . ', ';
+                    if ($sorting->getNaturalSorting()) {
+                        $order .= 'CHAR_LENGTH(' . $column . ') ' . $direction . ', ';
+                    }
+                    $order .= $column . ' ' . $direction;
+                    $outer->addSelect('DENSE_RANK() OVER (ORDER BY ' . $order . ') as ' . EntityDefinitionQueryHelper::escape($name . '.sr', $this->connection));
+                }
+                // A leaf terms query can safely limit SQL rows. Nested limits are applied after complete
+                // parent buckets have been reassembled; database ranks retain scalar types and collation.
+                if ($current === $aggregation && $current instanceof TermsAggregation && $current->getAggregation() === null) {
+                    $outer->orderBy($order . ', ' . $keyOrder);
+                    $outer->setMaxResults($current->getLimit());
+                }
+            }
+            $nested = $current->getAggregation();
+            if ($nested === null) {
+                break;
+            }
+            $current = $nested;
+        }
 
-        $direction = $sorting->getDirection() === FieldSorting::ASCENDING ? FieldSorting::ASCENDING : FieldSorting::DESCENDING;
-
-        $query->addOrderBy($countAccessor, $direction);
+        return $hasBuckets ? $outer : $query;
     }
 
     /**
+     * Reassemble complete parent buckets before sorting and applying each level's limit.
+     *
      * @param array<array<string, mixed>> $rows
      *
-     * @return array<array{count: int, buckets: list<array<string, mixed>>}>
+     * @return list<array{value: ?string, count: int, buckets: list<array<string, mixed>>, sort: mixed, keyRank: int}>
      */
-    private function groupBuckets(BucketAggregation $aggregation, array $rows): array
+    private function groupBuckets(TermsAggregation|DateHistogramAggregation $aggregation, array $rows): array
     {
-        $valueKey = $aggregation->getName() . '.key';
-
-        $countKey = $aggregation->getName() . '.count';
-
+        $name = $aggregation->getName();
+        $sorting = $aggregation->getSorting();
+        $descending = $sorting !== null && mb_strtoupper($sorting->getDirection()) === FieldSorting::DESCENDING;
         $grouped = [];
         foreach ($rows as $row) {
-            $value = $row[$valueKey];
-            $count = (int) $row[$countKey];
-
-            if (isset($grouped[$value])) {
-                $grouped[$value]['count'] += $count;
-            } else {
-                $grouped[$value] = ['count' => $count, 'buckets' => []];
+            $valueKey = $aggregation instanceof TermsAggregation ? '.c' : '.key';
+            $value = $row[$name . $valueKey] === null ? null : (string) $row[$name . $valueKey];
+            $key = (int) $row[$name . '.kr'];
+            $sort = isset($row[$name . '.sr']) ? (int) $row[$name . '.sr'] : null;
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = ['value' => $value, 'count' => 0, 'buckets' => [], 'sort' => $row[$name . '.sr'] ?? null, 'keyRank' => (int) $row[$name . '.kr']];
             }
-
+            if ($value !== null && strcmp($value, (string) $grouped[$key]['value']) < 0) {
+                $grouped[$key]['value'] = $value;
+            }
+            $grouped[$key]['count'] += (int) $row[$name . '.count'];
+            if ($sort !== null && ($grouped[$key]['sort'] === null || $sort < $grouped[$key]['sort'])) {
+                $grouped[$key]['sort'] = $sort;
+            }
             if ($aggregation->getAggregation()) {
-                $grouped[$value]['buckets'][] = $row;
+                $grouped[$key]['buckets'][] = $row;
             }
         }
+        $groups = array_values($grouped);
+        usort($groups, static function (array $left, array $right) use ($sorting, $descending): int {
+            if ($sorting?->getField() === '_count') {
+                $order = $left['count'] <=> $right['count'];
+                if ($descending) {
+                    $order = -$order;
+                }
+            } elseif ($sorting !== null) {
+                $order = $left['sort'] <=> $right['sort'];
+            } else {
+                $order = 0;
+            }
 
-        return $grouped;
+            return $order ?: ($left['keyRank'] <=> $right['keyRank']) ?: strcmp((string) $left['value'], (string) $right['value']);
+        });
+
+        return $aggregation instanceof TermsAggregation && $aggregation->getLimit() !== null
+            ? \array_slice($groups, 0, $aggregation->getLimit())
+            : $groups;
     }
 
     /**

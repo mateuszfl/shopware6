@@ -179,7 +179,7 @@ class CriteriaQueryBuilderTest extends TestCase
 
         $builder->addSortings($definition, $criteria, [$sorting], $groupedQuery, Context::createDefaultContext());
 
-        static::assertSame(['MIN(`order`.`name`) ASC'], $groupedQuery->getOrderByParts());
+        static::assertSame(['CASE WHEN MIN(`order`.`name`) IS NULL THEN 0 ELSE 1 END ASC', 'MIN(`order`.`name`) ASC'], $groupedQuery->getOrderByParts());
 
         $limitQuery = new QueryBuilder($connection);
         $limitQuery->addState(EntityDefinitionQueryHelper::HAS_TO_MANY_JOIN);
@@ -187,7 +187,7 @@ class CriteriaQueryBuilderTest extends TestCase
 
         $builder->addSortings($definition, $criteria, [$sorting], $limitQuery, Context::createDefaultContext());
 
-        static::assertSame(['`order`.`name` ASC'], $limitQuery->getOrderByParts());
+        static::assertSame(['CASE WHEN `order`.`name` IS NULL THEN 0 ELSE 1 END ASC', '`order`.`name` ASC'], $limitQuery->getOrderByParts());
     }
 
     private function returnMockDefinition(): EntityDefinition

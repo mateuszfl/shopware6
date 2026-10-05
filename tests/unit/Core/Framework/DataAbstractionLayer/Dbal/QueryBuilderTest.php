@@ -87,4 +87,18 @@ class QueryBuilderTest extends TestCase
         static::assertStringStartsWith('-- first   second' . \PHP_EOL, $sql);
         static::assertSame(1, substr_count($sql, \PHP_EOL));
     }
+
+    public function testResetOrderByClearsTransportedSortingsBeforeAddingNewOnes(): void
+    {
+        $this->queryBuilder->select('id')->from('product')->addOrderBy('name', 'DESC');
+        $this->queryBuilder->resetOrderBy();
+
+        static::assertSame([], $this->queryBuilder->getOrderByPairs());
+        static::assertSame([], $this->queryBuilder->getOrderByParts());
+        static::assertStringNotContainsString('ORDER BY', $this->queryBuilder->getSQL());
+
+        $this->queryBuilder->addOrderBy('id');
+        static::assertSame([['id', 'ASC']], $this->queryBuilder->getOrderByPairs());
+        static::assertStringContainsString('ORDER BY id', $this->queryBuilder->getSQL());
+    }
 }

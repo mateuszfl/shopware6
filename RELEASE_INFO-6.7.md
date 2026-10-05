@@ -2,6 +2,12 @@
 
 ## Core
 
+### DAL search and aggregation ordering is deterministic
+
+Criteria searches use the primary key to resolve sorting ties. Grouped searches select the first entity by score, the requested sorting and primary key. Ascending field sorting places null values first; descending sorting places them last. Natural sorting measures Unicode characters.
+
+Nested terms limits now apply to complete buckets at each level. Case or accent equivalent terms retain their configured collation and return a consistent spelling. Date histograms preserve a null bucket and use the ISO week year at year boundaries. Association limits count each child once when nested joins produce several rows for that child.
+
 ### DAL write callbacks follow the transaction outcome
 
 Success callbacks registered on `EntityWriteEvent` and `EntityDeleteEvent` now run after write validation and the outermost transaction managed by `RetryableTransaction` commits. Rolled-back savepoints and abandoned retry attempts discard their success callbacks. Exceptions raised by a success callback no longer retry an already committed write.

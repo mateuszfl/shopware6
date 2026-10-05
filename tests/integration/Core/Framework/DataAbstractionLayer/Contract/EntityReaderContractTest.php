@@ -21,6 +21,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelpe
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityForeignKeyResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityHydrator;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityReader;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntitySearcher;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\CustomFieldsAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\DefaultFieldAccessorBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\FieldAccessorBuilder\JsonFieldAccessorBuilder;
@@ -85,6 +86,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\RangeFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\SqlQueryParser;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Query\ScoreQuery;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\CountSorting;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\FieldSorting;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\EntityScoreQueryBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\SearchTermInterpreter;
@@ -115,6 +117,8 @@ class EntityReaderContractTest extends TestCase
     private DefinitionInstanceRegistry $registry;
 
     private EntityDefinitionQueryHelper $helper;
+
+    private CriteriaQueryBuilder $builder;
 
     private ReaderProductDefinition $product;
 
@@ -170,6 +174,7 @@ class EntityReaderContractTest extends TestCase
         $this->product = $product;
         $parser = new SqlQueryParser($this->helper, $this->connection);
         $builder = new CriteriaQueryBuilder($parser, $this->helper, new SearchTermInterpreter(new Tokenizer(new HtmlSanitizer(), 2), 2), new EntityScoreQueryBuilder(), new JoinGroupBuilder(), new CriteriaPartResolver($this->connection, $parser));
+        $this->builder = $builder;
         $hydrator = new EntityHydrator($container);
         $container->set(EntityHydrator::class, $hydrator);
         $this->reader = new EntityReader($this->connection, $hydrator, $this->helper, $parser, $builder, new NullLogger(), new CriteriaFieldsResolver());
@@ -381,6 +386,62 @@ class EntityReaderContractTest extends TestCase
         }
     }
 
+    public function testInverseManyToManyCollectsLogicalIdsAcrossMappingVersionsForAllCriteriaShapes(): void
+    {
+        $tagId = self::tagIds()[1];
+        $this->connection->delete('sw_dal_mapping', ['sw_dal_product_id' => Uuid::fromHexToBytes(self::id(0)), 'sw_dal_product_version_id' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION), 'sw_dal_tag_id' => Uuid::fromHexToBytes($tagId)], array_fill_keys(['sw_dal_product_id', 'sw_dal_product_version_id', 'sw_dal_tag_id'], ParameterType::BINARY));
+        $this->connection->insert('sw_dal_mapping', ['sw_dal_product_id' => Uuid::fromHexToBytes(self::id(0)), 'sw_dal_product_version_id' => Uuid::fromHexToBytes(DatabaseContractScenario::DRAFT_VERSION), 'sw_dal_tag_id' => Uuid::fromHexToBytes($tagId)], array_fill_keys(['sw_dal_product_id', 'sw_dal_product_version_id', 'sw_dal_tag_id'], ParameterType::BINARY));
+        $tag = $this->registry->get(ReaderTagDefinition::class);
+        foreach ([Defaults::LIVE_VERSION, DatabaseContractScenario::DRAFT_VERSION] as $version) {
+            $context = $this->context->createWithVersionId($version);
+            foreach (['unrestricted', 'sorted', 'limited', 'offset', 'filtered', 'scored'] as $shape) {
+                $criteria = (new Criteria([$tagId]))->addAssociation('products');
+                $products = $criteria->getAssociation('products');
+                if ($shape !== 'unrestricted') {
+                    $products->addSorting(new FieldSorting('id'));
+                }
+                if ($shape === 'limited') {
+                    $products->setLimit(1);
+                } elseif ($shape === 'offset') {
+                    $products->setOffset(1)->setLimit(1);
+                } elseif ($shape === 'filtered') {
+                    $products->addFilter(new EqualsFilter('id', self::id(0)));
+                } elseif ($shape === 'scored') {
+                    $products->addQuery(new ScoreQuery(new EqualsFilter('id', self::id(0)), 1.5))->setLimit(1);
+                }
+                $entity = $this->reader->read($tag, $criteria, $context)->first();
+                static::assertNotNull($entity);
+                $related = self::related($entity, 'products');
+                $expected = match ($shape) {
+                    'filtered', 'scored' => [self::id(0)],
+                    'limited' => [self::id(4)],
+                    'offset' => [self::id(0)],
+                    default => [self::id(4), self::id(0)],
+                };
+                static::assertSame($expected, array_values($related->getIds()), $version . ':' . $shape);
+                foreach ($related as $product) {
+                    static::assertSame($product->getUniqueIdentifier() === self::id(0) ? $version : Defaults::LIVE_VERSION, $product->get('versionId'));
+                }
+            }
+        }
+    }
+
+    public function testSearcherGroupsVersionAwareRowsAndPreservesCompositeMappingKeys(): void
+    {
+        $searcher = new EntitySearcher($this->connection, $this->helper, $this->builder);
+        $criteria = (new Criteria())->addSorting(new FieldSorting('tags.name'))->setLimit(1)->setTotalCountMode(Criteria::TOTAL_COUNT_MODE_EXACT);
+        $result = $searcher->search($this->product, $criteria, $this->context->createWithVersionId(DatabaseContractScenario::DRAFT_VERSION));
+        static::assertCount(1, $result->getIds());
+        static::assertSame(8, $result->getTotal());
+        $mapping = $this->registry->get(ReaderMappingDefinition::class);
+        $result = $searcher->search($mapping, new Criteria(), $this->context);
+        static::assertCount(6, $result->getIds());
+        $tags = self::tagIds();
+        sort($tags);
+        static::assertNotEmpty($tags);
+        static::assertSame(['productId' => self::id(4), 'tagId' => $tags[0]], $result->getDataOfId(self::id(4) . '-' . $tags[0]));
+    }
+
     public function testToManyFilterAndSortingGroupTheCompleteRootKey(): void
     {
         $criteria = new Criteria();
@@ -439,6 +500,27 @@ class EntityReaderContractTest extends TestCase
         $children = $affected[ReaderProductDefinition::ENTITY_NAME];
         sort($children);
         static::assertSame($expected, $children);
+    }
+
+    public function testAssociationLimitsGroupCountSortingsAndDeduplicateNestedOneToManyRows(): void
+    {
+        foreach ([new CountSorting('tags.id'), new FieldSorting('tags.name')] as $sorting) {
+            $criteria = new Criteria([self::id(0), self::id(4)]);
+            $criteria->getAssociation('children')->setLimit(1)->setOffset(1)->addSorting($sorting);
+            $entities = $this->reader->read($this->product, $criteria, $this->context);
+            foreach ([0 => [1, 2, 3], 4 => [5, 6, 7]] as $parent => $children) {
+                $expected = array_map(self::id(...), $children);
+                sort($expected);
+                static::assertSame([$expected[1]], array_values(self::related(self::entity($entities, self::id($parent)), 'children')->getIds()));
+            }
+        }
+        $criteria = new Criteria([self::id(0), self::id(4)]);
+        $criteria->getAssociation('tags')->setLimit(1)->setOffset(1)->addSorting(new CountSorting('products.id'));
+        $expected = self::tagIds();
+        sort($expected);
+        foreach ($this->reader->read($this->product, $criteria, $this->context) as $entity) {
+            static::assertSame([$expected[1]], array_values(self::related($entity, 'tags')->getIds()));
+        }
     }
 
     public function testManyToManyDeduplicatesRelationsBeforePaginationWithNestedToManySorting(): void

@@ -32,7 +32,33 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
 
     public function hex(string|array $column): string
     {
-        return 'encode(' . $this->quoteColumn($column) . ', \'hex\')';
+        return $this->hexExpression($this->quoteColumn($column));
+    }
+
+    public function hexExpression(string $expression): string
+    {
+        return 'encode(' . $expression . ', \'hex\')';
+    }
+
+    public function binaryText(string $expression): string
+    {
+        return 'CAST(' . $expression . ' AS text) COLLATE "C"';
+    }
+
+    public function dateBucket(string $expression, string $interval, ?string $timeZone = null): SqlFragment
+    {
+        if (!\in_array($interval, ['minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'], true)) {
+            throw DatabaseDialectException::invalidOperation('unsupported date bucket interval');
+        }
+        if ($timeZone !== null) {
+            $expression = '(' . $expression . ' AT TIME ZONE \'UTC\' AT TIME ZONE ?)';
+        }
+
+        return (new SqlFragment(
+            "date_trunc('$interval', $expression)",
+            $timeZone === null ? [] : [$timeZone],
+            $timeZone === null ? [] : [ParameterType::STRING],
+        ))->named();
     }
 
     public function fromHex(string $placeholder): string

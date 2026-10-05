@@ -33,6 +33,16 @@ interface DatabaseDialect
      */
     public function hex(string|array $column): string;
 
+    /**
+     * Encode a trusted DAL accessor expression as a lowercase hexadecimal UUID.
+     */
+    public function hexExpression(string $expression): string;
+
+    /**
+     * Text representation with binary collation for deterministic spellings within a collated bucket.
+     */
+    public function binaryText(string $expression): string;
+
     public function fromHex(string $placeholder): string;
 
     /**
@@ -83,6 +93,13 @@ interface DatabaseDialect
      * @param string|list<string> $column
      */
     public function dateAddSeconds(string|array $column, int $seconds): SqlFragment;
+
+    /**
+     * UTC storage timestamp to the start of a calendar bucket in the requested time zone.
+     *
+     * @param 'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year' $interval
+     */
+    public function dateBucket(string $expression, string $interval, ?string $timeZone = null): SqlFragment;
 
     /**
      * @param array<string, mixed> $values Column => value

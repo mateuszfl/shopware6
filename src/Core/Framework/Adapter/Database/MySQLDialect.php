@@ -28,7 +28,37 @@ final class MySQLDialect extends AbstractDatabaseDialect
 
     public function hex(string|array $column): string
     {
-        return 'LOWER(HEX(' . $this->quoteColumn($column) . '))';
+        return $this->hexExpression($this->quoteColumn($column));
+    }
+
+    public function hexExpression(string $expression): string
+    {
+        return 'LOWER(HEX(' . $expression . '))';
+    }
+
+    public function binaryText(string $expression): string
+    {
+        return 'CAST(CAST(' . $expression . ' AS CHAR CHARACTER SET utf8mb4) AS BINARY)';
+    }
+
+    public function dateBucket(string $expression, string $interval, ?string $timeZone = null): SqlFragment
+    {
+        if ($timeZone !== null) {
+            $expression = 'CONVERT_TZ(' . $expression . ', \'+00:00\', ?)';
+        }
+        $sql = match ($interval) {
+            'minute' => "DATE_FORMAT($expression, '%Y-%m-%d %H:%i:00')",
+            'hour' => "DATE_FORMAT($expression, '%Y-%m-%d %H:00:00')",
+            'day' => "DATE_FORMAT($expression, '%Y-%m-%d 00:00:00')",
+            'week' => "DATE_SUB(DATE($expression), INTERVAL WEEKDAY($expression) DAY)",
+            'month' => "DATE_FORMAT($expression, '%Y-%m-01 00:00:00')",
+            'quarter' => "DATE_ADD(MAKEDATE(YEAR($expression), 1), INTERVAL (QUARTER($expression) - 1) * 3 MONTH)",
+            'year' => "DATE_FORMAT($expression, '%Y-01-01 00:00:00')",
+            default => throw DatabaseDialectException::invalidOperation('unsupported date bucket interval'),
+        };
+        $parameters = $timeZone === null ? [] : array_fill(0, substr_count($sql, '?'), $timeZone);
+
+        return (new SqlFragment($sql, $parameters, array_fill(0, \count($parameters), ParameterType::STRING)))->named();
     }
 
     public function fromHex(string $placeholder): string
