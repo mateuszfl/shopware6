@@ -3,8 +3,10 @@
 namespace Shopware\Core\Framework\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Schema\Index\IndexedColumn;
+use Doctrine\DBAL\Schema\Index\IndexType;
 use Doctrine\DBAL\Schema\Table;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\SchemaBuilder;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\Database\TableHelper;
@@ -30,11 +32,12 @@ class MigrationQueryGenerator
      */
     public function generateQueries(EntityDefinition $entityDefinition): array
     {
+        $schema = new DatabaseSchema($this->connection);
         if (TableHelper::tableExists($this->connection, $entityDefinition->getEntityName())) {
-            return $this->getAlterTableQueries($entityDefinition);
+            return array_merge($schema->prerequisites(), $this->getAlterTableQueries($entityDefinition));
         }
 
-        return $this->getCreateTableQueries($entityDefinition);
+        return array_merge($schema->prerequisites(), $this->getCreateTableQueries($entityDefinition));
     }
 
     /**
@@ -45,14 +48,37 @@ class MigrationQueryGenerator
         $schemaManager = $this->connection->createSchemaManager();
         $originalTableSchema = $schemaManager->introspectTableByUnquotedName($definition->getEntityName());
 
-        // Indexes are not supported, so we remove them from both tables
+        // Ordinary indexes are not modeled by definitions; unique keys enforce schema integrity.
         $this->dropIndexes($originalTableSchema);
 
-        $tableSchema = $this->schemaBuilder->buildSchemaOfDefinition($definition);
+        $schema = new DatabaseSchema($this->connection);
+        $tableSchema = $schema->prepareTable($this->schemaBuilder->buildSchemaOfDefinition($definition));
 
         $this->dropIndexes($tableSchema);
 
-        return $this->getPlatform()->getAlterTableSQL($schemaManager->createComparator()->compareTables($originalTableSchema, $tableSchema));
+        // Definitions do not model index declarations. Preserve existing unique keys.
+        foreach ($originalTableSchema->getIndexes() as $index) {
+            if ($index->getType() !== IndexType::UNIQUE) {
+                continue;
+            }
+            $columns = array_map(static fn (IndexedColumn $column): array => [$column->getColumnName()->getIdentifier()->getValue(), $column->getLength()], $index->getIndexedColumns());
+            foreach ($tableSchema->getIndexes() as $generated) {
+                if ($generated->getType() !== IndexType::UNIQUE || $index->getPredicate() !== null) {
+                    continue;
+                }
+                $generatedColumns = array_map(static fn (IndexedColumn $column): array => [$column->getColumnName()->getIdentifier()->getValue(), $column->getLength()], $generated->getIndexedColumns());
+                if ($generatedColumns === $columns && $generated->getObjectName()->toString() !== $index->getObjectName()->toString()) {
+                    $tableSchema = $tableSchema->edit()->renameIndex($generated->getObjectName(), $index->getObjectName())->create();
+
+                    break;
+                }
+            }
+            if (!$tableSchema->hasIndex($index->getObjectName()->toString())) {
+                $tableSchema = $tableSchema->edit()->addIndex($index)->create();
+            }
+        }
+
+        return $schema->alterTableQueries($originalTableSchema, $tableSchema);
     }
 
     /**
@@ -60,23 +86,19 @@ class MigrationQueryGenerator
      */
     private function getCreateTableQueries(EntityDefinition $definition): array
     {
-        $tableSchema = $this->schemaBuilder->buildSchemaOfDefinition($definition);
+        $schema = new DatabaseSchema($this->connection);
+        $tableSchema = $schema->prepareTable($this->schemaBuilder->buildSchemaOfDefinition($definition));
 
         $this->dropIndexes($tableSchema);
 
-        return $this->getPlatform()->getCreateTableSQL($tableSchema);
-    }
-
-    private function getPlatform(): AbstractPlatform
-    {
-        return $this->connection->getDatabasePlatform();
+        return $schema->createTableQueries($tableSchema);
     }
 
     private function dropIndexes(Table $table): void
     {
         foreach ($table->getIndexes() as $index) {
             /** @phpstan-ignore method.deprecated (if can be removed with DBAL 5.0 as primaries won't be inlcuded anymore) */
-            if ($index->isPrimary()) {
+            if ($index->isPrimary() || $index->getType() === IndexType::UNIQUE) {
                 continue;
             }
 

@@ -11,6 +11,7 @@ use Doctrine\DBAL\Schema\Column as DbalColumn;
 use Doctrine\DBAL\Schema\Exception\TableDoesNotExist;
 use Doctrine\DBAL\Schema\Index as DbalIndex;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\UtilException;
 
@@ -52,7 +53,7 @@ class TableHelper
     public static function getTable(Connection $connection, string $tableName): Table
     {
         try {
-            $dbalTable = self::getSchemaManager($connection)->introspectTableByUnquotedName($tableName);
+            $dbalTable = (new DatabaseSchema($connection))->introspectTable($tableName);
 
             return new Table(
                 columns: array_map(static function (DbalColumn $dbalColumn): Column {
@@ -95,7 +96,7 @@ class TableHelper
     public static function getColumnOfTable(Connection $connection, string $table, string $columnName): Column
     {
         try {
-            $dbalColumn = self::getSchemaManager($connection)->introspectTableByUnquotedName($table)->getColumn($columnName);
+            $dbalColumn = (new DatabaseSchema($connection))->introspectTable($table)->getColumn($columnName);
 
             return Column::createFromDbalColumn($dbalColumn);
         } catch (TableHelperException $e) {

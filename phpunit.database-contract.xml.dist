@@ -27,6 +27,10 @@
         <testsuite name="database-dal-search">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/CriteriaSearchAggregationContractTest.php</file>
         </testsuite>
+        <testsuite name="database-dal-schema">
+            <file>tests/integration/Core/Framework/Adapter/Database/DatabaseSchemaTest.php</file>
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/SchemaContractTest.php</file>
+        </testsuite>
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>

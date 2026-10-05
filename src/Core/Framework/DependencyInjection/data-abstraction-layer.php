@@ -189,7 +189,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ])
         ->tag('console.command');
 
-    $services->set(SchemaBuilder::class);
+    $services->set(SchemaBuilder::class)
+        ->args([service(Connection::class)]);
 
     $services->set(MigrationFileRenderer::class);
 

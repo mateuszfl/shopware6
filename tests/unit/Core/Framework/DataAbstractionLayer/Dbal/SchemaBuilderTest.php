@@ -123,6 +123,37 @@ class SchemaBuilderTest extends TestCase
         static::assertSame('id', $firstPk->toString());
     }
 
+    public function testCustomFieldSubclassInheritsTheStorageTypeAndCanOverrideIt(): void
+    {
+        $field = new class('custom', 'custom') extends StringField {};
+        $definition = new class extends EntityDefinition {
+            public Field $field;
+
+            public function getEntityName(): string
+            {
+                return 'test_custom_field';
+            }
+
+            protected function defineFields(): FieldCollection
+            {
+                return new FieldCollection([$this->field]);
+            }
+        };
+        $definition->field = $field;
+        $this->registry->register($definition);
+
+        $table = (new SchemaBuilder())->buildSchemaOfDefinition($definition);
+        static::assertSame(Type::getType(Types::STRING), $table->getColumn('custom')->getType());
+
+        SchemaBuilder::$fieldMapping[$field::class] = Types::TEXT;
+        try {
+            $table = (new SchemaBuilder())->buildSchemaOfDefinition($definition);
+            static::assertSame(Type::getType(Types::TEXT), $table->getColumn('custom')->getType());
+        } finally {
+            unset(SchemaBuilder::$fieldMapping[$field::class]);
+        }
+    }
+
     public function testDifferentFieldTypes(): void
     {
         $definition = $this->registry->get(TestEntityWithAllPossibleFieldsDefinition::class);

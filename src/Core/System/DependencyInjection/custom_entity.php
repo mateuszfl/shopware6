@@ -46,6 +46,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(SchemaUpdater::class)
         ->args([
             service(CustomEntityNameValidator::class),
+            service(Connection::class),
         ]);
 
     $services->set(CustomEntitySchemaUpdater::class)

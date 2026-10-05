@@ -60,7 +60,9 @@ commands and remaining work. Production DAL writes, batch conflicts, partial
 JSON updates and transaction effects are verified by
 [DAL_WRITE_CONTRACT.md](DAL_WRITE_CONTRACT.md). Criteria search and aggregation
 behavior is verified by [DAL_SEARCH_CONTRACT.md](DAL_SEARCH_CONTRACT.md).
-Schema generation and index producers are ported separately.
+Schema generation and custom entity schema lifecycle are verified by
+[DAL_SCHEMA_CONTRACT.md](DAL_SCHEMA_CONTRACT.md). Index producers are ported
+separately.
 
 ## Verification
 

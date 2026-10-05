@@ -2,6 +2,10 @@
 
 ## Core
 
+### DAL schema generation preserves unique keys
+
+Definition-based schema updates preserve existing unique keys, including an equivalent auto-increment index with a custom name. New schemas containing `AutoIncrementField` create its required unique index. Custom subclasses of registered DAL field types inherit their storage type unless they register an explicit mapping.
+
 ### DAL search and aggregation ordering is deterministic
 
 Criteria searches use the primary key to resolve sorting ties. Grouped searches select the first entity by score, the requested sorting and primary key. Ascending field sorting places null values first; descending sorting places them last. Natural sorting measures Unicode characters.

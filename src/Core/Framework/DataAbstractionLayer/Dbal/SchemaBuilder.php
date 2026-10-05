@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\PrimaryKeyConstraint;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
@@ -10,6 +11,7 @@ use Shopware\Core\Content\Cms\DataAbstractionLayer\Field\SlotConfigField;
 use Shopware\Core\Content\Flow\DataAbstractionLayer\Field\FlowTemplateConfigField;
 use Shopware\Core\Content\MeasurementSystem\Field\MeasurementUnitsField;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceField;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityTranslationDefinition;
@@ -163,6 +165,10 @@ class SchemaBuilder
         ],
     ];
 
+    public function __construct(private readonly ?Connection $connection = null)
+    {
+    }
+
     public function buildSchemaOfDefinition(EntityDefinition $definition): Table
     {
         $table = (new Schema())->createTable($definition->getEntityName());
@@ -193,6 +199,9 @@ class SchemaBuilder
                 $fieldType,
                 $this->getFieldOptions($field, $fieldType, $definition)
             );
+            if ($field instanceof AutoIncrementField) {
+                $table->addUniqueIndex([$field->getStorageName()], DatabaseSchema::generatedName('uniq__' . $definition->getEntityName() . '__' . $field->getStorageName(), $this->connection !== null && (new DatabaseSchema($this->connection))->isPostgreSQL()));
+            }
         }
 
         /** @var array<non-empty-string> $primaryKeys */
@@ -212,7 +221,7 @@ class SchemaBuilder
 
         $this->addForeignKeys($table, $definition);
 
-        return $table;
+        return $this->connection === null ? $table : (new DatabaseSchema($this->connection))->prepareTable($table);
     }
 
     /**
@@ -226,7 +235,7 @@ class SchemaBuilder
 
         foreach (self::$fieldMapping as $class => $type) {
             if ($field instanceof $class) {
-                return self::$fieldMapping[$field::class];
+                return self::$fieldMapping[$field::class] ?? $type;
             }
         }
 
@@ -252,6 +261,8 @@ class SchemaBuilder
 
         if ($field instanceof StringField) {
             $options['length'] = $field->getMaxLength();
+        } elseif ($type === Types::STRING) {
+            $options['length'] = 255;
         }
 
         if ($field instanceof AutoIncrementField) {
@@ -262,6 +273,12 @@ class SchemaBuilder
         if ($field instanceof FloatField) {
             $options['precision'] = 10;
             $options['scale'] = 2;
+        }
+
+        if ($this->connection !== null && (new DatabaseSchema($this->connection))->isPostgreSQL()
+            && ($field instanceof PasswordField || $field instanceof TimeZoneField || $field instanceof CronIntervalField
+                || $field instanceof DateIntervalField || $field instanceof RemoteAddressField || $field instanceof EnumField)) {
+            $options['platformOptions']['collation'] = 'C';
         }
 
         return $options;
@@ -361,7 +378,7 @@ class SchemaBuilder
                     'onUpdate' => $update,
                     'onDelete' => $delete,
                 ],
-                \substr(\sprintf('fk__%s__%s', $definition->getEntityName(), $field->getStorageName()), 0, 64)
+                DatabaseSchema::generatedName(\sprintf('fk__%s__%s', $definition->getEntityName(), $field->getStorageName()), $this->connection !== null && (new DatabaseSchema($this->connection))->isPostgreSQL())
             );
         }
     }

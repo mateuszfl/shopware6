@@ -2,10 +2,12 @@
 
 namespace Shopware\Core\System\CustomEntity\Schema;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\PrimaryKeyConstraint;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Types;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\System\CustomEntity\CustomEntityException;
 use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter;
@@ -24,7 +26,7 @@ class SchemaUpdater
 
     private const COMMENT = 'custom-entity-element';
 
-    public function __construct(private readonly CustomEntityNameValidator $nameValidator)
+    public function __construct(private readonly CustomEntityNameValidator $nameValidator, private readonly ?Connection $connection = null)
     {
     }
 
@@ -124,10 +126,10 @@ class SchemaUpdater
         $pk->setQuotedColumnNames($name . '_id', 'language_id');
         $translation->addPrimaryKeyConstraint($pk->create());
 
-        $fk = substr('fk_ce_' . $translation->getObjectName()->toString() . '_root', 0, 64);
+        $fk = $this->foreignKeyName('fk_ce_' . $translation->getObjectName()->toString() . '_root');
         $translation->addForeignKeyConstraint($table->getObjectName()->toString(), [$name . '_id'], ['id'], ['onUpdate' => 'cascade', 'onDelete' => 'cascade'], $fk);
 
-        $fk = substr('fk_ce_' . $translation->getObjectName()->toString() . '_language_id', 0, 64);
+        $fk = $this->foreignKeyName('fk_ce_' . $translation->getObjectName()->toString() . '_language_id');
         $translation->addForeignKeyConstraint($languageTable->getObjectName()->toString(), ['language_id'], ['id'], ['onUpdate' => 'cascade', 'onDelete' => 'cascade'], $fk);
 
         $this->addColumns($schema, $translation, $translated);
@@ -241,11 +243,11 @@ class SchemaUpdater
                         $mapping->addPrimaryKeyConstraint($pk->create());
 
                         // add foreign key to source table (custom_entity_blog.id <=> custom_entity_blog_products.custom_entity_blog_id), add cascade delete for both
-                        $fkName = substr('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $name, 0, 64);
+                        $fkName = $this->foreignKeyName('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $name);
                         $mapping->addForeignKeyConstraint($table->getObjectName()->toString(), [self::id($name)], ['id'], $onDelete['cascade'], $fkName);
 
                         // add foreign key to reference table (product.id <=> custom_entity_blog_products.product_id), add cascade delete for both
-                        $fkName = substr('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $referenceName, 0, 64);
+                        $fkName = $this->foreignKeyName('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $referenceName);
                         $mapping->addForeignKeyConstraint($reference->getObjectName()->toString(), [self::id($referenceName)], ['id'], $onDelete['cascade'], $fkName);
 
                         break;
@@ -259,11 +261,11 @@ class SchemaUpdater
                     $mapping->addPrimaryKeyConstraint($pk->create());
 
                     // add foreign key to source table (custom_entity_blog.id <=> custom_entity_blog_products.custom_entity_blog_id), add cascade delete for both
-                    $fkName = substr('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $name, 0, 64);
+                    $fkName = $this->foreignKeyName('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $name);
                     $mapping->addForeignKeyConstraint($table->getObjectName()->toString(), [self::id($name)], ['id'], $onDelete['cascade'], $fkName);
 
                     // add foreign key to reference table (product.id <=> custom_entity_blog_products.product_id), add cascade delete for both
-                    $fkName = substr('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $referenceName, 0, 64);
+                    $fkName = $this->foreignKeyName('fk_ce_' . $mapping->getObjectName()->toString() . '_' . $referenceName);
                     $mapping->addForeignKeyConstraint($reference->getObjectName()->toString(), [self::id($referenceName), $referenceName . '_version_id'], ['id', 'version_id'], $onDelete['cascade'], $fkName);
 
                     break;
@@ -289,14 +291,14 @@ class SchemaUpdater
                     // check for version support and consider version id in foreign key
                     if ($reference->hasColumn('version_id')) {
                         $table->addColumn($field['name'] . '_version_id', Types::BINARY, $fieldOptions + $binary);
-                        $fkName = substr('fk_ce_' . $table->getObjectName()->toString() . '_' . $field['name'], 0, 64);
+                        $fkName = $this->foreignKeyName('fk_ce_' . $table->getObjectName()->toString() . '_' . $field['name']);
                         $table->addForeignKeyConstraint($reference->getObjectName()->toString(), [self::id($field['name']), $field['name'] . '_version_id'], ['id', 'version_id'], $options, $fkName);
 
                         break;
                     }
 
                     // add foreign key to reference table
-                    $fkName = substr('fk_ce_' . $table->getObjectName()->toString() . '_' . $field['name'], 0, 64);
+                    $fkName = $this->foreignKeyName('fk_ce_' . $table->getObjectName()->toString() . '_' . $field['name']);
                     $table->addForeignKeyConstraint($reference->getObjectName()->toString(), [self::id($field['name'])], ['id'], $options, $fkName);
 
                     break;
@@ -321,7 +323,7 @@ class SchemaUpdater
                     $reference->addColumn($foreignKey, Types::BINARY, $fieldOptions + $binary + ['comment' => self::COMMENT]);
 
                     // build foreign key with special naming. This allows us to identify the custom entity modification in sw-core tables when run the cleanup
-                    $fk = substr('fk_ce_' . $reference->getObjectName()->toString() . '_' . $foreignKey, 0, 64);
+                    $fk = $this->foreignKeyName('fk_ce_' . $reference->getObjectName()->toString() . '_' . $foreignKey);
                     $reference->addForeignKeyConstraint($table->getObjectName()->toString(), [$foreignKey], ['id'], $options, $fk);
 
                     // add inheritance column which matches the association name: `product.customEntityBlogTopSeller`
@@ -371,6 +373,11 @@ class SchemaUpdater
         return $schema->hasTable($name)
             ? $schema->getTable($name)
             : $schema->createTable($name);
+    }
+
+    private function foreignKeyName(string $name): string
+    {
+        return DatabaseSchema::generatedName($name, $this->connection !== null && (new DatabaseSchema($this->connection))->isPostgreSQL());
     }
 
     /**
