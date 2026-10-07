@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\ProductStream\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Result;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -59,6 +60,8 @@ class ProductStreamIndexerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->iteratorFactory = static::createStub(IteratorFactory::class);
         $this->productDefinition = static::createStub(ProductDefinition::class);
         $this->repository = new StaticEntityRepository([], new ProductStreamDefinition());
@@ -75,7 +78,7 @@ class ProductStreamIndexerTest extends TestCase
     public function testIterate(): void
     {
         $result = $this->createMock(Result::class);
-        $result->expects($this->once())->method('fetchAllKeyValue')->willReturn([123]);
+        $result->expects($this->once())->method('fetchAllNumeric')->willReturn([[123, '00000000000000000000000000000123']]);
 
         $queryBuilder = $this->createMock(QueryBuilder::class);
         $queryBuilder->expects($this->once())->method('executeQuery')->willReturn($result);
@@ -236,6 +239,8 @@ class ProductStreamIndexerTest extends TestCase
         $statement->expects($this->once())->method('executeStatement')->willReturn(1);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllAssociative')->willReturn($filters);
         $connection->expects($this->once())->method('prepare')->willReturn($statement);
 
@@ -305,6 +310,8 @@ class ProductStreamIndexerTest extends TestCase
         $statement->expects($this->once())->method('executeStatement')->willReturn(1);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllAssociative')->willReturn($filters);
         $connection->expects($this->once())->method('prepare')->willReturn($statement);
 

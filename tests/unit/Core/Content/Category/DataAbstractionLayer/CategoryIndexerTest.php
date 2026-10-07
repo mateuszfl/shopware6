@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Category\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
@@ -43,6 +44,8 @@ class CategoryIndexerTest extends TestCase
     protected function setUp(): void
     {
         $this->connectionMock = static::createStub(Connection::class);
+        $this->connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $this->indexer = new CategoryIndexer(
             $this->connectionMock,
@@ -142,6 +145,8 @@ class CategoryIndexerTest extends TestCase
         );
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchFirstColumn')->willReturn([]);
         $connection->method('getTransactionNestingLevel')->willReturn(0);
         $connection->method('transactional')->willReturnCallback(static fn (\Closure $closure) => $closure($connection));

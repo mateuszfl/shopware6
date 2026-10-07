@@ -4,6 +4,8 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Indexing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -67,8 +69,8 @@ class ManyToManyIdFieldUpdater
 
         $template = <<<'SQL'
 UPDATE #table#
-SET #table#.#storage_name# = (
-    SELECT CONCAT('[', GROUP_CONCAT(JSON_QUOTE(LOWER(HEX(#mapping_table#.#reference_column#)))), ']')
+SET #storage_name# = (
+    SELECT #aggregate#
     FROM #mapping_table#
     WHERE #mapping_table#.#mapping_column# = #table#.#join_column#
     #mapping_version_aware#
@@ -90,16 +92,17 @@ SQL;
             $parameters = ['ids' => $bytes];
 
             $replacement = [
-                '#table#' => EntityDefinitionQueryHelper::escape($definition->getEntityName()),
-                '#storage_name#' => EntityDefinitionQueryHelper::escape($field->getStorageName()),
-                '#mapping_table#' => EntityDefinitionQueryHelper::escape($association->getMappingDefinition()->getEntityName()),
-                '#reference_column#' => EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn()),
-                '#mapping_column#' => EntityDefinitionQueryHelper::escape($association->getMappingLocalColumn()),
-                '#join_column#' => EntityDefinitionQueryHelper::escape('id'),
+                '#aggregate#' => IndexingSql::idArray($this->connection, EntityDefinitionQueryHelper::escape($association->getMappingDefinition()->getEntityName(), $this->connection) . '.' . EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn(), $this->connection)),
+                '#table#' => EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection),
+                '#storage_name#' => EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection),
+                '#mapping_table#' => EntityDefinitionQueryHelper::escape($association->getMappingDefinition()->getEntityName(), $this->connection),
+                '#reference_column#' => EntityDefinitionQueryHelper::escape($association->getMappingReferenceColumn(), $this->connection),
+                '#mapping_column#' => EntityDefinitionQueryHelper::escape($association->getMappingLocalColumn(), $this->connection),
+                '#join_column#' => EntityDefinitionQueryHelper::escape('id', $this->connection),
             ];
 
             if ($definition->isInheritanceAware() && $association->is(Inherited::class)) {
-                $replacement['#join_column#'] = EntityDefinitionQueryHelper::escape($association->getPropertyName());
+                $replacement['#join_column#'] = EntityDefinitionQueryHelper::escape($association->getPropertyName(), $this->connection);
             }
 
             $tableVersionCondition = '';
@@ -125,7 +128,7 @@ SQL;
                 $this->connection->executeStatement(
                     $sql,
                     $parameters,
-                    ['ids' => ArrayParameterType::BINARY]
+                    ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
                 );
             });
         }

@@ -48,7 +48,10 @@ The PostgreSQL replacement table lock serializes the delete/insert pair with
 ordinary writers, including when no previous row exists. It favors the
 existing replacement semantics over update semantics and can reduce write
 concurrency on heavily used mapping tables. A table with additional unique
-conflicts needs a caller-specific implementation rather than this strategy.
+conflicts requires an explicit audited `setReplacementConflicts()` declaration
+covering every unique key. Replacement executes each delete/insert pair in
+input order; nonunique, partial and expression targets are rejected. The
+keyword dictionary verifies both keys in [INDEXING_CONTRACT.md](INDEXING_CONTRACT.md).
 
 ## Partial JSON updates
 

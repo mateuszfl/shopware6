@@ -4,6 +4,8 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexer;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexingMessage;
@@ -13,7 +15,7 @@ use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
- * Backfills and repairs `description_teaser`: it rebuilds each teaser from the current description and
+ * Backfills and repairs description_teaser: it rebuilds each teaser from the current description and
  * rewrites only the rows whose stored value is missing or out of date, so products that predate the
  * column or were changed outside the DAL get reconciled. Runs through the post-update flow.
  *
@@ -65,8 +67,8 @@ class ProductDescriptionTeaserIndexer extends PostUpdateIndexer
                 FROM product_translation
                 WHERE product_id IN (:ids)
                   AND description IS NOT NULL
-                  AND NOT (description <=> description_teaser)
-            SQL,
+            SQL
+            . ' AND NOT (' . (new DatabasePlatformResolver($this->connection))->dialect()->nullSafeEquals('description', 'description_teaser') . ')',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );
@@ -88,10 +90,11 @@ class ProductDescriptionTeaserIndexer extends PostUpdateIndexer
                 SQL,
                 [
                     'teaser' => $teaser,
-                    'productId' => $row['product_id'],
-                    'versionId' => $row['product_version_id'],
-                    'languageId' => $row['language_id'],
-                ]
+                    'productId' => \is_resource($row['product_id']) ? Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['product_id'])) : $row['product_id'],
+                    'versionId' => \is_resource($row['product_version_id']) ? Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['product_version_id'])) : $row['product_version_id'],
+                    'languageId' => \is_resource($row['language_id']) ? Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['language_id'])) : $row['language_id'],
+                ],
+                ['productId' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]
             );
         }
     }

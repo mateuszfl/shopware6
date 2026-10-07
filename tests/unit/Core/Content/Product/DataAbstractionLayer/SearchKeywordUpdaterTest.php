@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -222,6 +223,8 @@ class SearchKeywordUpdaterTest extends TestCase
         $queryBuilder->method('executeQuery')->willReturn($result);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('createQueryBuilder')->willReturn($queryBuilder);
 
         return $connection;

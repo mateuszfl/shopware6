@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Product\Aggregate\ProductKeywordDictionary\ProductKeywordDictionaryDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductSearchKeyword\ProductSearchKeywordDefinition;
@@ -11,6 +12,7 @@ use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\SearchKeyword\ProductSearchKeywordAnalyzerInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
@@ -197,7 +199,7 @@ class SearchKeywordUpdater implements ResetInterface
             $this->connection->executeStatement(
                 'DELETE FROM product_search_keyword WHERE product_id IN (:ids) AND language_id = :language AND version_id = :versionId',
                 $params,
-                ['ids' => ArrayParameterType::BINARY]
+                ['ids' => ArrayParameterType::BINARY, 'language' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
             );
         });
     }
@@ -209,7 +211,7 @@ class SearchKeywordUpdater implements ResetInterface
     {
         $queue = new MultiInsertQueryQueue($this->connection, 50, true);
         foreach ($keywords as $insert) {
-            $queue->addInsert(ProductSearchKeywordDefinition::ENTITY_NAME, $insert);
+            $queue->addInsert(ProductSearchKeywordDefinition::ENTITY_NAME, $insert, array_fill_keys(['id', 'version_id', 'product_version_id', 'language_id', 'product_id'], ParameterType::BINARY));
         }
         $queue->execute();
     }
@@ -220,9 +222,11 @@ class SearchKeywordUpdater implements ResetInterface
     private function insertDictionary(array $dictionary): void
     {
         $queue = new MultiInsertQueryQueue($this->connection, 50, true, true);
+        $queue->setConflictTarget(ProductKeywordDictionaryDefinition::ENTITY_NAME, ['id', 'language_id']);
+        $queue->setReplacementConflicts(ProductKeywordDictionaryDefinition::ENTITY_NAME, [['id', 'language_id'], ['language_id', 'keyword']]);
 
         foreach ($dictionary as $insert) {
-            $queue->addInsert(ProductKeywordDictionaryDefinition::ENTITY_NAME, $insert);
+            $queue->addInsert(ProductKeywordDictionaryDefinition::ENTITY_NAME, $insert, array_fill_keys(['id', 'language_id'], ParameterType::BINARY));
         }
         $queue->execute();
     }
@@ -366,7 +370,7 @@ class SearchKeywordUpdater implements ResetInterface
         }
 
         $query = $this->connection->createQueryBuilder();
-        $query->select('configField.field', 'configField.tokenize', 'configField.ranking', 'LOWER(HEX(config.language_id)) as language_id');
+        $query->select('configField.field', 'configField.tokenize', 'configField.ranking', '' . IndexingSql::hex($this->connection, 'config.language_id') . ' as language_id');
         $query->from('product_search_config', 'config');
         $query->join('config', 'product_search_config_field', 'configField', 'config.id = configField.product_search_config_id');
         $query->andWhere('config.language_id IN (:languageIds)');

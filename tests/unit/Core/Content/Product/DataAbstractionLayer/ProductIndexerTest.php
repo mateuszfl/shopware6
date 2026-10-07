@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPriceUpdater;
@@ -41,10 +42,14 @@ class ProductIndexerTest extends TestCase
 {
     public function testUpdateSkipChildCountUpdater(): void
     {
+        $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+
         $indexer = new ProductIndexer(
             static::createStub(IteratorFactory::class),
             static::createStub(EntityRepository::class),
-            static::createStub(Connection::class),
+            $connection,
             static::createStub(VariantListingUpdater::class),
             static::createStub(ProductCategoryDenormalizer::class),
             static::createStub(InheritanceUpdater::class),

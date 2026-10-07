@@ -4,6 +4,8 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Indexing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -45,7 +47,7 @@ class ChildCountUpdater
      */
     private function trySingleUpdate(EntityDefinition $definition, array $parentIds, Context $context): void
     {
-        $entity = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $entity = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
         $versionAware = $definition->isVersionAware();
 
         // sort the ids so concurrent transactions acquire the parent row locks in a consistent order
@@ -66,17 +68,17 @@ class ChildCountUpdater
                 $versionAware ? 'AND version_id = :version' : ''
             ),
             $params,
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $aggregations = $this->connection->fetchAllKeyValue(
             \sprintf(
-                'SELECT parent_id, COUNT(id) FROM %s WHERE parent_id IN (:ids) %s GROUP BY parent_id',
+                'SELECT ' . IndexingSql::hex($this->connection, 'parent_id') . ', COUNT(id) FROM %s WHERE parent_id IN (:ids) %s GROUP BY parent_id',
                 $entity,
                 $versionAware ? 'AND version_id = :version' : ''
             ),
             $params,
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
         /**
          * @var list<array{
@@ -87,7 +89,7 @@ class ChildCountUpdater
         $cases = array_map(
             static fn (string $id, int $key): array => [
                 'sql' => \sprintf('WHEN :id%d THEN :count%d ', $key, $key),
-                'params' => ['id' . $key => $id, 'count' . $key => (int) ($aggregations[$id] ?? 0)],
+                'params' => ['id' . $key => $id, 'count' . $key => (int) ($aggregations[Uuid::fromBytesToHex($id)] ?? 0)],
             ],
             $ids,
             array_keys($ids)
@@ -103,7 +105,7 @@ class ChildCountUpdater
                 $versionAware ? 'AND version_id = :version' : ''
             ),
             $params,
-            ['ids' => ArrayParameterType::BINARY]
+            array_merge(['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY], array_fill_keys(array_map(static fn (int $index): string => 'id' . $index, array_keys($ids)), ParameterType::BINARY), array_fill_keys(array_map(static fn (int $index): string => 'count' . $index, array_keys($ids)), ParameterType::INTEGER))
         );
     }
 }

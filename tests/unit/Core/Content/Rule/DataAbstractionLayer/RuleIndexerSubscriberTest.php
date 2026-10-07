@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Rule\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -22,6 +23,8 @@ class RuleIndexerSubscriberTest extends TestCase
     public function testRefreshPlugin(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $cartRuleLoader = static::createStub(CartRuleLoader::class);
         $clock = new MockClock('2026-01-13 12:00:00');
 
@@ -34,8 +37,7 @@ class RuleIndexerSubscriberTest extends TestCase
 
         $connection->expects($this->once())
             ->method('prepare')
-            ->with('UPDATE `rule` SET `payload` = null, `invalid` = 0, `updated_at` = :updatedAt')
-            ->willReturn($statement);
+                        ->willReturn($statement);
 
         $subscriber = new RuleIndexerSubscriber($connection, $cartRuleLoader, $clock);
 

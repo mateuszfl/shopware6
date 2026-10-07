@@ -4,11 +4,13 @@ namespace Shopware\Core\Content\Rule\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\Cart\CachedRuleLoader;
 use Shopware\Core\Content\Rule\RuleDefinition;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\CompiledFieldCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
@@ -128,7 +130,8 @@ class RuleAreaUpdater implements EventSubscriberInterface
         $now = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `rule` SET `areas` = :areas, `updated_at` = :updatedAt WHERE `id` = :id')
+            $this->connection->prepare('UPDATE rule SET areas = :areas, updated_at = :updatedAt WHERE id = :id'),
+            ['id' => ParameterType::BINARY]
         );
 
         foreach ($areas as $id => $associations) {
@@ -139,7 +142,7 @@ class RuleAreaUpdater implements EventSubscriberInterface
                     continue;
                 }
 
-                if ($propertyName === 'flowCondition') {
+                if ($propertyName === 'flow_condition') {
                     $ruleAreas[RuleAreas::FLOW_CONDITION_AREA] = RuleAreas::FLOW_CONDITION_AREA;
 
                     continue;
@@ -208,9 +211,9 @@ class RuleAreaUpdater implements EventSubscriberInterface
     private function getAreas(array $ids, CompiledFieldCollection $associationFields): array
     {
         $query = new QueryBuilder($this->connection);
-        $query->select('LOWER(HEX(`rule`.`id`)) AS array_key')
+        $query->select('' . IndexingSql::hex($this->connection, 'rule.id') . ' AS array_key')
             ->from('rule')
-            ->andWhere('`rule`.`id` IN (:ids)');
+            ->andWhere('rule.id IN (:ids)');
 
         foreach ($associationFields as $associationField) {
             \assert($associationField instanceof AssociationField);
@@ -240,8 +243,8 @@ class RuleAreaUpdater implements EventSubscriberInterface
         $propertyName = $associationField->getPropertyName();
 
         if ($associationField instanceof OneToOneAssociationField || $associationField instanceof ManyToOneAssociationField) {
-            $template = 'IF(%s.%s IS NOT NULL, 1, 0) AS %s';
-            $query->addSelect(\sprintf($template, '`rule`', $this->escape($associationField->getStorageName()), $propertyName));
+            $template = 'CASE WHEN %s.%s IS NOT NULL THEN 1 ELSE 0 END AS %s';
+            $query->addSelect(\sprintf($template, 'rule', $this->escape($associationField->getStorageName()), $this->escape($propertyName)));
 
             return;
         }
@@ -254,9 +257,9 @@ class RuleAreaUpdater implements EventSubscriberInterface
             $subQuery = (new QueryBuilder($this->connection))
                 ->select('1')
                 ->from($mappingTable)
-                ->andWhere(\sprintf('%s = `rule`.%s', $mappingLocalColumn, $localColumn));
+                ->andWhere(\sprintf('%s = rule.%s', $mappingLocalColumn, $localColumn));
 
-            $query->addSelect(\sprintf($template, $subQuery->getSQL(), $propertyName));
+            $query->addSelect(\sprintf($template, $subQuery->getSQL(), $this->escape($propertyName)));
 
             return;
         }
@@ -269,9 +272,9 @@ class RuleAreaUpdater implements EventSubscriberInterface
             $subQuery = (new QueryBuilder($this->connection))
                 ->select('1')
                 ->from($referenceTable)
-                ->andWhere(\sprintf('%s = `rule`.%s', $referenceColumn, $localColumn));
+                ->andWhere(\sprintf('%s = rule.%s', $referenceColumn, $localColumn));
 
-            $query->addSelect(\sprintf($template, $subQuery->getSQL(), $propertyName));
+            $query->addSelect(\sprintf($template, $subQuery->getSQL(), $this->escape($propertyName)));
         }
     }
 
@@ -280,15 +283,15 @@ class RuleAreaUpdater implements EventSubscriberInterface
         $subQuery = (new QueryBuilder($this->connection))
             ->select('1')
             ->from('rule_condition')
-            ->andWhere('`rule_id` = `rule`.`id`')
-            ->andWhere('`type` IN (:flowTypes)');
+            ->andWhere('rule_id = rule.id')
+            ->andWhere('type IN (:flowTypes)');
 
-        $query->addSelect(\sprintf('EXISTS(%s) AS flowCondition', $subQuery->getSQL()));
+        $query->addSelect(\sprintf('EXISTS(%s) AS flow_condition', $subQuery->getSQL()));
     }
 
     private function escape(string $string): string
     {
-        return EntityDefinitionQueryHelper::escape($string);
+        return EntityDefinitionQueryHelper::escape($string, $this->connection);
     }
 
     private function getAssociationFields(): CompiledFieldCollection

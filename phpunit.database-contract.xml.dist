@@ -31,6 +31,9 @@
             <file>tests/integration/Core/Framework/Adapter/Database/DatabaseSchemaTest.php</file>
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/SchemaContractTest.php</file>
         </testsuite>
+        <testsuite name="database-indexers">
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/IndexingContractTest.php</file>
+        </testsuite>
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>

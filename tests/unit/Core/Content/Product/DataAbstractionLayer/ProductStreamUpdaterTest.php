@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -82,6 +83,8 @@ class ProductStreamUpdaterTest extends TestCase
         $updatedStreamId = Uuid::randomHex();
         $deletedStreamId = Uuid::randomHex();
         $connectionMock = static::createStub(Connection::class);
+        $connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $messageBusMock = $this->createMock(MessageBusInterface::class);
         $expectedMessages = [$updatedStreamId, $deletedStreamId];
         $matcher = $this->exactly(\count($expectedMessages));
@@ -134,6 +137,8 @@ class ProductStreamUpdaterTest extends TestCase
     public function testUpdaterWithoutFilterChange(): void
     {
         $connectionMock = static::createStub(Connection::class);
+        $connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $messageBusMock = $this->createMock(MessageBusInterface::class);
         $messageBusMock->expects($this->never())->method('dispatch');
@@ -175,6 +180,8 @@ class ProductStreamUpdaterTest extends TestCase
         $context = Context::createDefaultContext();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchAllAssociative')
@@ -214,6 +221,8 @@ class ProductStreamUpdaterTest extends TestCase
         $message = new ProductStreamMappingIndexingMessage(Uuid::randomHex());
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -282,6 +291,8 @@ class ProductStreamUpdaterTest extends TestCase
         ]]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -345,6 +356,8 @@ class ProductStreamUpdaterTest extends TestCase
         ]]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -407,6 +420,8 @@ class ProductStreamUpdaterTest extends TestCase
         ]]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchAllAssociative')

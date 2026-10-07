@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Product\Events\InvalidateProductCache;
 use Shopware\Core\Content\Product\Events\ProductIndexerEvent;
@@ -11,6 +12,7 @@ use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\Stock\AbstractStockStorage;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -103,8 +105,8 @@ class ProductIndexer extends EntityIndexer
         }
 
         $parentAndChildIdsToBeChunked = \array_diff(\array_unique(\array_filter(\array_merge(
-            $this->getParentIds($ids),
-            $this->getChildrenIds($ids)
+            $this->getParentIds($ids, $event->getContext()->getVersionId()),
+            $this->getChildrenIds($ids, $event->getContext()->getVersionId())
         ))), $ids);
 
         if (\count($parentAndChildIdsToBeChunked) + \count($ids) < self::UPDATE_IDS_CHUNK_SIZE) {
@@ -178,7 +180,7 @@ class ProductIndexer extends EntityIndexer
             return;
         }
 
-        $parentIds = $this->filterVariants($ids);
+        $parentIds = $this->filterVariants($ids, $message->getContext()->getVersionId());
 
         $context = $message->getContext();
 
@@ -220,7 +222,7 @@ class ProductIndexer extends EntityIndexer
 
         if ($message->allow(self::RATING_AVERAGE_UPDATER)) {
             Profiler::trace('product:indexer:rating', function () use ($ids, $parentIds, $context): void {
-                $this->ratingAverageUpdater->update(array_unique([...$parentIds, ...$this->getParentIds($ids)]), $context);
+                $this->ratingAverageUpdater->update(array_unique([...$parentIds, ...$this->getParentIds($ids, $context->getVersionId())]), $context);
             });
         }
 
@@ -250,11 +252,11 @@ class ProductIndexer extends EntityIndexer
             });
         }
 
-        RetryableQuery::retryable($this->connection, function () use ($ids): void {
+        RetryableQuery::retryable($this->connection, function () use ($ids, $context): void {
             $this->connection->executeStatement(
-                'UPDATE product SET updated_at = :now WHERE id IN (:ids)',
-                ['ids' => Uuid::fromHexToBytesList($ids), 'now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
-                ['ids' => ArrayParameterType::BINARY]
+                'UPDATE product SET updated_at = :now WHERE id IN (:ids) AND version_id = :version',
+                ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($context->getVersionId()), 'now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
+                ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
             );
         });
 
@@ -286,12 +288,12 @@ class ProductIndexer extends EntityIndexer
      *
      * @return array<string>
      */
-    private function getChildrenIds(array $ids): array
+    private function getChildrenIds(array $ids, string $versionId): array
     {
         $childrenIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(id)) as id FROM product WHERE parent_id IN (:ids)',
-            ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'id') . ' as id FROM product WHERE parent_id IN (:ids) AND version_id = :version',
+            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($versionId)],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         return array_unique(array_filter($childrenIds));
@@ -302,12 +304,12 @@ class ProductIndexer extends EntityIndexer
      *
      * @return array<string>
      */
-    private function getParentIds(array $ids): array
+    private function getParentIds(array $ids, string $versionId): array
     {
         $parentIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(product.parent_id)) as id FROM product WHERE id IN (:ids)',
-            ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'product.parent_id') . ' as id FROM product WHERE id IN (:ids) AND version_id = :version',
+            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($versionId)],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         return array_unique(array_filter($parentIds));
@@ -318,15 +320,15 @@ class ProductIndexer extends EntityIndexer
      *
      * @return array<string>
      */
-    private function filterVariants(array $ids): array
+    private function filterVariants(array $ids, string $versionId): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(`id`))
+            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'id') . '
              FROM product
-             WHERE `id` IN (:ids)
-             AND `parent_id` IS NULL',
-            ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+             WHERE id IN (:ids)
+             AND parent_id IS NULL AND version_id = :version',
+            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($versionId)],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
     }
 

@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -174,6 +175,8 @@ class MediaFileExtensionWriteValidatorTest extends TestCase
     public function testInsertWithoutPrivateFlagDefaultsToPublicWithoutDatabaseLookup(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->never())->method('fetchAllKeyValue');
 
         $validator = new MediaFileExtensionWriteValidator(
@@ -247,6 +250,8 @@ class MediaFileExtensionWriteValidatorTest extends TestCase
     private function createValidator(array $storedPrivateMapping = []): MediaFileExtensionWriteValidator
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchAllKeyValue')->willReturn($storedPrivateMapping);
 
         return new MediaFileExtensionWriteValidator(

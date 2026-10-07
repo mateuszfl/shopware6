@@ -4,7 +4,9 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
@@ -70,9 +72,9 @@ class ProductCategoryDenormalizer
 
         RetryableTransaction::retryable($this->connection, function () use ($allIds, $versionId): void {
             $this->connection->executeStatement(
-                'DELETE FROM product_category_tree WHERE `product_id` IN (:ids) AND `product_version_id` = :version',
+                'DELETE FROM product_category_tree WHERE product_id IN (:ids) AND product_version_id = :version',
                 ['ids' => $allIds, 'version' => $versionId],
-                ['ids' => ArrayParameterType::BINARY]
+                ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
             );
         });
 
@@ -80,7 +82,7 @@ class ProductCategoryDenormalizer
             $query = $this->connection->prepare('UPDATE product SET category_tree = :tree WHERE id = :id AND version_id = :version');
 
             foreach ($updates as $update) {
-                StatementHelper::executeStatement($query, $update);
+                StatementHelper::executeStatement($query, $update, ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]);
             }
         });
 
@@ -98,7 +100,7 @@ class ProductCategoryDenormalizer
 
         $queue = new MultiInsertQueryQueue($this->connection, 250, true);
         foreach ($inserts as $insert) {
-            $queue->addInsert('product_category_tree', $insert);
+            $queue->addInsert('product_category_tree', $insert, array_fill_keys(array_keys($insert), ParameterType::BINARY));
         }
         $queue->execute();
     }
@@ -112,9 +114,9 @@ class ProductCategoryDenormalizer
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(product.id)) as product_id',
-            'GROUP_CONCAT(category.path SEPARATOR \'\') as paths',
-            'GROUP_CONCAT(LOWER(HEX(category.id)) SEPARATOR \'|\') as ids',
+            '' . IndexingSql::hex($this->connection, 'product.id') . ' as product_id',
+            IndexingSql::aggregate($this->connection, 'category.path', '', 'category.id') . ' as paths',
+            IndexingSql::aggregate($this->connection, IndexingSql::hex($this->connection, 'category.id'), '|', 'category.id') . ' as ids',
         );
         $query->from('product');
         $query->leftJoin(
@@ -130,7 +132,7 @@ class ProductCategoryDenormalizer
             'mapping.category_id = category.id AND mapping.category_version_id = category.version_id AND mapping.category_version_id = :live'
         );
 
-        $query->addGroupBy('product.id');
+        $query->addGroupBy('product.id', 'product.version_id');
 
         // Performance optimization: Reduce the number of products to check by filtering for products via indexed columns
         $query->andWhere('product.id IN (:ids) OR product.parent_id IN (:ids)');
@@ -143,8 +145,8 @@ class ProductCategoryDenormalizer
 
         $query->andWhere('product.version_id = :version');
 
-        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()));
-        $query->setParameter('live', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
+        $query->setParameter('live', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
 
         $bytes = array_map(static fn (string $id) => Uuid::fromHexToBytes($id), $ids);
 
@@ -173,6 +175,9 @@ class ProductCategoryDenormalizer
 
         $categoryIds = array_map('strtolower', $categoryIds);
 
-        return array_keys(array_flip(array_filter($categoryIds)));
+        $categoryIds = array_keys(array_flip(array_filter($categoryIds)));
+        sort($categoryIds, \SORT_STRING);
+
+        return $categoryIds;
     }
 }

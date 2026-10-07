@@ -40,6 +40,11 @@ class MultiInsertQueryQueue
      */
     private readonly int $chunkSize;
 
+    /**
+     * @var array<string, list<list<string>>>
+     */
+    private array $replacementConflicts = [];
+
     public function __construct(
         private readonly Connection $connection,
         int $chunkSize = 250,
@@ -118,6 +123,16 @@ class MultiInsertQueryQueue
     }
 
     /**
+     * Audited delete/insert replacement conflicts. Every unique key must be covered exactly.
+     *
+     * @param list<list<string>> $conflicts
+     */
+    public function setReplacementConflicts(string $table, array $conflicts): void
+    {
+        $this->replacementConflicts[$table] = $conflicts;
+    }
+
+    /**
      * @return list<array{query: string, values: list<mixed>, types: list<ParameterType>}>
      */
     private function prepareQueries(): array
@@ -145,7 +160,7 @@ class MultiInsertQueryQueue
                 if ($target === []) {
                     throw DataAbstractionLayerException::invalidWriteOperation('PostgreSQL replacement needs an audited explicit conflict target for ' . $table);
                 }
-                $this->validateReplacementTarget($table, $target);
+                $this->validateReplacementTarget($table, $this->replacementConflicts[$table] ?? [$target]);
                 // Serialize delete+insert with ordinary writers, including replacement of an absent key.
                 $queries[] = ['query' => 'LOCK TABLE ' . $escapedTable . ' IN SHARE ROW EXCLUSIVE MODE', 'values' => [], 'types' => []];
             }
@@ -156,15 +171,19 @@ class MultiInsertQueryQueue
                     $conditions = [];
                     $values = [];
                     $types = [];
-                    foreach ($target as $column) {
-                        if (!isset($row['data'][$column])) {
-                            throw DataAbstractionLayerException::invalidWriteOperation('replacement conflict columns must have non-null explicit values');
+                    foreach ($this->replacementConflicts[$table] ?? [$target] as $conflict) {
+                        $group = [];
+                        foreach ($conflict as $column) {
+                            if (!isset($row['data'][$column])) {
+                                throw DataAbstractionLayerException::invalidWriteOperation('replacement conflict columns must have non-null explicit values');
+                            }
+                            $group[] = $dialect->quoteIdentifier($column) . ' = ?';
+                            $values[] = $row['data'][$column];
+                            $types[] = $row['types'][$column] ?? ParameterType::STRING;
                         }
-                        $conditions[] = $dialect->quoteIdentifier($column) . ' = ?';
-                        $values[] = $row['data'][$column];
-                        $types[] = $row['types'][$column] ?? ParameterType::STRING;
+                        $conditions[] = '(' . implode(' AND ', $group) . ')';
                     }
-                    $queries[] = ['query' => 'DELETE FROM ' . $escapedTable . ' WHERE ' . implode(' AND ', $conditions), 'values' => $values, 'types' => $types];
+                    $queries[] = ['query' => 'DELETE FROM ' . $escapedTable . ' WHERE ' . implode(' OR ', $conditions), 'values' => $values, 'types' => $types];
                 }
                 $data = $this->prepareValues($columns, $chunk);
                 $queries[] = [
@@ -179,13 +198,19 @@ class MultiInsertQueryQueue
     }
 
     /**
-     * A replacement target is complete only when every unique index identifies the same row.
-     * Secondary unique keys, partial indexes and expression indexes need a caller-specific strategy.
+     * Replacement conflicts must cover every unique key; partial and expression indexes are rejected.
      *
-     * @param list<string> $target
+     * @param list<list<string>> $conflicts
      */
-    private function validateReplacementTarget(string $table, array $target): void
+    private function validateReplacementTarget(string $table, array $conflicts): void
     {
+        if ($conflicts === [] || \in_array([], $conflicts, true)) {
+            throw DataAbstractionLayerException::invalidWriteOperation('replacement conflicts cannot be empty');
+        }
+        foreach ($conflicts as &$conflict) {
+            sort($conflict);
+        }
+        unset($conflict);
         if ($table === '') {
             throw DataAbstractionLayerException::invalidWriteOperation('replacement table cannot be empty');
         }
@@ -195,28 +220,32 @@ class MultiInsertQueryQueue
         }
         $manager = $this->connection->createSchemaManager();
         $name = OptionallyQualifiedName::quoted($table);
-        $unique = false;
+        $uniqueKeys = [];
         $primary = $manager->introspectTablePrimaryKeyConstraint($name);
         if ($primary !== null) {
             $columns = array_map(static fn (UnqualifiedName $column): string => $column->getIdentifier()->getValue(), $primary->getColumnNames());
-            if (array_diff($target, $columns) !== [] || array_diff($columns, $target) !== []) {
+            sort($columns);
+            if (!\in_array($columns, $conflicts, true)) {
                 throw DataAbstractionLayerException::invalidWriteOperation('replacement has an unaudited primary conflict on ' . $table);
             }
-            $unique = true;
+            $uniqueKeys[] = $columns;
         }
         foreach ($manager->introspectTableIndexes($name) as $index) {
             if ($index->getType() !== IndexType::UNIQUE) {
                 continue;
             }
             $columns = array_map(static fn (IndexedColumn $column): string => $column->getColumnName()->getIdentifier()->getValue(), $index->getIndexedColumns());
-            if (array_diff($target, $columns) !== [] || array_diff($columns, $target) !== [] || $index->getPredicate() !== null
+            sort($columns);
+            if (!\in_array($columns, $conflicts, true) || $index->getPredicate() !== null
             ) {
                 throw DataAbstractionLayerException::invalidWriteOperation('replacement has an unaudited secondary, partial or expression conflict on ' . $table);
             }
-            $unique = true;
+            $uniqueKeys[] = $columns;
         }
-        if (!$unique) {
-            throw DataAbstractionLayerException::invalidWriteOperation('replacement target is not a unique key on ' . $table);
+        foreach ($conflicts as $conflict) {
+            if (!\in_array($conflict, $uniqueKeys, true)) {
+                throw DataAbstractionLayerException::invalidWriteOperation('replacement target is not a unique key on ' . $table);
+            }
         }
     }
 

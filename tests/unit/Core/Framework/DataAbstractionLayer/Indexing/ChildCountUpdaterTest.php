@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Indexing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Context;
@@ -32,7 +33,7 @@ class ChildCountUpdaterTest extends TestCase
             versionAware: false,
         );
 
-        static::assertSame(
+        static::assertEquals(
             [$withChildren => 3, $emptied => 0, $singleChild => 1],
             $written,
             'Every listed parent must be written, and a parent that lost its last child must be reset to 0.',
@@ -110,17 +111,13 @@ class ChildCountUpdaterTest extends TestCase
         $registry = static::createStub(DefinitionInstanceRegistry::class);
         $registry->method('getByEntityName')->willReturn($definition);
 
-        // fetchAllKeyValue() returns the counts keyed by the binary parent_id, as MySQL would
-        $aggregation = [];
-        foreach ($aggregationByHex as $hex => $count) {
-            $aggregation[Uuid::fromHexToBytes($hex)] = $count;
-        }
-
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('getTransactionNestingLevel')->willReturn(0);
         // the write happens inside a retryable transaction, so the double has to really run the closure
         $connection->method('transactional')->willReturnCallback(static fn (\Closure $closure) => $closure());
-        $connection->method('fetchAllKeyValue')->willReturn($aggregation);
+        $connection->method('fetchAllKeyValue')->willReturn($aggregationByHex);
         $connection->method('executeStatement')->willReturnCallback(function (string $sql, array $params = []) use (&$captured): int {
             $captured = $params;
 

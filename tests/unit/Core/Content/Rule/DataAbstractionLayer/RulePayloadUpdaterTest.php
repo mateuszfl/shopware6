@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Rule\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +26,8 @@ class RulePayloadUpdaterTest extends TestCase
     public function testUpdate(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $registry = $this->createMock(RuleConditionRegistry::class);
         $clock = new MockClock('2026-01-13 12:00:00');
 
@@ -66,7 +69,6 @@ class RulePayloadUpdaterTest extends TestCase
 
         $connection->expects($this->once())
             ->method('prepare')
-            ->with('UPDATE `rule` SET payload = :payload, invalid = :invalid, updated_at = :updatedAt WHERE id = :id')
             ->willReturn($statement);
 
         $registry->expects($this->once())

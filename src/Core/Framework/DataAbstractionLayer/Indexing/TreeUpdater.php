@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Indexing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
@@ -120,15 +121,15 @@ class TreeUpdater
     private function getChildren(array $parent, EntityDefinition $definition, Context $context): array
     {
         $query = $this->connection->createQueryBuilder();
-        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
         $query->from($escaped);
 
         $query->select(...$this->getFieldsToSelect($definition));
         $query->andWhere('parent_id = :id');
-        $query->setParameter('id', $parent['id']);
+        $query->setParameter('id', $parent['id'], ParameterType::BINARY);
         $this->makeQueryVersionAware($definition, Uuid::fromHexToBytes($context->getVersionId()), $query);
 
-        return $query->executeQuery()->fetchAllAssociative();
+        return array_map($this->normalizeEntity(...), $query->executeQuery()->fetchAllAssociative());
     }
 
     /**
@@ -137,18 +138,21 @@ class TreeUpdater
     private function updateTree(array $entity, EntityDefinition $definition, Context $context): void
     {
         $query = $this->connection->createQueryBuilder();
-        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
         $query->update($escaped);
 
+        $pathIndex = 0;
         foreach ($definition->getFields()->filterInstance(TreePathField::class) as $pathField) {
             \assert($pathField instanceof TreePathField);
-            $path = 'null';
+            $path = null;
 
             if (\array_key_exists('parent', $entity)) {
-                $path = '"|' . implode('|', $this->buildPathArray($entity['parent'], $pathField)) . '|"';
+                $path = '|' . implode('|', $this->buildPathArray($entity['parent'], $pathField)) . '|';
             }
 
-            $query->set($pathField->getStorageName(), $path);
+            $parameter = 'tree_path_' . $pathIndex++;
+            $query->set(EntityDefinitionQueryHelper::escape($pathField->getStorageName(), $this->connection), ':' . $parameter);
+            $query->setParameter($parameter, $path);
         }
 
         foreach ($definition->getFields()->filterInstance(TreeLevelField::class) as $field) {
@@ -159,11 +163,11 @@ class TreeUpdater
                 $level = $entity['parent']['parentCount'] + 1;
             }
 
-            $query->set($field->getStorageName(), (string) $level);
+            $query->set(EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection), (string) $level);
         }
 
         $query->andWhere('id = :id');
-        $query->setParameter('id', $entity['id']);
+        $query->setParameter('id', $entity['id'], ParameterType::BINARY);
         $this->makeQueryVersionAware($definition, Uuid::fromHexToBytes($context->getVersionId()), $query);
 
         RetryableQuery::retryable($this->connection, static function () use ($query): void {
@@ -207,6 +211,7 @@ class TreeUpdater
             return [];
         }
 
+        $result = $this->normalizeEntity($result);
         $result['parentCount'] = 1;
 
         if ($result['parent_id']) {
@@ -234,9 +239,9 @@ class TreeUpdater
             $fields[] = 'parent_version_id';
         }
 
-        return $definition->getFields()
+        $fields = $definition->getFields()
             ->filterInstance(TreePathField::class)
-            /** @phpstan-ignore argument.type (Collection only contains `TreePathField`) */
+            /** @phpstan-ignore argument.type (Collection only contains TreePathField) */
             ->reduce(static function (array $fields, TreePathField $field) {
                 if (!\in_array($field->getPathField(), $fields, true)) {
                     $fields[] = $field->getPathField();
@@ -244,26 +249,28 @@ class TreeUpdater
 
                 return $fields;
             }, $fields);
+
+        return array_map(fn (string $field): string => EntityDefinitionQueryHelper::escape($field, $this->connection), $fields);
     }
 
     private function makeQueryVersionAware(EntityDefinition $definition, string $versionId, QueryBuilder $query): void
     {
         if ($definition->isVersionAware()) {
             $query->andWhere('version_id = :versionId');
-            $query->setParameter('versionId', $versionId);
+            $query->setParameter('versionId', $versionId, ParameterType::BINARY);
         }
     }
 
     private function getEntityByIdQuery(string $parentId, EntityDefinition $definition): QueryBuilder
     {
         $query = $this->connection->createQueryBuilder();
-        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
 
         $query->from($escaped);
 
         $query->select(...$this->getFieldsToSelect($definition));
         $query->andWhere('id = :id');
-        $query->setParameter('id', $parentId);
+        $query->setParameter('id', $parentId, ParameterType::BINARY);
 
         return $query;
     }
@@ -307,8 +314,8 @@ class TreeUpdater
         }
 
         $query = $this->connection->createQueryBuilder();
-        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName());
-        $column = EntityDefinitionQueryHelper::escape($column);
+        $escaped = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
+        $column = EntityDefinitionQueryHelper::escape($column, $this->connection);
         $query->from($escaped);
         $query->select('id', 'parent_id');
         $query->andWhere($column . ' IN (:ids)');
@@ -317,6 +324,7 @@ class TreeUpdater
 
         $fetchedIds = [];
         foreach ($query->executeQuery()->fetchAllAssociative() as $entity) {
+            $entity = $this->normalizeEntity($entity);
             $bag->addEntity($entity['id'], $entity);
             $fetchedIds[$entity['id']] = $entity['id'];
         }
@@ -358,30 +366,30 @@ class TreeUpdater
     private function updateEntity(array $entity, EntityDefinition $definition, ?TreePathField $pathField, ?TreeLevelField $levelField, Context $context, TreeUpdaterBag $bag): void
     {
         if ($pathField === null && $levelField) {
-            throw DataAbstractionLayerException::treeUpdateError('`TreePathField` or `TreeLevelField` required.');
+            throw DataAbstractionLayerException::treeUpdateError('TreePathField or TreeLevelField required.');
         }
 
         if ($bag->alreadyUpdated($entity['id'])) {
             return;
         }
 
-        $tableName = EntityDefinitionQueryHelper::escape($definition->getEntityName());
+        $tableName = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
         $sql = 'UPDATE ' . $tableName . ' SET ';
 
         $sets = [];
         if ($pathField !== null) {
-            $sets[] = EntityDefinitionQueryHelper::escape($pathField->getStorageName()) . ' = :path';
+            $sets[] = EntityDefinitionQueryHelper::escape($pathField->getStorageName(), $this->connection) . ' = :path';
         }
 
         if ($levelField !== null) {
-            $sets[] = EntityDefinitionQueryHelper::escape($levelField->getStorageName()) . ' = :level';
+            $sets[] = EntityDefinitionQueryHelper::escape($levelField->getStorageName(), $this->connection) . ' = :level';
         }
 
         $sql .= implode(',', $sets);
-        $sql .= ' WHERE `id` = :id';
+        $sql .= ' WHERE id = :id';
 
         if ($definition->getField('version_id')) {
-            $sql .= ' AND `version_id` = :version';
+            $sql .= ' AND version_id = :version';
         }
 
         $sql .= ';';
@@ -406,7 +414,7 @@ class TreeUpdater
         RetryableQuery::retryable(
             connection: $this->connection,
             closure: static function () use ($statement, $update): void {
-                StatementHelper::executeStatement($statement, $update);
+                StatementHelper::executeStatement($statement, $update, ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]);
             }
         );
 
@@ -453,6 +461,20 @@ class TreeUpdater
         $entity['level'] = ($parent['level'] ?? 0) + 1;
 
         $bag->addEntity($id, $entity);
+
+        return $entity;
+    }
+
+    /** @param array<string, mixed> $entity
+     * @return array<string, mixed>
+     */
+    private function normalizeEntity(array $entity): array
+    {
+        foreach (['id', 'parent_id', 'version_id', 'parent_version_id'] as $key) {
+            if (isset($entity[$key])) {
+                $entity[$key] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($entity[$key]));
+            }
+        }
 
         return $entity;
     }

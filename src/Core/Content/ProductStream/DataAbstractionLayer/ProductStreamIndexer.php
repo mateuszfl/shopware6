@@ -4,10 +4,12 @@ namespace Shopware\Core\Content\ProductStream\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\ProductStream\Event\ProductStreamIndexerEvent;
 use Shopware\Core\Content\ProductStream\ProductStreamCollection;
 use Shopware\Core\Content\ProductStream\ProductStreamDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -93,7 +95,7 @@ class ProductStreamIndexer extends EntityIndexer
 
         $filters = $this->connection->fetchAllAssociative(
             'SELECT
-                LOWER(HEX(product_stream_id)) as array_key,
+                ' . IndexingSql::hex($this->connection, 'product_stream_id') . ' as array_key,
                 product_stream_filter.*
              FROM product_stream_filter
              WHERE product_stream_id IN (:ids)
@@ -102,12 +104,21 @@ class ProductStreamIndexer extends EntityIndexer
             ['ids' => ArrayParameterType::BINARY]
         );
 
+        foreach ($filters as &$row) {
+            foreach (['id', 'parent_id'] as $key) {
+                if (isset($row[$key]) && \is_resource($row[$key])) {
+                    $row[$key] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row[$key]));
+                }
+            }
+        }
+        unset($row);
         /** @var array<string, list<array<string, string>>> */
         $filters = FetchModeHelper::group($filters);
 
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE product_stream SET api_filter = :serialized, invalid = :invalid WHERE id = :id')
+            $this->connection->prepare('UPDATE product_stream SET api_filter = :serialized, invalid = :invalid WHERE id = :id'),
+            ['id' => ParameterType::BINARY]
         );
 
         foreach ($ids as $id) {
@@ -160,7 +171,7 @@ class ProductStreamIndexer extends EntityIndexer
      */
     private function buildPayload(array $filter): string
     {
-        usort($filter, static fn (array $a, array $b) => $a['position'] <=> $b['position']);
+        usort($filter, static fn (array $a, array $b) => ($a['position'] <=> $b['position']) ?: strcmp($a['id'], $b['id']));
 
         $nested = $this->buildNested($filter, null);
 

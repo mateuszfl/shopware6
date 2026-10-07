@@ -4,7 +4,10 @@ namespace Shopware\Core\Content\Category\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
@@ -37,24 +40,24 @@ class CategoryBreadcrumbUpdater
         foreach ($this->fetchActiveLanguages() as $language) {
             $languageChain = array_values(array_unique(array_filter([
                 $language['id'],
-                $language['parentId'],
+                $language['parent_id'],
                 Defaults::LANGUAGE_SYSTEM,
             ])));
 
-            $names = $this->fetchNames($all, $languageChain);
+            $names = $this->fetchNames($all, $languageChain, $context);
 
-            $this->updateLanguage($ids, $language['id'], $names);
+            $this->updateLanguage($ids, $language['id'], $names, $context);
         }
     }
 
     /**
-     * @return list<array{id: string, parentId: string|null}>
+     * @return list<array{id: string, parent_id: string|null}>
      */
     private function fetchActiveLanguages(): array
     {
-        /** @var list<array{id: string, parentId: string|null}> $languages */
+        /** @var list<array{id: string, parent_id: string|null}> $languages */
         $languages = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`id`)) AS id, LOWER(HEX(`parent_id`)) AS parentId FROM `language` WHERE `active` = 1'
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' AS id, ' . IndexingSql::hex($this->connection, 'parent_id') . ' AS parent_id FROM language WHERE active = 1'
         );
 
         return $languages;
@@ -72,7 +75,7 @@ class CategoryBreadcrumbUpdater
         $query->from('category');
         $query->where('category.id IN (:ids)');
         $query->andWhere('category.version_id = :version');
-        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()));
+        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
         $query->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY);
 
         $paths = $query->executeQuery()->fetchFirstColumn();
@@ -91,15 +94,15 @@ class CategoryBreadcrumbUpdater
      * @param string[] $ids
      * @param string[] $languageChain
      *
-     * @return array<string, array{parentId: string|null, name: string|null}>
+     * @return array<string, array{parent_id: string|null, name: string|null}>
      */
-    private function fetchNames(array $ids, array $languageChain): array
+    private function fetchNames(array $ids, array $languageChain, Context $context): array
     {
         $query = $this->connection->createQueryBuilder();
         $query->from('category');
         $query->where('category.id IN (:ids)');
         $query->andWhere('category.version_id = :version');
-        $query->setParameter('version', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+        $query->setParameter('version', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
         $query->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY);
 
         $coalesce = [];
@@ -117,20 +120,20 @@ class CategoryBreadcrumbUpdater
                     $index
                 )
             );
-            $query->setParameter('language' . $index, Uuid::fromHexToBytes($languageId));
+            $query->setParameter('language' . $index, Uuid::fromHexToBytes($languageId), ParameterType::BINARY);
             $coalesce[] = $alias . '.name';
         }
 
         $query->select(
-            'LOWER(HEX(category.id)) AS id',
-            'LOWER(HEX(category.parent_id)) AS parentId',
+            '' . IndexingSql::hex($this->connection, 'category.id') . ' AS id',
+            '' . IndexingSql::hex($this->connection, 'category.parent_id') . ' AS parent_id',
             'COALESCE(' . implode(', ', $coalesce) . ') AS name'
         );
 
         $names = [];
         foreach ($query->executeQuery()->fetchAllAssociative() as $row) {
             $names[(string) $row['id']] = [
-                'parentId' => $row['parentId'] !== null ? (string) $row['parentId'] : null,
+                'parent_id' => $row['parent_id'] !== null ? (string) $row['parent_id'] : null,
                 'name' => $row['name'] !== null ? (string) $row['name'] : null,
             ];
         }
@@ -140,11 +143,11 @@ class CategoryBreadcrumbUpdater
 
     /**
      * @param string[] $ids
-     * @param array<string, array{parentId: string|null, name: string|null}> $names
+     * @param array<string, array{parent_id: string|null, name: string|null}> $names
      */
-    private function updateLanguage(array $ids, string $languageId, array $names): void
+    private function updateLanguage(array $ids, string $languageId, array $names, Context $context): void
     {
-        $versionId = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
+        $versionId = Uuid::fromHexToBytes($context->getVersionId());
         $languageIdBytes = Uuid::fromHexToBytes($languageId);
 
         $cache = [];
@@ -169,7 +172,7 @@ class CategoryBreadcrumbUpdater
     }
 
     /**
-     * @param array<string, array{parentId: string|null, name: string|null}> $names
+     * @param array<string, array{parent_id: string|null, name: string|null}> $names
      * @param array<string, array<string, string|null>|null> $cache
      *
      * @return array<string, string|null>|null
@@ -186,8 +189,8 @@ class CategoryBreadcrumbUpdater
         }
 
         $breadcrumb = [];
-        if ($category['parentId'] !== null) {
-            $parent = $this->buildBreadcrumb($category['parentId'], $names, $cache);
+        if ($category['parent_id'] !== null) {
+            $parent = $this->buildBreadcrumb($category['parent_id'], $names, $cache);
             if ($parent === null) {
                 // A missing ancestor invalidates the whole chain, as in core.
                 return $cache[$id] = null;
@@ -220,10 +223,11 @@ class CategoryBreadcrumbUpdater
 
         RetryableQuery::retryable($this->connection, function () use ($placeholders, $parameters): void {
             $this->connection->executeStatement(
-                'INSERT INTO `category_translation` (`category_id`, `category_version_id`, `language_id`, `breadcrumb`, `created_at`)
+                'INSERT INTO category_translation (category_id, category_version_id, language_id, breadcrumb, created_at)
                  VALUES ' . $placeholders . '
-                 ON DUPLICATE KEY UPDATE `breadcrumb` = VALUES(`breadcrumb`)',
-                $parameters
+                 ' . (new DatabasePlatformResolver($this->connection))->dialect()->insertConflictClause(['category_id', 'category_version_id', 'language_id'], ['breadcrumb']),
+                $parameters,
+                array_merge(...array_map(static fn (): array => [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING], array_chunk($parameters, 4)))
             );
         });
     }

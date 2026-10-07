@@ -4,10 +4,12 @@ namespace Shopware\Core\Content\Category\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\Aggregate\CategoryTranslation\CategoryTranslationDefinition;
 use Shopware\Core\Content\Category\CategoryCollection;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Category\Event\CategoryIndexerEvent;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
@@ -254,16 +256,16 @@ WITH RECURSIVE category_tree AS (
     INNER JOIN category_tree ct ON c.parent_id = ct.id
     WHERE c.version_id = :version
 )
-SELECT DISTINCT LOWER(HEX(id))
+SELECT DISTINCT %s
 FROM category_tree
 WHERE depth > 0
 SQL;
 
-        return $this->connection->fetchFirstColumn($sql, [
+        return $this->connection->fetchFirstColumn(\sprintf($sql, IndexingSql::hex($this->connection, 'id')), [
             'version' => Uuid::fromHexToBytes($versionId),
             'categoryIds' => Uuid::fromHexToBytesList($categoryIds),
         ], [
-            'categoryIds' => ArrayParameterType::BINARY,
+            'categoryIds' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY,
         ]);
     }
 

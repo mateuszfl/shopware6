@@ -61,8 +61,9 @@ JSON updates and transaction effects are verified by
 [DAL_WRITE_CONTRACT.md](DAL_WRITE_CONTRACT.md). Criteria search and aggregation
 behavior is verified by [DAL_SEARCH_CONTRACT.md](DAL_SEARCH_CONTRACT.md).
 Schema generation and custom entity schema lifecycle are verified by
-[DAL_SCHEMA_CONTRACT.md](DAL_SCHEMA_CONTRACT.md). Index producers are ported
-separately.
+[DAL_SCHEMA_CONTRACT.md](DAL_SCHEMA_CONTRACT.md). Content index producers, their
+Core helpers, batch removals and version isolation are verified by
+[INDEXING_CONTRACT.md](INDEXING_CONTRACT.md).
 
 ## Verification
 

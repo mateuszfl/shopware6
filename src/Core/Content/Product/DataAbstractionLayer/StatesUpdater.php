@@ -4,10 +4,12 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Events\ProductStatesBeforeChangeEvent;
 use Shopware\Core\Content\Product\Events\ProductStatesChangedEvent;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\State;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Feature;
@@ -42,16 +44,13 @@ class StatesUpdater
             Feature::deprecatedMethodMessage(self::class, 'update', 'v6.8.0.0')
         );
 
-        $sql = 'SELECT LOWER(HEX(`product`.`id`)) as id,
-                IF(`product_download`.`id` IS NOT NULL, 1, 0) as hasDownloads,
-                `product`.`type`,
-                `product`.`states`
-                FROM `product`
-                LEFT JOIN `product_download` ON `product`.`id` = `product_download`.`product_id`
-                AND `product`.`version_id` = `product_download`.`product_version_id`
-                WHERE `product`.`id` IN (:ids)
-                AND `product`.`version_id` = :versionId
-                GROUP BY `product`.`id`';
+        $sql = 'SELECT ' . IndexingSql::hex($this->connection, 'product.id') . ' as id,
+                CASE WHEN EXISTS(SELECT 1 FROM product_download WHERE product.id = product_download.product_id AND product.version_id = product_download.product_version_id) THEN 1 ELSE 0 END as has_downloads,
+                product.type,
+                product.states
+                FROM product
+                WHERE product.id IN (:ids)
+                AND product.version_id = :versionId';
 
         $params = [
             'ids' => Uuid::fromHexToBytesList($ids),
@@ -61,7 +60,7 @@ class StatesUpdater
         $products = $this->connection->fetchAllAssociative(
             $sql,
             $params,
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         $updates = [];
@@ -87,7 +86,8 @@ class StatesUpdater
 
         $query = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `product` SET `states` = :states, `type` = :type WHERE `id` = :id AND `version_id` = :version')
+            $this->connection->prepare('UPDATE product SET states = :states, type = :type WHERE id = :id AND version_id = :version'),
+            ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $event = new ProductStatesBeforeChangeEvent($updates, $context);
@@ -114,7 +114,7 @@ class StatesUpdater
     {
         $states = [];
 
-        if ($product['type'] === ProductDefinition::TYPE_DIGITAL || (int) $product['hasDownloads'] === 1) {
+        if ($product['type'] === ProductDefinition::TYPE_DIGITAL || (int) $product['has_downloads'] === 1) {
             $states[] = State::IS_DOWNLOAD;
         } else {
             $states[] = State::IS_PHYSICAL;

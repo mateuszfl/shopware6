@@ -4,9 +4,11 @@ namespace Shopware\Core\Content\Rule\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Rule\DataAbstractionLayer\Indexing\ConditionTypeNotFound;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\App\Event\AppScriptConditionEvents;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -51,22 +53,31 @@ class RulePayloadUpdater implements EventSubscriberInterface
     public function update(array $ids): array
     {
         $conditions = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(rc.rule_id)) as array_key, rc.*, rs.script, rs.identifier, rs.updated_at as lastModified
+            'SELECT ' . IndexingSql::hex($this->connection, 'rc.rule_id') . ' as array_key, rc.*, rs.script, rs.identifier, rs.updated_at as last_modified
             FROM rule_condition rc
             LEFT JOIN app_script_condition rs ON rc.script_id = rs.id AND rs.active = 1
             WHERE rc.rule_id IN (:ids)
-            ORDER BY rc.rule_id, rc.position',
+            ORDER BY rc.rule_id, rc.position, rc.id',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );
 
+        foreach ($conditions as &$row) {
+            foreach (['id', 'parent_id'] as $key) {
+                if (isset($row[$key]) && \is_resource($row[$key])) {
+                    $row[$key] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row[$key]));
+                }
+            }
+        }
+        unset($row);
         /** @var array<string, list<array<string, string>>> */
         $rules = FetchModeHelper::group($conditions);
 
         $now = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `rule` SET payload = :payload, invalid = :invalid, updated_at = :updatedAt WHERE id = :id')
+            $this->connection->prepare('UPDATE rule SET payload = :payload, invalid = :invalid, updated_at = :updatedAt WHERE id = :id'),
+            ['payload' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
 
         $updated = [];
@@ -140,7 +151,7 @@ class RulePayloadUpdater implements EventSubscriberInterface
             if ($object instanceof ScriptRule) {
                 $object->assign([
                     'script' => $rule['script'] ?? '',
-                    'lastModified' => $rule['lastModified'] ? new \DateTimeImmutable($rule['lastModified']) : null,
+                    'lastModified' => $rule['last_modified'] ? new \DateTimeImmutable($rule['last_modified']) : null,
                     'identifier' => $rule['identifier'] ?? null,
                     'values' => $rule['value'] ? json_decode((string) $rule['value'], true, 512, \JSON_THROW_ON_ERROR) : [],
                 ]);

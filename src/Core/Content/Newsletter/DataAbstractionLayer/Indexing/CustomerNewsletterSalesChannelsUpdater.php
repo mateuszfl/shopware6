@@ -5,6 +5,8 @@ namespace Shopware\Core\Content\Newsletter\DataAbstractionLayer\Indexing;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Newsletter\SalesChannel\NewsletterSubscribeRoute;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -30,69 +32,17 @@ class CustomerNewsletterSalesChannelsUpdater
 
         $ids = array_unique($ids);
 
-        $tableTemplate = <<<'SQL'
-UPDATE `customer`, `newsletter_recipient` SET `customer`.`newsletter_sales_channel_ids` = (
-    SELECT CONCAT(
-        '{',
-        GROUP_CONCAT(
-            CONCAT(
-                JSON_QUOTE(LOWER(HEX(`newsletter_recipient`.`id`))),
-                ':',
-                JSON_QUOTE(LOWER(HEX(`newsletter_recipient`.`sales_channel_id`)))
-            )
-        ),
-        '}'
-    )
-    FROM `newsletter_recipient`
-    WHERE `newsletter_recipient`.`email` = `customer`.`email`
-    AND `newsletter_recipient`.`status` IN (:states)
-)
-WHERE `newsletter_recipient`.`email` = `customer`.`email`
-AND #table#.`id` IN (:ids)
-SQL;
+        $selection = $reverseUpdate
+            ? 'customer.id IN (:ids)'
+            : 'EXISTS(SELECT 1 FROM newsletter_recipient selected WHERE selected.email = customer.email AND selected.id IN (:ids))';
+        $aggregate = IndexingSql::objectMap($this->connection, IndexingSql::hex($this->connection, 'recipient.id'), IndexingSql::hex($this->connection, 'recipient.sales_channel_id'));
+        $sql = 'UPDATE customer SET newsletter_sales_channel_ids = (SELECT ' . $aggregate . ' FROM newsletter_recipient recipient WHERE recipient.email = customer.email AND recipient.status IN (:states)) WHERE ' . $selection;
 
-        $resetTemplate = <<<'SQL'
-UPDATE `customer`
-LEFT JOIN `newsletter_recipient` ON `newsletter_recipient`.`email` = `customer`.`email`
-SET `customer`.`newsletter_sales_channel_ids` = NULL
-WHERE #table#.`id` IN (:ids)
-SQL;
-
-        $parameters = [
-            'ids' => Uuid::fromHexToBytesList($ids),
-            'states' => [NewsletterSubscribeRoute::STATUS_DIRECT, NewsletterSubscribeRoute::STATUS_OPT_IN],
-        ];
-
-        $replacement = [
-            '#table#' => $reverseUpdate ? '`customer`' : '`newsletter_recipient`',
-        ];
-
-        $sql = str_replace(
-            array_keys($replacement),
-            array_values($replacement),
-            $tableTemplate
-        );
-
-        $resetSql = str_replace(
-            array_keys($replacement),
-            array_values($replacement),
-            $resetTemplate
-        );
-
-        RetryableQuery::retryable($this->connection, function () use ($resetSql, $parameters): void {
-            $this->connection->executeStatement(
-                $resetSql,
-                $parameters,
-                ['ids' => ArrayParameterType::BINARY]
-            );
-        });
-
-        RetryableQuery::retryable($this->connection, function () use ($sql, $parameters): void {
-            $this->connection->executeStatement(
-                $sql,
-                $parameters,
-                ['ids' => ArrayParameterType::BINARY, 'states' => ArrayParameterType::STRING]
-            );
+        RetryableQuery::retryable($this->connection, function () use ($sql, $ids): void {
+            $this->connection->executeStatement($sql, [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'states' => [NewsletterSubscribeRoute::STATUS_DIRECT, NewsletterSubscribeRoute::STATUS_OPT_IN],
+            ], ['ids' => ArrayParameterType::BINARY, 'states' => ArrayParameterType::STRING]);
         });
     }
 
@@ -101,34 +51,23 @@ SQL;
      */
     public function delete(array $ids): void
     {
-        $sqlTemplate = <<<'SQL'
-SELECT `customer`.`id`
-FROM `customer`
-WHERE #expressions#
-SQL;
-
-        $expressions = [];
-        foreach ($ids as $id) {
-            $expressions[] = 'JSON_EXTRACT(`customer`.`newsletter_sales_channel_ids`, \'$."' . $id . '"\') IS NOT NULL';
-        }
-
-        $replacement = [
-            '#expressions#' => implode(' OR ', $expressions),
-        ];
-
-        $sql = str_replace(
-            array_keys($replacement),
-            array_values($replacement),
-            $sqlTemplate
-        );
-
-        $customerIds = RetryableQuery::retryable($this->connection, fn (): array => $this->connection->fetchFirstColumn($sql));
-
-        if ($customerIds === []) {
+        if ($ids === []) {
             return;
         }
-
-        $this->update(Uuid::fromBytesToHexList($customerIds), true);
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $expressions = [];
+        $parameters = [];
+        $types = [];
+        foreach ($ids as $id) {
+            $fragment = $dialect->jsonExtract('newsletter_sales_channel_ids', [$id])->named();
+            $expressions[] = $fragment->sql . ' IS NOT NULL';
+            $parameters = array_replace($parameters, $fragment->parameters);
+            $types = array_replace($types, $fragment->types);
+        }
+        $customerIds = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM customer WHERE ' . implode(' OR ', $expressions), $parameters, $types);
+        if ($customerIds !== []) {
+            $this->update($customerIds, true);
+        }
     }
 
     /**

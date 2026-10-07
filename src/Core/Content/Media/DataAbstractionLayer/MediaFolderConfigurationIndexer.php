@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Media\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Aggregate\MediaFolderConfiguration\MediaFolderConfigurationCollection;
 use Shopware\Core\Content\Media\Aggregate\MediaFolderConfiguration\MediaFolderConfigurationDefinition;
 use Shopware\Core\Content\Media\Event\MediaFolderConfigurationIndexerEvent;
@@ -84,7 +85,8 @@ class MediaFolderConfigurationIndexer extends EntityIndexer
 
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE media_folder_configuration SET media_thumbnail_sizes_ro = :media_thumbnail_sizes_ro WHERE id = :id')
+            $this->connection->prepare('UPDATE media_folder_configuration SET media_thumbnail_sizes_ro = :media_thumbnail_sizes_ro WHERE id = :id'),
+            ['media_thumbnail_sizes_ro' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
 
         foreach ($configs as $config) {

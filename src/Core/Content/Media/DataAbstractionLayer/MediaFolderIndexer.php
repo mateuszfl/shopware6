@@ -4,9 +4,11 @@ namespace Shopware\Core\Content\Media\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderCollection;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderDefinition;
 use Shopware\Core\Content\Media\Event\MediaFolderIndexerEvent;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -106,21 +108,23 @@ class MediaFolderIndexer extends EntityIndexer
 
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE media_folder SET media_folder_configuration_id = :configId WHERE id = :id')
+            $this->connection->prepare('UPDATE media_folder SET media_folder_configuration_id = :configId WHERE id = :id'),
+            ['configId' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
 
         $children = [];
         foreach ($ids as $id) {
             $folder = $this->connection->fetchAssociative(
-                'SELECT LOWER(HEX(child.id)) as id,
-                       LOWER(HEX(parent.media_folder_configuration_id)) AS parent_configuration_id
+                'SELECT ' . IndexingSql::hex($this->connection, 'child.id') . ' as id,
+                       ' . IndexingSql::hex($this->connection, 'parent.media_folder_configuration_id') . ' AS parent_configuration_id
                 FROM media_folder child
                     LEFT JOIN media_folder as parent
                         ON parent.id = child.parent_id
                 WHERE child.id = :id
                     AND child.media_folder_configuration_id != parent.media_folder_configuration_id
                     AND child.use_parent_configuration = 1',
-                ['id' => Uuid::fromHexToBytes($id)]
+                ['id' => Uuid::fromHexToBytes($id)],
+                ['id' => ParameterType::BINARY]
             );
 
             if ($folder === false) {
@@ -179,7 +183,7 @@ class MediaFolderIndexer extends EntityIndexer
     private function fetchChildren(array $parentIds): array
     {
         $childIds = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(id)) as id FROM media_folder WHERE parent_id IN (:ids) AND use_parent_configuration = 1',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id FROM media_folder WHERE parent_id IN (:ids) AND use_parent_configuration = 1',
             ['ids' => Uuid::fromHexToBytesList($parentIds)],
             ['ids' => ArrayParameterType::BINARY]
         );
@@ -202,7 +206,7 @@ class MediaFolderIndexer extends EntityIndexer
     {
         /** @var list<string> $parentIds */
         $parentIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(media_folder.parent_id)) as id FROM media_folder WHERE id IN (:ids)',
+            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'media_folder.parent_id') . ' as id FROM media_folder WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

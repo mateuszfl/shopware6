@@ -4,6 +4,8 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Indexing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -82,7 +84,7 @@ class InheritanceUpdater
             $versionKey = \substr($foreignKey, 0, -3) . '_version_id';
 
             $sql = \sprintf(
-                'UPDATE #root# SET #property# = IFNULL(
+                'UPDATE #root# SET #property# = COALESCE(
                         (
                             SELECT #reference#.#entity_id#
                             FROM   #reference#
@@ -90,7 +92,7 @@ class InheritanceUpdater
                             %s
                             LIMIT 1
                         ),
-                        IFNULL(#root#.parent_id, #root#.id)
+                        COALESCE(#root#.parent_id, #root#.id)
                      )
                      WHERE #root#.id IN (:ids)
                      %s',
@@ -99,11 +101,11 @@ class InheritanceUpdater
             );
 
             $parameters = [
-                '#root#' => EntityDefinitionQueryHelper::escape($definition->getEntityName()),
-                '#entity_id#' => EntityDefinitionQueryHelper::escape($foreignKey),
-                '#entity_version_id#' => EntityDefinitionQueryHelper::escape($versionKey),
-                '#property#' => EntityDefinitionQueryHelper::escape($association->getPropertyName()),
-                '#reference#' => EntityDefinitionQueryHelper::escape($reference->getEntityName()),
+                '#root#' => EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection),
+                '#entity_id#' => EntityDefinitionQueryHelper::escape($foreignKey, $this->connection),
+                '#entity_version_id#' => EntityDefinitionQueryHelper::escape($versionKey, $this->connection),
+                '#property#' => EntityDefinitionQueryHelper::escape($association->getPropertyName(), $this->connection),
+                '#reference#' => EntityDefinitionQueryHelper::escape($reference->getEntityName(), $this->connection),
             ];
 
             $params = ['ids' => $bytes];
@@ -123,7 +125,7 @@ class InheritanceUpdater
                 $this->connection->executeStatement(
                     $sql,
                     $params,
-                    ['ids' => ArrayParameterType::BINARY]
+                    ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
                 );
             });
         }
@@ -143,25 +145,20 @@ class InheritanceUpdater
             }
 
             $parameters = [
-                '#root#' => EntityDefinitionQueryHelper::escape($definition->getEntityName()),
-                '#field#' => EntityDefinitionQueryHelper::escape($association->getStorageName()),
-                '#property#' => EntityDefinitionQueryHelper::escape($association->getPropertyName()),
+                '#root#' => EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection),
+                '#field#' => EntityDefinitionQueryHelper::escape($association->getStorageName(), $this->connection),
+                '#property#' => EntityDefinitionQueryHelper::escape($association->getPropertyName(), $this->connection),
             ];
 
-            $sql = 'UPDATE #root# as #root#, #root# as parent
-                    SET #root#.#property# = IFNULL(#root#.#field#, parent.#field#)
-                    WHERE #root#.parent_id = parent.id
-                    AND #root#.parent_id IS NOT NULL
-                    AND #root#.id IN (:ids)';
-
+            $root = EntityDefinitionQueryHelper::escape($definition->getEntityName(), $this->connection);
+            $field = EntityDefinitionQueryHelper::escape($association->getStorageName(), $this->connection);
+            $condition = 'root.parent_id = parent.id AND root.id IN (:ids)';
             $params = ['ids' => $bytes];
-
             if ($definition->isVersionAware()) {
-                $sql .= 'AND #root#.version_id = parent.version_id
-                         AND #root#.version_id = :version';
-                $versionId = Uuid::fromHexToBytes($context->getVersionId());
-                $params['version'] = $versionId;
+                $condition .= ' AND parent.version_id = root.parent_version_id AND root.version_id = :version';
+                $params['version'] = Uuid::fromHexToBytes($context->getVersionId());
             }
+            $sql = IndexingSql::joinedUpdate($this->connection, $definition->getEntityName(), 'root', $root . ' parent', [$association->getPropertyName() => 'COALESCE(root.' . $field . ', parent.' . $field . ')'], $condition);
 
             $sql = str_replace(
                 array_keys($parameters),
@@ -173,12 +170,12 @@ class InheritanceUpdater
                 $this->connection->executeStatement(
                     $sql,
                     $params,
-                    ['ids' => ArrayParameterType::BINARY]
+                    ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
                 );
             });
 
             $sql = 'UPDATE #root# AS #root#
-                    SET #root#.#property# = #root#.#field#
+                    SET #property# = #root#.#field#
                     WHERE #root#.parent_id IS NULL
                     AND #root#.id IN (:ids)';
 
@@ -200,7 +197,7 @@ class InheritanceUpdater
                 $this->connection->executeStatement(
                     $sql,
                     $params,
-                    ['ids' => ArrayParameterType::BINARY]
+                    ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
                 );
             });
         }

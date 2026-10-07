@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\DataAbstractionLayer\ProductDescriptionTeaserBuilder;
@@ -67,6 +68,8 @@ class ProductDescriptionTeaserIndexerTest extends TestCase
     public function testHandleRebuildsMissingAndStaleTeasers(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $selectSql = null;
         $connection->method('fetchAllAssociative')
@@ -108,6 +111,8 @@ class ProductDescriptionTeaserIndexerTest extends TestCase
     public function testHandleIgnoresEmptyMessage(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->never())->method('fetchAllAssociative');
         $connection->expects($this->never())->method('executeStatement');
 

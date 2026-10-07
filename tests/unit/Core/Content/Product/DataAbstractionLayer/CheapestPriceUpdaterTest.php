@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use Doctrine\DBAL\Statement;
@@ -50,6 +51,8 @@ class CheapestPriceUpdaterTest extends TestCase
         $this->quantitySelector->method('add')->willReturnSelf();
 
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->connection->method('createQueryBuilder')->willReturn($this->queryBuilder);
     }
 

@@ -2,6 +2,12 @@
 
 ## Core
 
+### Catalog indexing preserves versions and stable association order
+
+Product price inheritance now reads the referenced parent version. Category breadcrumbs, product ratings and stream mapping updates stay within the indexing context's version. Repeated indexer messages preserve the same category ID and filter order, and equivalent cheapest-price JSON no longer triggers a price-change event solely because object members were reordered.
+
+`StatementHelper` methods and the `RetryableQuery` constructor accept an optional parameter-type map for binary UUIDs and serialized values. Existing calls keep their default bindings.
+
 ### DAL schema generation preserves unique keys
 
 Definition-based schema updates preserve existing unique keys, including an equivalent auto-increment index with a custom name. New schemas containing `AutoIncrementField` create its required unique index. Custom subclasses of registered DAL field types inherit their storage type unless they register an explicit mapping.

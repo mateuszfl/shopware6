@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Media\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Aggregate\MediaThumbnail\MediaThumbnailCollection;
 use Shopware\Core\Content\Media\Event\MediaIndexerEvent;
 use Shopware\Core\Content\Media\MediaCollection;
@@ -99,7 +100,8 @@ class MediaIndexer extends EntityIndexer
 
         $query = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `media` SET thumbnails_ro = :thumbnails_ro WHERE id = :id')
+            $this->connection->prepare('UPDATE media SET thumbnails_ro = :thumbnails_ro WHERE id = :id'),
+            ['thumbnails_ro' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
 
         $all = $this->thumbnailRepository

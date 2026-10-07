@@ -63,6 +63,7 @@ class RuleAreaUpdaterTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
         $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $this->conditionRegistry = static::createStub(RuleConditionRegistry::class);
@@ -105,6 +106,7 @@ class RuleAreaUpdaterTest extends TestCase
         ]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('executeQuery')
@@ -210,6 +212,8 @@ class RuleAreaUpdaterTest extends TestCase
         $resultStatement->expects($this->once())->method('fetchAllAssociative')->willReturn([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('executeQuery')

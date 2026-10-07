@@ -4,9 +4,11 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceContainer;
 use Shopware\Core\Content\Product\Events\ProductIndexerEvent;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -44,12 +46,14 @@ class CheapestPriceUpdater
 
         $cheapestPrice = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE product SET cheapest_price = :price WHERE id = :id AND version_id = :version')
+            $this->connection->prepare('UPDATE product SET cheapest_price = :price WHERE id = :id AND version_id = :version'),
+            ['price' => ParameterType::BINARY, 'id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $accessorQuery = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE product SET cheapest_price_accessor = :accessor WHERE id = :id AND version_id = :version')
+            $this->connection->prepare('UPDATE product SET cheapest_price_accessor = :accessor WHERE id = :id AND version_id = :version'),
+            ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         // Pre-load the existing cheapest-price accessors of all variants for every parent in a single
@@ -57,15 +61,15 @@ class CheapestPriceUpdater
         $existingAccessorsByParent = [];
         if ($all !== []) {
             $rows = $this->connection->fetchAllAssociative(
-                'SELECT LOWER(HEX(`parent_id`)) AS parentId, `id` AS id, `cheapest_price_accessor` AS accessor
+                'SELECT ' . IndexingSql::hex($this->connection, 'parent_id') . ' AS parent_id, id AS id, cheapest_price_accessor AS accessor
                  FROM product
-                 WHERE `parent_id` IN (:ids) AND `version_id` = :version',
+                 WHERE parent_id IN (:ids) AND version_id = :version',
                 ['ids' => Uuid::fromHexToBytesList(array_keys($all)), 'version' => $versionId],
-                ['ids' => ArrayParameterType::BINARY]
+                ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
             );
 
             foreach ($rows as $row) {
-                $existingAccessorsByParent[$row['parentId']][$row['id']] = $row['accessor'];
+                $existingAccessorsByParent[$row['parent_id']][Uuid::fromBytesToHex($row['id'])] = $row['accessor'];
             }
         }
 
@@ -91,7 +95,7 @@ class CheapestPriceUpdater
             foreach ($container->getVariantIds() as $variantId) {
                 $accessor = Json::encode($this->buildAccessor($container, $variantId));
 
-                if (($existingAccessors[Uuid::fromHexToBytes($variantId)] ?? null) === $accessor) {
+                if (isset($existingAccessors[$variantId]) && $this->canonicalAccessor(Json::decodeToArray((string) $existingAccessors[$variantId])) === $this->canonicalAccessor(Json::decodeToArray($accessor))) {
                     continue;
                 }
 
@@ -193,23 +197,23 @@ class CheapestPriceUpdater
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(IFNULL(product.parent_id, product.id))) as parent_id',
-            'LOWER(HEX(product.id)) as variant_id',
-            'LOWER(HEX(price.rule_id)) as rule_id',
-            'LOWER(HEX(IFNULL(product.unit_id, parent.unit_id))) as unit_id',
-            'IFNULL(product.purchase_unit, parent.purchase_unit) as purchase_unit',
-            'IFNULL(product.reference_unit, parent.reference_unit) as reference_unit',
-            'IFNULL(product.min_purchase, parent.min_purchase) as min_purchase',
+            '' . IndexingSql::hex($this->connection, 'COALESCE(product.parent_id, product.id)') . ' as parent_id',
+            '' . IndexingSql::hex($this->connection, 'product.id') . ' as variant_id',
+            '' . IndexingSql::hex($this->connection, 'price.rule_id') . ' as rule_id',
+            '' . IndexingSql::hex($this->connection, 'COALESCE(product.unit_id, parent.unit_id)') . ' as unit_id',
+            'COALESCE(product.purchase_unit, parent.purchase_unit) as purchase_unit',
+            'COALESCE(product.reference_unit, parent.reference_unit) as reference_unit',
+            'COALESCE(product.min_purchase, parent.min_purchase) as min_purchase',
             'price.price',
         );
 
         $query->from('product', 'product');
         $query->innerJoin('product', 'product_price', 'price', 'price.product_id = product.prices AND product.version_id = price.product_version_id');
-        $query->leftJoin('product', 'product', 'parent', 'parent.id = product.parent_id');
+        $query->leftJoin('product', 'product', 'parent', 'parent.id = product.parent_id AND parent.version_id = product.parent_version_id');
 
         $query->andWhere('product.id IN (:ids) OR product.parent_id IN (:ids)');
         $query->andWhere('product.version_id = :version');
-        $query->andWhere('IFNULL(product.active, parent.active) = 1');
+        $query->andWhere('COALESCE(product.active, parent.active) = 1');
         $query->andWhere('(product.child_count = 0 OR product.parent_id IS NOT NULL)');
 
         $this->quantitySelector->add($query);
@@ -218,31 +222,31 @@ class CheapestPriceUpdater
         $versionBytes = Uuid::fromHexToBytes($context->getVersionId());
 
         $query->setParameter('ids', $idsBytes, ArrayParameterType::BINARY);
-        $query->setParameter('version', $versionBytes);
+        $query->setParameter('version', $versionBytes, ParameterType::BINARY);
 
         $data = $query->executeQuery()->fetchAllAssociative();
 
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(IFNULL(product.parent_id, product.id))) as parent_id',
-            'LOWER(HEX(product.id)) as variant_id',
+            '' . IndexingSql::hex($this->connection, 'COALESCE(product.parent_id, product.id)') . ' as parent_id',
+            '' . IndexingSql::hex($this->connection, 'product.id') . ' as variant_id',
             'NULL as rule_id',
             '0 AS is_ranged',
             'product.price as price',
-            'IFNULL(product.min_purchase, parent.min_purchase) as min_purchase',
-            'LOWER(HEX(IFNULL(product.unit_id, parent.unit_id))) as unit_id',
-            'IFNULL(product.purchase_unit, parent.purchase_unit) as purchase_unit',
-            'IFNULL(product.reference_unit, parent.reference_unit) as reference_unit',
+            'COALESCE(product.min_purchase, parent.min_purchase) as min_purchase',
+            '' . IndexingSql::hex($this->connection, 'COALESCE(product.unit_id, parent.unit_id)') . ' as unit_id',
+            'COALESCE(product.purchase_unit, parent.purchase_unit) as purchase_unit',
+            'COALESCE(product.reference_unit, parent.reference_unit) as reference_unit',
             'product.child_count as child_count',
         );
 
         $query->from('product', 'product');
-        $query->leftJoin('product', 'product', 'parent', 'product.parent_id = parent.id');
+        $query->leftJoin('product', 'product', 'parent', 'product.parent_id = parent.id AND parent.version_id = product.parent_version_id');
         $query->andWhere('product.id IN (:ids) OR product.parent_id IN (:ids)');
         $query->andWhere('product.version_id = :version');
-        $query->andWhere('IFNULL(product.active, parent.active) = 1 OR product.child_count > 0'); // always load parent products
+        $query->andWhere('COALESCE(product.active, parent.active) = 1 OR product.child_count > 0'); // always load parent products
         $query->setParameter('ids', $idsBytes, ArrayParameterType::BINARY);
-        $query->setParameter('version', $versionBytes);
+        $query->setParameter('version', $versionBytes, ParameterType::BINARY);
 
         $defaults = $query->executeQuery()->fetchAllAssociative();
 
@@ -298,7 +302,7 @@ class CheapestPriceUpdater
         }
 
         $results = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(product_id)) as product_id, LOWER(HEX(sales_channel_id)) as sales_channel_id
+            'SELECT ' . IndexingSql::hex($this->connection, 'product_id') . ' as product_id, ' . IndexingSql::hex($this->connection, 'sales_channel_id') . ' as sales_channel_id
              FROM product_visibility
              WHERE product_id IN (:ids)
              AND product_version_id = :version',
@@ -307,7 +311,7 @@ class CheapestPriceUpdater
                 'version' => Uuid::fromHexToBytes($context->getVersionId()),
             ],
             [
-                'ids' => ArrayParameterType::BINARY,
+                'ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY,
             ]
         );
 
@@ -327,5 +331,22 @@ class CheapestPriceUpdater
         }
 
         return $prices;
+    }
+
+    /** @param array<mixed> $value
+     * @return array<mixed>
+     */
+    private function canonicalAccessor(array $value): array
+    {
+        if (!array_is_list($value)) {
+            ksort($value, \SORT_STRING);
+        }
+        foreach ($value as &$member) {
+            if (\is_array($member)) {
+                $member = $this->canonicalAccessor($member);
+            }
+        }
+
+        return $value;
     }
 }
