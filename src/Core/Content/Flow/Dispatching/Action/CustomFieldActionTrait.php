@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Content\Flow\Dispatching\Action;
 
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 
@@ -96,7 +97,8 @@ trait CustomFieldActionTrait
             [
                 'entity' => $entity,
                 'id' => Uuid::fromHexToBytes($customFieldId),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
 
         return $name ?: null;

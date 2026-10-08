@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Mail\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Monolog\Level;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
@@ -60,6 +61,6 @@ class FailedMessageSubscriber implements EventSubscriberInterface
             'context' => $context,
             'extra' => $extra,
             'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        ], ['id' => ParameterType::BINARY]);
     }
 }

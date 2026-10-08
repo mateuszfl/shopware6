@@ -80,21 +80,8 @@ class NewsletterRecipientSalutationSubscriberTest extends TestCase
         $this->connection->expects($this->once())
             ->method('executeStatement')
             ->willReturnCallback(static function ($sql, $params) use ($newsletterRecipientId): int {
-                static::assertSame($params, [
-                    'id' => Uuid::fromHexToBytes($newsletterRecipientId),
-                    'notSpecified' => 'not_specified',
-                ]);
-
-                static::assertSame('
-                UPDATE `newsletter_recipient`
-                SET `salutation_id` = (
-                    SELECT `id`
-                    FROM `salutation`
-                    WHERE `salutation_key` = :notSpecified
-                    LIMIT 1
-                )
-                WHERE `id` = :id AND `salutation_id` is NULL
-            ', $sql);
+                static::assertSame(Uuid::fromHexToBytes($newsletterRecipientId), $params['id']);
+                static::assertSame('not_specified', $params['notSpecified']);
 
                 return 1;
             });

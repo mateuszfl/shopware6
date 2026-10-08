@@ -2,6 +2,16 @@
 
 ## Core
 
+### Content cleanup and workflow ordering preserve database semantics
+
+Media cleanup recognizes CMS references in category, product and landing page overrides across slot versions and literal custom field names, including media select values. Used media remain protected when cleanup advances through multiple batches and folder restrictions.
+
+Flow sequences with the same display group and position now run in sequence ID order. Flows with equal priority use flow ID order. Delivery state actions choose the highest numeric shipping cost, then the newest creation date and lowest delivery ID; missing costs and dates sort last.
+
+### DAL UUID range filters accept hexadecimal bounds
+
+`RangeFilter` accepts hexadecimal UUID bounds for ID, foreign key and version fields, including inherited fields. Existing binary UUID bounds remain supported.
+
 ### Catalog indexing preserves versions and stable association order
 
 Product price inheritance now reads the referenced parent version. Category breadcrumbs, product ratings and stream mapping updates stay within the indexing context's version. Repeated indexer messages preserve the same category ID and filter order, and equivalent cheapest-price JSON no longer triggers a price-change event solely because object members were reordered.

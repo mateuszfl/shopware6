@@ -2,11 +2,11 @@
 
 namespace Shopware\Core\Content\Media\Subscriber;
 
-use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Event\UnusedMediaSearchEvent;
-use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\JsonPath;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\TranslatedField;
 use Shopware\Core\Framework\Log\Package;
@@ -37,147 +37,49 @@ class CustomFieldsUnusedMediaSubscriber implements EventSubscriberInterface
 
     public function removeUsedMedia(UnusedMediaSearchEvent $event): void
     {
-        $this->findMediaIds($event);
-        $this->findMediaIdsWithEntitySelect($event);
-        $this->findMediaIdsWithEntityMultiSelect($event);
-    }
-
-    private function findMediaIds(UnusedMediaSearchEvent $event): void
-    {
-        /** @var list<array{id: string, name: string, entity_name: string}> $customMediaFields */
-        $customMediaFields = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT f.id, f.name, fsr.entity_name
-            FROM custom_field f
-            INNER JOIN custom_field_set fs ON (f.set_id = fs.id)
-            INNER JOIN custom_field_set_relation fsr ON (fs.id = fsr.set_id)
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(f.config, '$.customFieldType')) = 'media'
-            SQL
-        );
-
-        $fieldsPerEntity = $this->groupFieldsPerEntity($customMediaFields);
-
-        $template = <<<'SQL'
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(%1$s.custom_fields, CONCAT('$.', JSON_QUOTE(:field)))) as media_id
-            FROM %1$s
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(%1$s.custom_fields, CONCAT('$.', JSON_QUOTE(:field)))) IN (:ids)
-            SQL;
-        $statements = [];
-        foreach ($fieldsPerEntity as $entity => $fields) {
-            $table = EntityDefinitionQueryHelper::escape($this->getTableName((string) $entity));
-            $statement = \sprintf($template, $table);
-
-            foreach ($fields as $field) {
-                $usedMediaIds = $this->connection->fetchFirstColumn(
-                    $statement,
-                    [
-                        'field' => $field,
-                        'ids' => $event->getUnusedIds(),
-                    ],
-                    [
-                        'field' => ParameterType::STRING,
-                        'ids' => ArrayParameterType::STRING,
-                    ],
-                );
-
-                $event->markAsUsed($usedMediaIds);
-            }
+        if ($event->getUnusedIds() === []) {
+            return;
         }
-    }
 
-    /**
-     * @return list<array{id: string, name: string, entity_name: string}>
-     */
-    private function findCustomFieldsWithEntitySelect(string $componentType): array
-    {
-        /** @var list<array{id: string, name: string, entity_name: string}> $results */
-        $results = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT f.id, f.name, fsr.entity_name
-            FROM custom_field f
-            INNER JOIN custom_field_set fs ON (f.set_id = fs.id)
-            INNER JOIN custom_field_set_relation fsr ON (fs.id = fsr.set_id)
-            WHERE f.type = 'select' AND JSON_UNQUOTE(JSON_EXTRACT(f.config, '$.entity')) = 'media' AND JSON_UNQUOTE(JSON_EXTRACT(f.config, '$.componentName')) = :componentType
-            SQL,
-            ['componentType' => $componentType],
-            ['componentType' => ParameterType::STRING]
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $mediaType = $dialect->jsonExtractPath('f.config', JsonPath::members(['customFieldType']))->named();
+        $entity = $dialect->jsonExtractPath('f.config', JsonPath::members(['entity']))->named();
+        $component = $dialect->jsonExtractPath('f.config', JsonPath::members(['componentName']))->named();
+        /** @var list<array{name: string, entity_name: string}> $fields */
+        $fields = $this->connection->fetchAllAssociative(
+            'SELECT f.name, fsr.entity_name FROM custom_field f '
+            . 'INNER JOIN custom_field_set fs ON f.set_id = fs.id '
+            . 'INNER JOIN custom_field_set_relation fsr ON fs.id = fsr.set_id '
+            . 'WHERE ' . $dialect->jsonScalar($mediaType->sql) . ' = \'media\' OR (f.type = \'select\' AND '
+            . $dialect->jsonScalar($entity->sql) . ' = \'media\' AND '
+            . $dialect->jsonScalar($component->sql) . ' IN (\'sw-entity-single-select\', \'sw-entity-multi-id-select\'))',
+            [...$mediaType->parameters, ...$entity->parameters, ...$component->parameters],
+            [...$mediaType->types, ...$entity->types, ...$component->types],
         );
 
-        return $results;
-    }
-
-    private function findMediaIdsWithEntitySelect(UnusedMediaSearchEvent $event): void
-    {
-        $fieldsPerEntity = $this->groupFieldsPerEntity(
-            $this->findCustomFieldsWithEntitySelect('sw-entity-single-select')
-        );
-
-        $template = <<<'SQL'
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(%1$s.custom_fields, CONCAT('$.', JSON_QUOTE(:field)))) as media_id
-            FROM %1$s
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(%1$s.custom_fields, CONCAT('$.', JSON_QUOTE(:field)))) IN (:ids)
-            SQL;
-        $statements = [];
-        foreach ($fieldsPerEntity as $entity => $fields) {
-            $table = EntityDefinitionQueryHelper::escape($this->getTableName((string) $entity));
-            $statement = \sprintf($template, $table);
-
-            foreach ($fields as $field) {
-                $usedMediaIds = $this->connection->fetchFirstColumn(
-                    $statement,
-                    [
-                        'field' => $field,
-                        'ids' => $event->getUnusedIds(),
-                    ],
-                    [
-                        'field' => ParameterType::STRING,
-                        'ids' => ArrayParameterType::STRING,
-                    ],
-                );
-
-                $event->markAsUsed($usedMediaIds);
+        foreach ($fields as $field) {
+            if ($event->getUnusedIds() === []) {
+                return;
             }
-        }
-    }
 
-    private function findMediaIdsWithEntityMultiSelect(UnusedMediaSearchEvent $event): void
-    {
-        $fieldsPerEntity = $this->groupFieldsPerEntity(
-            $this->findCustomFieldsWithEntitySelect('sw-entity-multi-id-select')
-        );
-
-        $template = <<<'SQL'
-            SELECT JSON_EXTRACT(custom_fields, CONCAT('$.', JSON_QUOTE(:field))) as mediaIds
-            FROM %s
-            WHERE JSON_OVERLAPS(
-                JSON_EXTRACT(custom_fields, CONCAT('$.', JSON_QUOTE(:field))),
-                JSON_ARRAY(:ids)
+            $table = $dialect->quoteIdentifier($this->getTableName($field['entity_name']));
+            $value = $dialect->jsonExtractPath($table . '.custom_fields', JsonPath::members([$field['name']]))->named();
+            $rows = $this->connection->fetchFirstColumn(
+                'SELECT ' . $value->sql . ' FROM ' . $table . ' WHERE ' . $dialect->jsonOverlaps($value->sql, ':mediaIds'),
+                [...$value->parameters, 'mediaIds' => json_encode($event->getUnusedIds(), \JSON_THROW_ON_ERROR)],
+                [...$value->types, 'mediaIds' => ParameterType::STRING],
             );
-            SQL;
-        $statements = [];
-        foreach ($fieldsPerEntity as $entity => $fields) {
-            $table = EntityDefinitionQueryHelper::escape($this->getTableName((string) $entity));
-            $statement = \sprintf($template, $table);
 
-            foreach ($fields as $field) {
-                $usedMediaIds = $this->connection->fetchFirstColumn(
-                    $statement,
-                    [
-                        'field' => $field,
-                        'ids' => $event->getUnusedIds(),
-                    ],
-                    [
-                        'field' => ParameterType::STRING,
-                        'ids' => ArrayParameterType::STRING,
-                    ],
-                );
-
-                $event->markAsUsed(
-                    array_merge(
-                        ...array_map(static fn (string $ids) => json_decode($ids, true, flags: \JSON_THROW_ON_ERROR), $usedMediaIds)
-                    )
-                );
+            $ids = [];
+            foreach ($rows as $row) {
+                $value = json_decode($row, true, flags: \JSON_THROW_ON_ERROR);
+                foreach (\is_array($value) ? $value : [$value] as $id) {
+                    if (\is_string($id)) {
+                        $ids[] = $id;
+                    }
+                }
             }
+            $event->markAsUsed($ids);
         }
     }
 
@@ -194,23 +96,5 @@ class CustomFieldsUnusedMediaSubscriber implements EventSubscriberInterface
         }
 
         return $table;
-    }
-
-    /**
-     * @param list<array{id: string, name: string, entity_name: string}> $customMediaFields
-     *
-     * @return array<string, array<string>>
-     */
-    private function groupFieldsPerEntity(array $customMediaFields): array
-    {
-        $fieldsPerEntity = [];
-        foreach ($customMediaFields as $field) {
-            if (!isset($fieldsPerEntity[$field['entity_name']])) {
-                $fieldsPerEntity[$field['entity_name']] = [];
-            }
-            $fieldsPerEntity[$field['entity_name']][] = $field['name'];
-        }
-
-        return $fieldsPerEntity;
     }
 }

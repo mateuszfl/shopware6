@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Seo;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\Log\Package;
@@ -105,7 +106,7 @@ class SeoUrlPlaceholderHandler implements SeoUrlPlaceholderHandlerInterface
         foreach ($matches as $match) {
             // remove self::DOMAIN_PLACEHOLDER from start
             // remove # from end
-            $mapping[$match] = str_replace('\/', '/', substr((string) $match, $placeholder, -1));
+            $mapping[$match] = str_replace('\\/', '/', substr((string) $match, $placeholder, -1));
         }
 
         return $mapping;
@@ -133,8 +134,8 @@ class SeoUrlPlaceholderHandler implements SeoUrlPlaceholderHandlerInterface
         $query->andWhere('seo_url.sales_channel_id = :salesChannelId OR seo_url.sales_channel_id IS NULL');
         $query->andWhere('seo_url.is_deleted = 0');
         $query->setParameter('pathInfo', $mapping, ArrayParameterType::STRING);
-        $query->setParameter('languageId', Uuid::fromHexToBytes($context->getLanguageId()));
-        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()));
+        $query->setParameter('languageId', Uuid::fromHexToBytes($context->getLanguageId()), ParameterType::BINARY);
+        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()), ParameterType::BINARY);
 
         $seoUrls = $query->executeQuery()->fetchAllAssociative();
 

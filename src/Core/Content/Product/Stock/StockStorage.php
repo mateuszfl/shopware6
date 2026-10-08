@@ -4,9 +4,11 @@ namespace Shopware\Core\Content\Product\Stock;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Events\ProductNoLongerAvailableEvent;
 use Shopware\Core\Content\Product\Events\ProductStockAlteredEvent;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
@@ -50,15 +52,14 @@ class StockStorage extends AbstractStockStorage
             return;
         }
 
-        $sql = <<<'SQL'
-            UPDATE product
-            SET stock = stock + :quantity, sales = sales - :quantity, available_stock = stock, updated_at = NOW()
-            WHERE id = :id AND version_id = :version
-        SQL;
+        $sql = 'UPDATE product
+            SET available_stock = stock + :quantity, stock = stock + :quantity, sales = sales - :quantity, updated_at = CURRENT_TIMESTAMP
+            WHERE id = :id AND version_id = :version';
 
         $query = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare($sql)
+            $this->connection->prepare($sql),
+            ['quantity' => ParameterType::INTEGER, 'id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         foreach ($changes as $alteration) {
@@ -99,40 +100,37 @@ class StockStorage extends AbstractStockStorage
 
         $bytes = Uuid::fromHexToBytesList($ids);
 
-        $sql = '
-            UPDATE product
-            LEFT JOIN product parent
-                ON parent.id = product.parent_id
-                AND parent.version_id = product.version_id
-
-            SET product.available = IFNULL((
-                COALESCE(product.is_closeout, parent.is_closeout, 0) * product.stock
-                >=
-                COALESCE(product.is_closeout, parent.is_closeout, 0) * IFNULL(product.min_purchase, parent.min_purchase)
-            ), 0),
-                product.updated_at = NOW()
-            WHERE product.id IN (:ids)
-            AND product.version_id = :version
-        ';
+        $sql = IndexingSql::joinedUpdate(
+            $this->connection,
+            'product',
+            'target',
+            '(SELECT child.id, child.version_id, CASE WHEN '
+            . 'COALESCE(child.is_closeout, parent.is_closeout, 0) * child.stock >= '
+            . 'COALESCE(child.is_closeout, parent.is_closeout, 0) * COALESCE(child.min_purchase, parent.min_purchase) '
+            . 'THEN 1 ELSE 0 END AS available '
+            . 'FROM product child LEFT JOIN product parent ON parent.id = child.parent_id AND parent.version_id = child.version_id) availability',
+            ['available' => 'availability.available', 'updated_at' => 'CURRENT_TIMESTAMP'],
+            'target.id = availability.id AND target.version_id = availability.version_id AND target.id IN (:ids) AND target.version_id = :version',
+        );
 
         $before = $this->connection->fetchAllKeyValue(
-            'SELECT LOWER(HEX(id)), available FROM product WHERE id IN (:ids) AND product.version_id = :version',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', available FROM product WHERE id IN (:ids) AND product.version_id = :version',
             ['ids' => $bytes, 'version' => Uuid::fromHexToBytes($context->getVersionId())],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         RetryableQuery::retryable($this->connection, function () use ($sql, $context, $bytes): void {
             $this->connection->executeStatement(
                 $sql,
                 ['ids' => $bytes, 'version' => Uuid::fromHexToBytes($context->getVersionId())],
-                ['ids' => ArrayParameterType::BINARY]
+                ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
             );
         });
 
         $after = $this->connection->fetchAllKeyValue(
-            'SELECT LOWER(HEX(id)), available FROM product WHERE id IN (:ids) AND product.version_id = :version',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', available FROM product WHERE id IN (:ids) AND product.version_id = :version',
             ['ids' => $bytes, 'version' => Uuid::fromHexToBytes($context->getVersionId())],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $updated = [];

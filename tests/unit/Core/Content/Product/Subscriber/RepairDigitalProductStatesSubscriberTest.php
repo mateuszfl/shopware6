@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -28,6 +29,9 @@ class RepairDigitalProductStatesSubscriberTest extends TestCase
         ]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchFirstColumn');
 
         $statesUpdater = $this->createMock(StatesUpdater::class);
@@ -54,6 +58,9 @@ class RepairDigitalProductStatesSubscriberTest extends TestCase
         $storage = new ArrayKeyValueStorage();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('fetchFirstColumn')
             ->willReturn($ids);
@@ -88,6 +95,9 @@ class RepairDigitalProductStatesSubscriberTest extends TestCase
         $storage = new ArrayKeyValueStorage();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')
             ->willReturnOnConsecutiveCalls($ids, $ids);

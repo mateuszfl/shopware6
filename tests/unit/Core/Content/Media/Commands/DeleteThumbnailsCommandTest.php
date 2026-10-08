@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\Commands;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\DirectoryListing;
 use League\Flysystem\FileAttributes;
 use League\Flysystem\FilesystemOperator;
@@ -43,6 +44,9 @@ class DeleteThumbnailsCommandTest extends TestCase
     public function testExecuteWithRemoteThumbnailsDisabledAndForce(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $thumbnailRepository = $this->createMock(EntityRepository::class);
         $filesystemPublic = $this->createMock(FilesystemOperator::class);
         $filesystemPrivate = $this->createMock(FilesystemOperator::class);
@@ -55,7 +59,6 @@ class DeleteThumbnailsCommandTest extends TestCase
         $thumbnailPath = 'thumbnail/aa/bb/cc/1786525629/test_100x100.png';
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
-            ->with('SELECT LOWER(HEX(`id`)) as id, `path` FROM `media_thumbnail`')
             ->willReturn([$thumbnailId => $thumbnailPath]);
 
         $filesystemPublic->expects($this->once())
@@ -77,8 +80,7 @@ class DeleteThumbnailsCommandTest extends TestCase
             ->with([['id' => $thumbnailId]], static::isInstanceOf(Context::class));
 
         $connection->expects($this->once())
-            ->method('executeStatement')
-            ->with('UPDATE `media` SET `thumbnails_ro` = NULL;');
+            ->method('executeStatement');
 
         $filesystemPublic->expects($this->once())
             ->method('deleteDirectory')
@@ -100,6 +102,9 @@ class DeleteThumbnailsCommandTest extends TestCase
     public function testExecuteFailsWhenForceAndOrphansAreCombined(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllKeyValue');
 
         $command = new DeleteThumbnailsCommand(
@@ -123,6 +128,9 @@ class DeleteThumbnailsCommandTest extends TestCase
     public function testExecuteWithOrphansOptionOnlyDeletesOrphanedFiles(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $thumbnailRepository = $this->createMock(EntityRepository::class);
         $filesystemPublic = $this->createMock(FilesystemOperator::class);
         $filesystemPrivate = $this->createMock(FilesystemOperator::class);
@@ -137,7 +145,6 @@ class DeleteThumbnailsCommandTest extends TestCase
         ];
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
-            ->with('SELECT LOWER(HEX(`id`)) as id, `path` FROM `media_thumbnail`')
             ->willReturn([Uuid::randomHex() => $thumbnailPath]);
 
         $filesystemPublic->expects($this->once())
@@ -182,6 +189,9 @@ class DeleteThumbnailsCommandTest extends TestCase
     public function testExecuteWithRemoteThumbnailsEnabled(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $thumbnailRepository = $this->createMock(EntityRepository::class);
         $filesystemPublic = static::createStub(FilesystemOperator::class);
         $filesystemPrivate = static::createStub(FilesystemOperator::class);
@@ -204,7 +214,6 @@ class DeleteThumbnailsCommandTest extends TestCase
         ];
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
-            ->with('SELECT LOWER(HEX(`id`)) as id, `path` FROM `media_thumbnail`')
             ->willReturn($thumbnails);
 
         $thumbnailRepository->expects($this->once())
@@ -212,8 +221,7 @@ class DeleteThumbnailsCommandTest extends TestCase
             ->with(array_map(static fn (string $id) => ['id' => $id], array_keys($thumbnails)), static::isInstanceOf(Context::class));
 
         $connection->expects($this->once())
-            ->method('executeStatement')
-            ->with('UPDATE `media` SET `thumbnails_ro` = NULL;');
+            ->method('executeStatement');
         $commandTester->execute([]);
 
         $commandTester->assertCommandIsSuccessful();

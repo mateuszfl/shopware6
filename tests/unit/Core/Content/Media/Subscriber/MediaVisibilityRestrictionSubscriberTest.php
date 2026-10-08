@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderDefinition;
@@ -192,6 +193,9 @@ class MediaVisibilityRestrictionSubscriberTest extends TestCase
     public function testResetClearsMemoizedProductDownloadMediaFolderId(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->exactly(2))
             ->method('fetchOne')
@@ -320,6 +324,9 @@ class MediaVisibilityRestrictionSubscriberTest extends TestCase
     private function createSubscriber(string $productDownloadMediaFolderId = self::PRODUCT_DOWNLOAD_MEDIA_FOLDER_ID): MediaVisibilityRestrictionSubscriber
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->method('fetchOne')
             ->willReturn($productDownloadMediaFolderId);

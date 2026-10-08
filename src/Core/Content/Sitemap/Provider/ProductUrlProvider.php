@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Sitemap\Provider;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Aggregate\ProductVisibility\ProductVisibilityDefinition;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\ProductEntity;
@@ -125,30 +126,30 @@ class ProductUrlProvider extends AbstractUrlProvider
         $showAfterCloseout = !$this->systemConfigService->get(self::CONFIG_HIDE_AFTER_CLOSEOUT, $context->getSalesChannelId());
 
         $query->addSelect(
-            '`product`.created_at as created_at',
-            '`product`.updated_at as updated_at',
+            'product.created_at as created_at',
+            'product.updated_at as updated_at',
         );
 
-        $query->leftJoin('`product`', '`product`', 'parent', '`product`.parent_id = parent.id');
-        $query->innerJoin('`product`', 'product_visibility', 'visibilities', 'product.visibilities = visibilities.product_id');
+        $query->leftJoin('product', 'product', 'parent', 'product.parent_id = parent.id AND product.parent_version_id = parent.version_id');
+        $query->innerJoin('product', 'product_visibility', 'visibilities', 'product.visibilities = visibilities.product_id');
 
-        $query->andWhere('`product`.version_id = :versionId');
+        $query->andWhere('product.version_id = :versionId');
 
         if ($showAfterCloseout) {
-            $query->andWhere('(`product`.available = 1 OR `product`.is_closeout)');
+            $query->andWhere('(product.available = 1 OR product.is_closeout = 1)');
         } else {
-            $query->andWhere('`product`.available = 1');
+            $query->andWhere('product.available = 1');
         }
 
-        $query->andWhere('IFNULL(`product`.active, parent.active) = 1');
-        $query->andWhere('(`product`.child_count = 0 OR `product`.parent_id IS NOT NULL)');
-        $query->andWhere('(`product`.parent_id IS NULL OR parent.canonical_product_id IS NULL OR parent.canonical_product_id = `product`.id)');
+        $query->andWhere('COALESCE(product.active, parent.active) = 1');
+        $query->andWhere('(product.child_count = 0 OR product.parent_id IS NOT NULL)');
+        $query->andWhere('(product.parent_id IS NULL OR parent.canonical_product_id IS NULL OR parent.canonical_product_id = product.id)');
         $query->andWhere('visibilities.product_version_id = :versionId');
         $query->andWhere('visibilities.sales_channel_id = :salesChannelId');
 
         $excludedProductIds = $this->getExcludedProductIds($context);
         if ($excludedProductIds !== []) {
-            $query->andWhere('`product`.id NOT IN (:productIds)');
+            $query->andWhere('product.id NOT IN (:productIds)');
             $query->setParameter('productIds', Uuid::fromHexToBytesList($excludedProductIds), ArrayParameterType::BINARY);
         }
 
@@ -158,8 +159,8 @@ class ProductUrlProvider extends AbstractUrlProvider
             $query->setParameter('excludedVisibility', ProductVisibilityDefinition::VISIBILITY_LINK);
         }
 
-        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
-        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()));
+        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
+        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()), ParameterType::BINARY);
 
         $this->eventDispatcher->dispatch(
             new SitemapQueryEvent($query, $limit, $offset, $context, self::QUERY_EVENT_NAME)

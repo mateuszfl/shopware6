@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Flow\Dispatching\Action;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
@@ -33,6 +34,9 @@ class SetOrderStateActionTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->orderService = static::createStub(OrderService::class);
 
         $this->action = new SetOrderStateAction($this->connection, $this->orderService);
@@ -67,24 +71,27 @@ class SetOrderStateActionTest extends TestCase
         $flow->setConfig($config);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $orderService = $this->createMock(OrderService::class);
 
         $connection->expects($this->exactly($expectsTimes))
             ->method('fetchOne')
             ->willReturnOnConsecutiveCalls(
-                Uuid::randomHex(),
-                Uuid::randomHex(),
-                Uuid::randomHex(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
                 $expected['order'],
                 $ids->get('orderDeliveryId'),
-                Uuid::randomHex(),
-                Uuid::randomHex(),
-                Uuid::randomHex(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
                 $expected['orderDelivery'],
                 $ids->get('orderTransactionId'),
-                Uuid::randomHex(),
-                Uuid::randomHex(),
-                Uuid::randomHex(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
+                Uuid::randomBytes(),
                 $expected['orderTransaction'],
             );
 
@@ -136,7 +143,7 @@ class SetOrderStateActionTest extends TestCase
     public function testActionWithEmptyConfig(): void
     {
         $flow = new StorableFlow('foo', Context::createDefaultContext(), [], [
-            OrderAware::ORDER_ID => Uuid::randomHex(),
+            OrderAware::ORDER_ID => Uuid::randomBytes(),
         ]);
 
         $orderService = $this->createMock(OrderService::class);

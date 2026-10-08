@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\ImportExport\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerDefinition;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -71,7 +72,7 @@ final class CustomerNumberRangeConfigService implements ResetInterface
                     'number_range.id = number_range_sales_channel.number_range_id',
                 )
                 ->andWhere('(number_range_sales_channel.sales_channel_id = :salesChannelId OR number_range_type.global = 1 OR number_range.global = 1)')
-                ->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+                ->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
         }
 
         /** @var array{id: string, pattern: string}|false $configuration */

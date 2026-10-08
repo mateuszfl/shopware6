@@ -4,8 +4,10 @@ namespace Shopware\Core\Content\Seo;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Seo\Hreflang\HreflangCollection;
 use Shopware\Core\Content\Seo\Hreflang\HreflangStruct;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Component\Routing\RouterInterface;
@@ -100,16 +102,17 @@ class HreflangLoader implements HreflangLoaderInterface
     {
         /** @var list<array{languageId: string, id: string, url: string, locale: string, onlyLocale: bool}> $result */
         $result = $this->connection->fetchAllAssociative(
-            'SELECT `domain`.`language_id` AS languageId,
-                          `domain`.`id` AS id,
-                          `domain`.`url` AS url,
-                          `domain`.`hreflang_use_only_locale` AS onlyLocale,
-                          `locale`.`code` AS locale
-            FROM `sales_channel_domain` AS `domain`
-            INNER JOIN `language` ON `language`.`id` = `domain`.`language_id`
-            INNER JOIN `locale` ON `locale`.`id` = `language`.`locale_id`
-            WHERE `domain`.`sales_channel_id` = :salesChannelId',
-            ['salesChannelId' => Uuid::fromHexToBytes($salesChannelId)]
+            'SELECT ' . IndexingSql::hex($this->connection, 'domain.language_id') . ' AS ' . $this->connection->quoteSingleIdentifier('languageId') . ',
+                          ' . IndexingSql::hex($this->connection, 'domain.id') . ' AS id,
+                          domain.url AS url,
+                          domain.hreflang_use_only_locale AS ' . $this->connection->quoteSingleIdentifier('onlyLocale') . ',
+                          locale.code AS locale
+            FROM sales_channel_domain AS domain
+            INNER JOIN language ON language.id = domain.language_id
+            INNER JOIN locale ON locale.id = language.locale_id
+            WHERE domain.sales_channel_id = :salesChannelId',
+            ['salesChannelId' => Uuid::fromHexToBytes($salesChannelId)],
+            ['salesChannelId' => ParameterType::BINARY]
         );
 
         return $result;
@@ -153,7 +156,7 @@ class HreflangLoader implements HreflangLoaderInterface
             $locale = mb_substr($locale, 0, 2);
         }
 
-        if (Uuid::fromBytesToHex($domain['id']) === $defaultDomainId) {
+        if ($domain['id'] === $defaultDomainId) {
             $mainLang = clone $hrefLang;
             $mainLang->setLocale('x-default');
             $collection->add($mainLang);
@@ -172,12 +175,12 @@ class HreflangLoader implements HreflangLoaderInterface
     {
         /** @var list<array{seoPathInfo: string, languageId: string}> $result */
         $result = $this->connection->fetchAllAssociative(
-            'SELECT `seo_path_info` AS seoPathInfo, `language_id` AS languageId
-            FROM `seo_url`
-            WHERE `path_info` = :pathInfo AND `is_canonical` = 1 AND
-                  `sales_channel_id` = :salesChannelId AND `language_id` IN (:languageIds)',
-            ['pathInfo' => $pathInfo, 'salesChannelId' => Uuid::fromHexToBytes($salesChannelId), 'languageIds' => $languageIds],
-            ['languageIds' => ArrayParameterType::BINARY]
+            'SELECT seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo') . ', ' . IndexingSql::hex($this->connection, 'language_id') . ' AS ' . $this->connection->quoteSingleIdentifier('languageId') . '
+            FROM seo_url
+            WHERE path_info = :pathInfo AND is_canonical = 1 AND
+                  sales_channel_id = :salesChannelId AND language_id IN (:languageIds)',
+            ['pathInfo' => $pathInfo, 'salesChannelId' => Uuid::fromHexToBytes($salesChannelId), 'languageIds' => Uuid::fromHexToBytesList($languageIds)],
+            ['languageIds' => ArrayParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY]
         );
 
         return $result;

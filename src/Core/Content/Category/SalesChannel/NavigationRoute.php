@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Category\SalesChannel;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryCollection;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Category\CategoryException;
@@ -10,6 +11,7 @@ use Shopware\Core\Content\Category\Service\DefaultCategoryLevelLoaderInterface;
 use Shopware\Core\Content\Category\Service\NavigationLoaderInterface;
 use Shopware\Core\Content\Category\Tree\CategoryTreePathResolver;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
@@ -156,11 +158,11 @@ class NavigationRoute extends AbstractNavigationRoute
     private function getCategoryMetaInfo(string $activeId, string $rootId): array
     {
         $result = $this->connection->fetchAllAssociative('
-            # navigation-route::meta-information
-            SELECT LOWER(HEX(`id`)), `path`, `level`
-            FROM `category`
-            WHERE `id` = :activeId OR `id` = :rootId
-        ', ['activeId' => Uuid::fromHexToBytes($activeId), 'rootId' => Uuid::fromHexToBytes($rootId)]);
+            -- navigation-route::meta-information
+            SELECT ' . IndexingSql::hex($this->connection, 'id') . ', path, level
+            FROM category
+            WHERE id = :activeId OR id = :rootId
+        ', ['activeId' => Uuid::fromHexToBytes($activeId), 'rootId' => Uuid::fromHexToBytes($rootId)], ['activeId' => ParameterType::BINARY, 'rootId' => ParameterType::BINARY]);
 
         if (!$result) {
             throw CategoryException::categoryNotFound($activeId);

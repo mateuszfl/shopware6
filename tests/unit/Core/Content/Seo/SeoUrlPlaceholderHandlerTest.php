@@ -3,7 +3,6 @@
 namespace Shopware\Tests\Unit\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -38,7 +37,6 @@ class SeoUrlPlaceholderHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
-        $this->connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $this->salesChannelContext = Generator::generateSalesChannelContext();
 
@@ -89,7 +87,6 @@ class SeoUrlPlaceholderHandlerTest extends TestCase
     public function testReplace(string $host, string $content, string $expected): void
     {
         $connection = $this->createMock(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
         $connection->expects($this->once())->method('executeQuery')->willReturn(static::createStub(Result::class));
 
         static::assertSame($expected, $this->createHandler($connection)->replace($content, $host, $this->salesChannelContext));
@@ -129,7 +126,6 @@ class SeoUrlPlaceholderHandlerTest extends TestCase
     public function testReplaceWithoutPlaceholderReturnsContentUnchangedAndSkipsDatabase(): void
     {
         $connection = $this->createMock(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
         // no placeholder present -> the regex/DB lookup must be skipped entirely (e.g. JSON/AJAX responses)
         $connection->expects($this->never())->method('executeQuery');
 

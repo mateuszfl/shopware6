@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\Cart;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\CartBehavior;
 use Shopware\Core\Checkout\Cart\CartDataCollectorInterface;
@@ -26,6 +27,7 @@ use Shopware\Core\Content\Product\SalesChannel\Price\AbstractProductPriceCalcula
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Content\Product\State;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\RuleAreas;
 use Shopware\Core\Framework\Feature;
@@ -511,14 +513,14 @@ class ProductCartProcessor implements CartProcessorInterface, CartDataCollectorI
         }
 
         $updates = $this->connection->fetchAllKeyValue(
-            'SELECT LOWER(HEX(id)) as id, IFNULL(updated_at, created_at) FROM product WHERE id IN (:ids) AND version_id = :liveVersionId',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id, COALESCE(updated_at, created_at) FROM product WHERE id IN (:ids) AND version_id = :liveVersionId',
             [
                 'ids' => Uuid::fromHexToBytesList(array_keys($changes)),
                 'liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
             ],
             [
                 'ids' => ArrayParameterType::BINARY,
-            ]
+                'liveVersionId' => ParameterType::BINARY]
         );
 
         foreach ($changes as $id => $timestamp) {

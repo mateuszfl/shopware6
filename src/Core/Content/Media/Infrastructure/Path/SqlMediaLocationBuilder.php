@@ -9,6 +9,7 @@ use Shopware\Core\Content\Media\Core\Event\MediaLocationEvent;
 use Shopware\Core\Content\Media\Core\Event\ThumbnailLocationEvent;
 use Shopware\Core\Content\Media\Core\Params\MediaLocationStruct;
 use Shopware\Core\Content\Media\Core\Params\ThumbnailLocationStruct;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -43,8 +44,8 @@ class SqlMediaLocationBuilder implements MediaLocationBuilder
         }
 
         $data = $this->connection->fetchAllAssociativeIndexed(
-            'SELECT LOWER(HEX(id)) as array_key,
-                    LOWER(HEX(id)) as id,
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as array_key,
+                    ' . IndexingSql::hex($this->connection, 'id') . ' as id,
                     file_extension,
                     file_name,
                     uploaded_at
@@ -83,11 +84,11 @@ class SqlMediaLocationBuilder implements MediaLocationBuilder
         }
 
         $data = $this->connection->fetchAllAssociativeIndexed(
-            'SELECT LOWER(HEX(media_thumbnail.id)) as array_key,
-                    LOWER(HEX(media_thumbnail.id)) as id,
+            'SELECT ' . IndexingSql::hex($this->connection, 'media_thumbnail.id') . ' as array_key,
+                    ' . IndexingSql::hex($this->connection, 'media_thumbnail.id') . ' as id,
                     media.file_extension,
                     media.file_name,
-                    LOWER(HEX(media.id)) as media_id,
+                    ' . IndexingSql::hex($this->connection, 'media.id') . ' as media_id,
                     width,
                     height,
                     uploaded_at

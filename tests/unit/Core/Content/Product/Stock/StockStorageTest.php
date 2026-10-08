@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\Stock;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\Stock\StockLoadRequest;
@@ -28,6 +29,9 @@ class StockStorageTest extends TestCase
         $salesChannelContext = static::createStub(SalesChannelContext::class);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $dispatcher = static::createStub(EventDispatcherInterface::class);
 
         $stockStorage = new StockStorage($connection, $dispatcher);
@@ -41,6 +45,9 @@ class StockStorageTest extends TestCase
     public function testEmptyChangesDoNotDispatchEvent(): void
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
 
         $dispatcher->expects($this->never())->method('dispatch');

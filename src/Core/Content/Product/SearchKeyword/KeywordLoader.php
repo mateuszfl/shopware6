@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Product\SearchKeyword;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\Log\Package;
@@ -26,6 +27,10 @@ class KeywordLoader
      */
     public function fetch(array $tokenSlops, Context $context): array
     {
+        if ($tokenSlops === []) {
+            return [];
+        }
+
         $query = new QueryBuilder($this->connection);
         $query->select('keyword');
         $query->from('product_keyword_dictionary');
@@ -48,15 +53,15 @@ class KeywordLoader
                 $slopsWheres[] = 'reversed LIKE :reg' . $counter;
                 $query->setParameter('reg' . $counter, $slop);
             }
-            $query->addSelect('IF (' . implode(' OR ', $slopsWheres) . ', 1, 0) as \'' . $index++ . '\'');
+            $query->addSelect('CASE WHEN ' . ($slopsWheres === [] ? '1 = 0' : implode(' OR ', $slopsWheres)) . ' THEN 1 ELSE 0 END AS ' . $this->connection->quoteSingleIdentifier((string) $index++));
             $wheres = array_merge($wheres, $slopsWheres);
         }
 
         $query->andWhere('language_id = :language');
-        $query->andWhere('(' . implode(' OR ', $wheres) . ')');
+        $query->andWhere('(' . ($wheres === [] ? '1 = 0' : implode(' OR ', $wheres)) . ')');
         $query->addOrderBy('keyword', 'ASC');
 
-        $query->setParameter('language', Uuid::fromHexToBytes($context->getLanguageId()));
+        $query->setParameter('language', Uuid::fromHexToBytes($context->getLanguageId()), ParameterType::BINARY);
 
         return $query->executeQuery()->fetchAllNumeric();
     }

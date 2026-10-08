@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\Stock;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Order\Aggregate\OrderLineItem\OrderLineItemDefinition;
 use Shopware\Core\Checkout\Order\OrderStates;
@@ -185,25 +186,29 @@ final readonly class OrderStockSubscriber implements EventSubscriberInterface
      */
     private function fetchOrderLineItems(array $ids): array
     {
-        $sql = <<<'SQL'
-            SELECT order_line_item.id, quantity, referenced_id, state_machine_state.technical_name AS order_status
+        $sql = 'SELECT order_line_item.id, quantity, referenced_id, state_machine_state.technical_name AS order_status
             FROM order_line_item
-            INNER JOIN `order` ON order_line_item.order_id = `order`.id AND `order`.version_id = :version
-            INNER JOIN state_machine_state ON `order`.state_id = state_machine_state.id
+            INNER JOIN ' . $this->connection->quoteSingleIdentifier('order') . ' ON order_line_item.order_id = ' . $this->connection->quoteSingleIdentifier('order') . '.id AND ' . $this->connection->quoteSingleIdentifier('order') . '.version_id = :version
+            INNER JOIN state_machine_state ON ' . $this->connection->quoteSingleIdentifier('order') . '.state_id = state_machine_state.id
             WHERE order_line_item.id IN (:ids)
                 AND order_line_item.version_id = :version
                 AND type = :type
-                AND state_machine_state.technical_name != :cancelled_state
-        SQL;
+                AND state_machine_state.technical_name != :cancelled_state';
 
-        /** @var array<string, array{id: string, quantity: int, referenced_id: string}> $result */
-        $result = $this->connection->fetchAllAssociativeIndexed(
+        /** @var list<array{id: string, quantity: int, referenced_id: string}> $result */
+        $result = $this->connection->fetchAllAssociative(
             $sql,
             ['ids' => $ids, 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION), 'type' => LineItem::PRODUCT_LINE_ITEM_TYPE, 'cancelled_state' => OrderStates::STATE_CANCELLED],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
-        return $result;
+        $items = [];
+        foreach ($result as $item) {
+            $item['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($item['id']));
+            $items[$item['id']] = $item;
+        }
+
+        return $items;
     }
 
     /**
@@ -214,13 +219,11 @@ final readonly class OrderStockSubscriber implements EventSubscriberInterface
         $orderIdBytes = Uuid::fromHexToBytes($orderId);
         $versionBytes = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
 
-        $sql = <<<'SQL'
-            SELECT id, referenced_id as product_id, quantity
+        $sql = 'SELECT id, referenced_id as product_id, quantity
             FROM order_line_item
             WHERE type = :type
                 AND order_id = :id
-                AND version_id = :version
-        SQL;
+                AND version_id = :version';
 
         $params = [
             'id' => $orderIdBytes,
@@ -229,7 +232,12 @@ final readonly class OrderStockSubscriber implements EventSubscriberInterface
         ];
 
         /** @var list<array{id: string, product_id: string, quantity: string}> $result */
-        $result = $this->connection->fetchAllAssociative($sql, $params);
+        $result = $this->connection->fetchAllAssociative($sql, $params, ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY]);
+
+        foreach ($result as &$item) {
+            $item['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($item['id']));
+        }
+        unset($item);
 
         return $result;
     }

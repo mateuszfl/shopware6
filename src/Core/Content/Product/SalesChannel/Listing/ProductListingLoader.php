@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\SalesChannel\Listing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Events\ProductListingPreviewCriteriaEvent;
 use Shopware\Core\Content\Product\Events\ProductListingResolvePreviewEvent;
 use Shopware\Core\Content\Product\Extension\LoadPreviewExtension;
@@ -16,6 +17,7 @@ use Shopware\Core\Content\Product\SalesChannel\ProductAvailableFilter;
 use Shopware\Core\Content\Product\SalesChannel\Search\ResolvedCriteriaProductSearchRoute;
 use Shopware\Core\Content\Product\SalesChannel\Suggest\ProductSuggestRoute;
 use Shopware\Core\Content\ProductStream\Service\AbstractProductStreamBuilder;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
@@ -226,11 +228,11 @@ class ProductListingLoader
         $ids = array_combine($ids, $ids);
 
         $config = $this->connection->fetchAllAssociative(
-            '# product-listing-loader::resolve-previews
+            '-- product-listing-loader::resolve-previews
             SELECT
-                parent.variant_listing_config as variantListingConfig,
-                LOWER(HEX(child.id)) as id,
-                LOWER(HEX(parent.id)) as parentId
+                parent.variant_listing_config as ' . $this->connection->quoteSingleIdentifier('variantListingConfig') . ',
+                ' . IndexingSql::hex($this->connection, 'child.id') . ' as id,
+                ' . IndexingSql::hex($this->connection, 'parent.id') . ' as ' . $this->connection->quoteSingleIdentifier('parentId') . '
              FROM product as child
                 INNER JOIN product as parent
                     ON parent.id = child.parent_id
@@ -241,7 +243,7 @@ class ProductListingLoader
                 'ids' => Uuid::fromHexToBytesList(array_values($ids)),
                 'version' => Uuid::fromHexToBytes($context->getContext()->getVersionId()),
             ],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $mapping = [];

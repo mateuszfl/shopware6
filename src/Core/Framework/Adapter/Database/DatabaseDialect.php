@@ -61,6 +61,11 @@ interface DatabaseDialect
      */
     public function jsonListContains(string $expression, string $placeholder): string;
 
+    /**
+     * Compare immediate array elements, object key/value pairs or scalars without coercion or recursive flattening.
+     */
+    public function jsonOverlaps(string $left, string $right): string;
+
     public function nullSafeEquals(string $expression, string $placeholder): string;
 
     /**

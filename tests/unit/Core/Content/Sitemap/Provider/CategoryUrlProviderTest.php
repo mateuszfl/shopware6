@@ -4,6 +4,7 @@ namespace Shopware\Tests\Unit\Core\Content\Sitemap\Provider;
 
 use Doctrine\DBAL\Cache\ArrayResult;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -58,6 +59,8 @@ class CategoryUrlProviderTest extends TestCase
     {
         $this->configHandler = static::createStub(ConfigHandler::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->definition = static::createStub(CategoryDefinition::class);
         $this->iteratorFactory = static::createStub(IteratorFactory::class);
         $this->entityRouteResolver = static::createStub(EntityRouteResolver::class);

@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Flow\Dispatching;
 
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\Log\Package;
 
@@ -24,9 +25,9 @@ class FlowLoader extends AbstractFlowLoader
     public function load(): array
     {
         $flows = $this->connection->fetchAllAssociative(
-            'SELECT `event_name`, LOWER(HEX(`id`)) as `id`, `name`, `payload` FROM `flow`
-                WHERE `active` = 1 AND `invalid` = 0 AND `payload` IS NOT NULL
-                ORDER BY `priority` DESC',
+            'SELECT event_name, ' . IndexingSql::hex($this->connection, 'id') . ' as id, name, payload FROM flow
+                WHERE active = 1 AND invalid = 0 AND payload IS NOT NULL
+                ORDER BY priority DESC, id ASC',
         );
 
         if ($flows === []) {
@@ -34,6 +35,7 @@ class FlowLoader extends AbstractFlowLoader
         }
 
         foreach ($flows as $key => $flow) {
+            $flow['payload'] = \is_resource($flow['payload']) ? stream_get_contents($flow['payload']) : $flow['payload'];
             try {
                 /** @phpstan-ignore shopware.unserializeUsage */
                 $payload = \unserialize($flow['payload']);

@@ -3,9 +3,11 @@
 namespace Shopware\Core\Content\Cms\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\Aggregate\CategoryTranslation\CategoryTranslationEntity;
 use Shopware\Core\Content\LandingPage\Aggregate\LandingPageTranslation\LandingPageTranslationEntity;
 use Shopware\Core\Content\Product\Aggregate\ProductTranslation\ProductTranslationEntity;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityCollection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -110,10 +112,10 @@ readonly class EntityCmsSlotConfigInheritanceBuilder
     private function getParentLanguageId(string $languageId): ?string
     {
         $parentId = $this->connection->createQueryBuilder()
-            ->select('LOWER(HEX(language.parent_id))')
+            ->select(IndexingSql::hex($this->connection, 'language.parent_id'))
             ->from('language', 'language')
             ->where('language.id = :id')
-            ->setParameter('id', Uuid::fromHexToBytes($languageId))
+            ->setParameter('id', Uuid::fromHexToBytes($languageId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchOne();
 

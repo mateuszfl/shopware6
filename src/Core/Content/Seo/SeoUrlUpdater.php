@@ -3,10 +3,12 @@
 namespace Shopware\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Seo\SeoUrlRoute\EntitySeoUrlRouteInterface;
 use Shopware\Core\Content\Seo\SeoUrlRoute\SeoUrlRouteInterface;
 use Shopware\Core\Content\Seo\SeoUrlRoute\SeoUrlRouteRegistry;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -136,8 +138,8 @@ class SeoUrlUpdater
     private function loadUrlTemplate(string $routeName, bool $isHeadless): array
     {
         $query = 'SELECT DISTINCT
-               LOWER(HEX(sales_channel.id)) as salesChannelId,
-               LOWER(HEX(domains.language_id)) as languageId
+               ' . IndexingSql::hex($this->connection, 'sales_channel.id') . ' as ' . $this->connection->quoteSingleIdentifier('salesChannelId') . ',
+               ' . IndexingSql::hex($this->connection, 'domains.language_id') . ' as ' . $this->connection->quoteSingleIdentifier('languageId') . '
              FROM sales_channel_domain as domains
              INNER JOIN sales_channel
                ON domains.sales_channel_id = sales_channel.id
@@ -148,14 +150,14 @@ class SeoUrlUpdater
             : ' AND sales_channel.type_id != :apiTypeId';
         $parameters = ['apiTypeId' => Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_API)];
 
-        $domains = $this->connection->fetchAllAssociative($query, $parameters);
+        $domains = $this->connection->fetchAllAssociative($query, $parameters, ['apiTypeId' => ParameterType::BINARY]);
 
         if ($domains === []) {
             return [];
         }
 
         $salesChannelTemplates = $this->connection->fetchAllKeyValue(
-            'SELECT LOWER(HEX(sales_channel_id)) as sales_channel_id, template
+            'SELECT ' . IndexingSql::hex($this->connection, 'sales_channel_id') . ' as sales_channel_id, template
              FROM seo_url_template
              WHERE route_name LIKE :route
                AND is_headless = :isHeadless',

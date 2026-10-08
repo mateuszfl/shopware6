@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Flow\Dispatching\Action;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Order\OrderCollection;
 use Shopware\Core\Content\Flow\Dispatching\DelayableAction;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
@@ -57,10 +58,11 @@ class AddOrderAffiliateAndCampaignCodeAction extends FlowAction implements Delay
     private function getAffiliateAndCampaignCodeFromOrderId(string $orderId): array
     {
         $data = $this->connection->fetchAssociative(
-            'SELECT affiliate_code, campaign_code FROM `order` WHERE id = :id',
+            'SELECT affiliate_code, campaign_code FROM ' . $this->connection->quoteSingleIdentifier('order') . ' WHERE id = :id',
             [
                 'id' => Uuid::fromHexToBytes($orderId),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
 
         if (!$data) {

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Media\Infrastructure\Path;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Core\Application\MediaPathStorage;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -31,7 +32,7 @@ class SqlMediaPathStorage implements MediaPathStorage
         $update = $this->connection->prepare('UPDATE media SET path = :path WHERE id = :id');
 
         foreach ($paths as $id => $path) {
-            StatementHelper::executeStatement($update, ['path' => $path, 'id' => Uuid::fromHexToBytes($id)]);
+            StatementHelper::executeStatement($update, ['path' => $path, 'id' => Uuid::fromHexToBytes($id)], ['id' => ParameterType::BINARY]);
         }
     }
 
@@ -43,7 +44,7 @@ class SqlMediaPathStorage implements MediaPathStorage
         $update = $this->connection->prepare('UPDATE media_thumbnail SET path = :path WHERE id = :id');
 
         foreach ($paths as $id => $path) {
-            StatementHelper::executeStatement($update, [':path' => $path, ':id' => Uuid::fromHexToBytes($id)]);
+            StatementHelper::executeStatement($update, [':path' => $path, ':id' => Uuid::fromHexToBytes($id)], [':id' => ParameterType::BINARY]);
         }
     }
 }

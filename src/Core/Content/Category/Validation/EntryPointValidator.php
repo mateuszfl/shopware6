@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Category\Validation;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\InsertCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\UpdateCommand;
@@ -118,9 +119,9 @@ class EntryPointValidator implements EventSubscriberInterface
             ->where('navigation_category_id = :navigation_id')
             ->orWhere('footer_category_id = :footer_id')
             ->orWhere('service_category_id = :service_id')
-            ->setParameter('navigation_id', $categoryId)
-            ->setParameter('footer_id', $categoryId)
-            ->setParameter('service_id', $categoryId)
+            ->setParameter('navigation_id', $categoryId, ParameterType::BINARY)
+            ->setParameter('footer_id', $categoryId, ParameterType::BINARY)
+            ->setParameter('service_id', $categoryId, ParameterType::BINARY)
             ->setMaxResults(1)
             ->executeQuery();
 

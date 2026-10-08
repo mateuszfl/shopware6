@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Flow\Dispatching\Action;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
@@ -35,6 +36,9 @@ class AddOrderAffiliateAndCampaignCodeActionTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->repository = static::createStub(EntityRepository::class);
         $this->action = new AddOrderAffiliateAndCampaignCodeAction($this->connection, $this->repository);
     }
@@ -61,6 +65,9 @@ class AddOrderAffiliateAndCampaignCodeActionTest extends TestCase
     public function testActionExecuted(array $config, array $existedData, array $expected): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())->method('fetchAssociative')->willReturn($existedData);
 
         $repository = $this->createMock(EntityRepository::class);

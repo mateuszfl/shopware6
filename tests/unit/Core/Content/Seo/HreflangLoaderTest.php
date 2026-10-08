@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,9 @@ class HreflangLoaderTest extends TestCase
     {
         $this->router = static::createStub(RouterInterface::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->loader = new HreflangLoader($this->router, $this->connection);
     }
 
@@ -52,12 +56,12 @@ class HreflangLoaderTest extends TestCase
             ->method('fetchAllAssociative')
             ->willReturnOnConsecutiveCalls(
                 [
-                    ['languageId' => Uuid::fromHexToBytes($languageId1), 'id' => Uuid::fromHexToBytes($domainId1), 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
-                    ['languageId' => Uuid::fromHexToBytes($languageId2), 'id' => Uuid::fromHexToBytes($domainId2), 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
+                    ['languageId' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
+                    ['languageId' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
                 ],
                 [
-                    ['seoPathInfo' => 'nice-product', 'languageId' => Uuid::fromHexToBytes($languageId1)],
-                    ['seoPathInfo' => 'nice-product-en', 'languageId' => Uuid::fromHexToBytes($languageId2)],
+                    ['seoPathInfo' => 'nice-product', 'languageId' => $languageId1],
+                    ['seoPathInfo' => 'nice-product-en', 'languageId' => $languageId2],
                 ]
             );
 
@@ -96,12 +100,12 @@ class HreflangLoaderTest extends TestCase
             ->method('fetchAllAssociative')
             ->willReturnOnConsecutiveCalls(
                 [
-                    ['languageId' => Uuid::fromHexToBytes($languageId1), 'id' => Uuid::fromHexToBytes($domainId1), 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
-                    ['languageId' => Uuid::fromHexToBytes($languageId2), 'id' => Uuid::fromHexToBytes($domainId2), 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
+                    ['languageId' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
+                    ['languageId' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
                 ],
                 [
-                    ['seoPathInfo' => 'nice-product', 'languageId' => Uuid::fromHexToBytes($languageId1)],
-                    ['seoPathInfo' => 'nice-product-en', 'languageId' => Uuid::fromHexToBytes($languageId2)],
+                    ['seoPathInfo' => 'nice-product', 'languageId' => $languageId1],
+                    ['seoPathInfo' => 'nice-product-en', 'languageId' => $languageId2],
                 ]
             );
 

@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\Core\Application;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\Filesystem;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -40,6 +41,9 @@ class RemoteThumbnailLoaderTest extends TestCase
         $prefixFilesystem->method('publicUrl')->willReturn('http://localhost:8000');
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturnOnConsecutiveCalls(
             $thumbnailSizes,
             [[
@@ -186,6 +190,9 @@ class RemoteThumbnailLoaderTest extends TestCase
         $filesystem = new Filesystem(new InMemoryFilesystemAdapter(), ['public_url' => 'http://localhost:8000']);
 
         $connection = static::createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($shouldLookupFolders ? $this->exactly(2) : $this->once())
             ->method('fetchAllAssociative')
             ->willReturnOnConsecutiveCalls($configuredSizes, $folderConfigurations);
@@ -314,6 +321,9 @@ class RemoteThumbnailLoaderTest extends TestCase
         ]];
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturnOnConsecutiveCalls([], $folderConfiguration, [], $folderConfiguration);
 
         $prefixFilesystem = static::createStub(PrefixFilesystem::class);
@@ -362,6 +372,9 @@ class RemoteThumbnailLoaderTest extends TestCase
         ];
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturnOnConsecutiveCalls($thumbnailSizes, [[
             'folder_id' => $ids->get('mediaFolderId'),
             'configuration_id' => $ids->get('mediaFolderConfigurationId'),
@@ -399,6 +412,9 @@ class RemoteThumbnailLoaderTest extends TestCase
         $filesystem = new Filesystem(new InMemoryFilesystemAdapter(), ['public_url' => 'http://localhost:8000']);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturnOnConsecutiveCalls([], [[
             'folder_id' => $ids->get('mediaFolderId'),
             'configuration_id' => $ids->get('mediaFolderConfigurationId'),

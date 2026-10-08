@@ -127,28 +127,25 @@ class SqlQueryParser
     ): ParseResult {
         $result = new ParseResult();
 
-        $key = $this->getKey();
-
         $field = $this->queryHelper->getFieldAccessor($query->getField(), $definition, $root, $context, $result);
-
+        $definitionField = $this->queryHelper->getField($query->getField(), $definition, $root);
+        $binary = $definitionField instanceof IdField || $definitionField instanceof FkField;
         $where = [];
-
-        if ($query->hasParameter(RangeFilter::GT)) {
-            $where[] = $field . ' > :' . $key;
-            $result->addParameter($key, $query->getParameter(RangeFilter::GT));
-        } elseif ($query->hasParameter(RangeFilter::GTE)) {
-            $where[] = $field . ' >= :' . $key;
-            $result->addParameter($key, $query->getParameter(RangeFilter::GTE));
-        }
-
-        $key = $this->getKey();
-
-        if ($query->hasParameter(RangeFilter::LT)) {
-            $where[] = $field . ' < :' . $key;
-            $result->addParameter($key, $query->getParameter(RangeFilter::LT));
-        } elseif ($query->hasParameter(RangeFilter::LTE)) {
-            $where[] = $field . ' <= :' . $key;
-            $result->addParameter($key, $query->getParameter(RangeFilter::LTE));
+        $bounds = [
+            $query->hasParameter(RangeFilter::GT) ? RangeFilter::GT : RangeFilter::GTE => $query->hasParameter(RangeFilter::GT) ? '>' : '>=',
+            $query->hasParameter(RangeFilter::LT) ? RangeFilter::LT : RangeFilter::LTE => $query->hasParameter(RangeFilter::LT) ? '<' : '<=',
+        ];
+        foreach ($bounds as $bound => $operator) {
+            if (!$query->hasParameter($bound)) {
+                continue;
+            }
+            $key = $this->getKey();
+            $value = $query->getParameter($bound);
+            if ($binary && \is_string($value) && Uuid::isValid($value)) {
+                $value = Uuid::fromHexToBytes($value);
+            }
+            $where[] = $field . ' ' . $operator . ' :' . $key;
+            $result->addParameter($key, $value, $binary ? ParameterType::BINARY : ParameterType::STRING);
         }
 
         $where = '(' . implode(' AND ', $where) . ')';

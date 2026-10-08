@@ -142,7 +142,7 @@ class SeoUrlTemplateChangeSubscriber implements EventSubscriberInterface
 
         /** @var list<array{routeName: string, entityName: string}> $rows */
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT DISTINCT route_name AS routeName, entity_name AS entityName
+            'SELECT DISTINCT route_name AS ' . $this->connection->quoteSingleIdentifier('routeName') . ', entity_name AS ' . $this->connection->quoteSingleIdentifier('entityName') . '
              FROM seo_url_template
              WHERE id IN (:ids)',
             ['ids' => $bytes],

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Product\SalesChannel\Detail;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryEntity;
 use Shopware\Core\Content\Category\Service\CategoryBreadcrumbBuilder;
 use Shopware\Core\Content\Cms\CmsPageEntity;
@@ -20,6 +21,7 @@ use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductDefinition;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Adapter\Request\RequestParamHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -243,17 +245,18 @@ class ProductDetailRoute extends AbstractProductDetailRoute
         }
 
         $productData = $this->connection->fetchAssociative(
-            '# product-detail-route::check-variant-listing-config
+            '-- product-detail-route::check-variant-listing-config
             SELECT
-                variant_listing_config as variantListingConfig,
-                parent_id as parentId
+                variant_listing_config as ' . $this->connection->quoteSingleIdentifier('variantListingConfig') . ',
+                ' . IndexingSql::hex($this->connection, 'parent_id') . ' as ' . $this->connection->quoteSingleIdentifier('parentId') . '
             FROM product
             WHERE id = :id
             AND version_id = :versionId',
             [
                 'id' => Uuid::fromHexToBytes($productId),
                 'versionId' => Uuid::fromHexToBytes($context->getVersionId()),
-            ]
+            ],
+            ['id' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         if ($productData === false) {

@@ -4,9 +4,11 @@ namespace Shopware\Core\Content\Flow\Indexing;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Flow\Dispatching\CachedFlowLoader;
 use Shopware\Core\Content\Flow\Indexing\FlowBuilder\Sequence;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
@@ -32,23 +34,27 @@ class FlowPayloadUpdater
      */
     public function update(array $ids): array
     {
+        if ($ids === []) {
+            return [];
+        }
+
         $listFlowSequence = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`flow`.`id`)) as array_key,
-            LOWER(HEX(`flow`.`id`)) as `flow_id`,
-            LOWER(HEX(`flow_sequence`.`id`)) as `sequence_id`,
-            LOWER(HEX(`flow_sequence`.`parent_id`)) as `parent_id`,
-            LOWER(HEX(`flow_sequence`.`rule_id`)) as `rule_id`,
-            LOWER(HEX(`flow_sequence`.`app_flow_action_id`)) as `app_flow_action_id`,
-            `flow_sequence`.`display_group` as `display_group`,
-            `flow_sequence`.`position` as `position`,
-            `flow_sequence`.`action_name` as `action_name`,
-            `flow_sequence`.`config` as `config`,
-            `flow_sequence`.`true_case` as `true_case`
-            FROM `flow`
-            LEFT JOIN `flow_sequence` ON `flow`.`id` = `flow_sequence`.`flow_id`
-            WHERE `flow`.`active` = 1
-                AND (`flow_sequence`.`id` IS NULL OR (`flow_sequence`.`rule_id` IS NOT NULL OR `flow_sequence`.`action_name` IS NOT NULL))
-                AND `flow`.`id` IN (:ids)',
+            'SELECT ' . IndexingSql::hex($this->connection, 'flow.id') . ' as array_key,
+            ' . IndexingSql::hex($this->connection, 'flow.id') . ' as flow_id,
+            ' . IndexingSql::hex($this->connection, 'flow_sequence.id') . ' as sequence_id,
+            ' . IndexingSql::hex($this->connection, 'flow_sequence.parent_id') . ' as parent_id,
+            ' . IndexingSql::hex($this->connection, 'flow_sequence.rule_id') . ' as rule_id,
+            ' . IndexingSql::hex($this->connection, 'flow_sequence.app_flow_action_id') . ' as app_flow_action_id,
+            flow_sequence.display_group as display_group,
+            flow_sequence.position as position,
+            flow_sequence.action_name as action_name,
+            flow_sequence.config as config,
+            flow_sequence.true_case as true_case
+            FROM flow
+            LEFT JOIN flow_sequence ON flow.id = flow_sequence.flow_id
+            WHERE flow.active = 1
+                AND (flow_sequence.id IS NULL OR (flow_sequence.rule_id IS NOT NULL OR flow_sequence.action_name IS NOT NULL))
+                AND flow.id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );
@@ -57,7 +63,8 @@ class FlowPayloadUpdater
 
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `flow` SET payload = :payload, invalid = :invalid WHERE `id` = :id')
+            $this->connection->prepare('UPDATE flow SET payload = :payload, invalid = :invalid WHERE id = :id'),
+            ['id' => ParameterType::BINARY, 'payload' => ParameterType::BINARY, 'invalid' => ParameterType::INTEGER]
         );
 
         $updated = [];
@@ -78,7 +85,7 @@ class FlowPayloadUpdater
                     $result = $a->position <=> $b->position;
                 }
 
-                return $result;
+                return $result !== 0 ? $result : $a->sequenceId <=> $b->sequenceId;
             });
 
             $invalid = false;

@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Product\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\MeasurementSystem\MeasurementUnits;
 use Shopware\Core\Content\MeasurementSystem\MeasurementUnitTypeEnum;
 use Shopware\Core\Content\MeasurementSystem\ProductMeasurement\ProductMeasurementEnum;
@@ -228,6 +229,7 @@ class ProductSubscriber implements EventSubscriberInterface
             ],
             [
                 'parentIds' => ArrayParameterType::BINARY,
+                'versionId' => ParameterType::BINARY,
             ]
         );
     }

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Product\SalesChannel\CrossSelling;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Aggregate\ProductCrossSelling\ProductCrossSellingCollection;
 use Shopware\Core\Content\Product\Aggregate\ProductCrossSelling\ProductCrossSellingDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductCrossSelling\ProductCrossSellingEntity;
@@ -19,6 +20,7 @@ use Shopware\Core\Content\Product\SalesChannel\ProductAvailableFilter;
 use Shopware\Core\Content\ProductStream\Service\AbstractProductStreamBuilder;
 use Shopware\Core\Content\ProductStream\Service\ProductStreamBuilderInterface;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -266,11 +268,12 @@ class ProductCrossSellingRoute extends AbstractProductCrossSellingRoute
     private function fetchRootProductId(string $productId, SalesChannelContext $context): string
     {
         $parentId = $this->connection->fetchOne(
-            'SELECT LOWER(HEX(parent_id)) FROM product WHERE id = :id AND version_id = :versionId',
+            'SELECT ' . IndexingSql::hex($this->connection, 'parent_id') . ' FROM product WHERE id = :id AND version_id = :versionId',
             [
                 'id' => Uuid::fromHexToBytes($productId),
                 'versionId' => Uuid::fromHexToBytes($context->getVersionId()),
-            ]
+            ],
+            ['id' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return \is_string($parentId) ? $parentId : $productId;

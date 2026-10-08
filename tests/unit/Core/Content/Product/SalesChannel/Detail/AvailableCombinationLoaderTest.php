@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\SalesChannel\Detail;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -158,6 +159,9 @@ class AvailableCombinationLoaderTest extends TestCase
         $queryBuilder->method('executeQuery')->willReturn($result);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('createQueryBuilder')->willReturn($queryBuilder);
 
         return $connection;

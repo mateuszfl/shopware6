@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
@@ -68,7 +69,7 @@ class SeoResolver extends AbstractSeoResolver
         $normalizedQueryString = $this->normalizeQueryString($context->queryString);
 
         $query = (new QueryBuilder($this->connection))
-            ->select('id', 'path_info pathInfo', 'seo_path_info seoPathInfo', 'is_canonical isCanonical', 'sales_channel_id salesChannelId')
+            ->select('id', 'path_info AS ' . $this->connection->quoteSingleIdentifier('pathInfo'), 'seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'), 'is_canonical AS ' . $this->connection->quoteSingleIdentifier('isCanonical'), 'sales_channel_id AS ' . $this->connection->quoteSingleIdentifier('salesChannelId'))
             ->from('seo_url')
             ->where('language_id = :language_id')
             ->andWhere('(sales_channel_id = :sales_channel_id OR sales_channel_id IS NULL)')
@@ -79,8 +80,8 @@ class SeoResolver extends AbstractSeoResolver
             'seo_path_info = :seoPathWithSlash',
         ];
 
-        $query->setParameter('language_id', Uuid::fromHexToBytes($context->languageId))
-            ->setParameter('sales_channel_id', Uuid::fromHexToBytes($context->salesChannelId))
+        $query->setParameter('language_id', Uuid::fromHexToBytes($context->languageId), ParameterType::BINARY)
+            ->setParameter('sales_channel_id', Uuid::fromHexToBytes($context->salesChannelId), ParameterType::BINARY)
             ->setParameter('seoPath', $seoPathInfo)
             ->setParameter('seoPathWithSlash', $seoPathInfo . '/');
 
@@ -101,6 +102,11 @@ class SeoResolver extends AbstractSeoResolver
 
         /** @var list<array{id: string, pathInfo: string, seoPathInfo: string, isCanonical: string|null, salesChannelId: string|null}> $seoPaths */
         $seoPaths = $query->executeQuery()->fetchAllAssociative();
+
+        foreach ($seoPaths as &$path) {
+            $path['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($path['id']));
+        }
+        unset($path);
 
         usort($seoPaths, function ($a, $b) use ($normalizedQueryString) {
             if ($a['isCanonical'] === null) {
@@ -141,7 +147,7 @@ class SeoResolver extends AbstractSeoResolver
 
         if (!$seoPath['isCanonical']) {
             $query = (new QueryBuilder($this->connection))
-                ->select('path_info pathInfo', 'seo_path_info seoPathInfo')
+                ->select('path_info AS ' . $this->connection->quoteSingleIdentifier('pathInfo'), 'seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'))
                 ->from('seo_url')
                 ->where('language_id = :language_id')
                 ->andWhere('sales_channel_id = :sales_channel_id')
@@ -149,8 +155,8 @@ class SeoResolver extends AbstractSeoResolver
                 ->andWhere('is_canonical = 1')
                 ->andWhere('is_deleted = 0')
                 ->setMaxResults(1)
-                ->setParameter('language_id', Uuid::fromHexToBytes($context->languageId))
-                ->setParameter('sales_channel_id', Uuid::fromHexToBytes($context->salesChannelId))
+                ->setParameter('language_id', Uuid::fromHexToBytes($context->languageId), ParameterType::BINARY)
+                ->setParameter('sales_channel_id', Uuid::fromHexToBytes($context->salesChannelId), ParameterType::BINARY)
                 ->setParameter('pathInfo', '/' . ltrim((string) $seoPath['pathInfo'], '/'));
 
             $query->setTitle('seo-url::resolve-fallback');
@@ -158,7 +164,7 @@ class SeoResolver extends AbstractSeoResolver
             // we only have an id when the hit seo url was not a canonical url, save the one filter condition
             if (isset($seoPath['id'])) {
                 $query->andWhere('id != :id')
-                    ->setParameter('id', $seoPath['id']);
+                    ->setParameter('id', $seoPath['id'], ParameterType::BINARY);
             }
 
             $canonicalQueryResult = $query->executeQuery()->fetchAssociative();

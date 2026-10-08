@@ -4,7 +4,9 @@ namespace Shopware\Core\Content\Product\Api;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Api\Sync\AbstractFkResolver;
 use Shopware\Core\Framework\Api\Sync\FkReference;
 use Shopware\Core\Framework\Log\Package;
@@ -41,9 +43,9 @@ class ProductNumberFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT product_number, LOWER(HEX(id)) FROM product WHERE product_number IN (:numbers) AND version_id = :version',
+            'SELECT product_number, ' . IndexingSql::hex($this->connection, 'id') . ' FROM product WHERE product_number IN (:numbers) AND version_id = :version',
             ['numbers' => $numbers, 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['numbers' => ArrayParameterType::STRING]
+            ['numbers' => ArrayParameterType::STRING, 'version' => ParameterType::BINARY]
         );
 
         foreach ($map as $reference) {

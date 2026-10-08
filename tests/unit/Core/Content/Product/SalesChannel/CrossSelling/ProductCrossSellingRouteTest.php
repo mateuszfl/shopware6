@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\SalesChannel\CrossSelling;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -69,6 +70,9 @@ class ProductCrossSellingRouteTest extends TestCase
         $this->listingLoader = static::createStub(ProductListingLoader::class);
         $this->cacheTagCollector = static::createStub(CacheTagCollector::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->connection->method('fetchOne')->willReturn(false);
         $this->productStreamBuilder = static::createStub(ProductStreamBuilder::class);
         $this->productStreamBuilder->method('enrichCriteria')->willReturnCallback(static function (Criteria $criteria, mixed ...$_): void {
@@ -520,6 +524,9 @@ class ProductCrossSellingRouteTest extends TestCase
         );
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchOne')->willReturn($parentId ?? false);
 
         $streamCriteria = null;

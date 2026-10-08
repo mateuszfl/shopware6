@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\ImportExport\Event\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\ImportExport\Event\ImportExportAfterImportRecordEvent;
 use Shopware\Core\Content\ImportExport\ImportExportException;
 use Shopware\Core\Content\Product\Aggregate\ProductConfiguratorSetting\ProductConfiguratorSettingDefinition;
@@ -119,18 +120,19 @@ class ProductVariantsSubscriber implements EventSubscriberInterface, ResetInterf
 
         $variantIds = array_column($payload, 'id');
         $this->connection->executeStatement(
-            'DELETE FROM `product_option` WHERE `product_id` IN (:ids);',
-            ['ids' => Uuid::fromHexToBytesList($variantIds)],
-            ['ids' => ArrayParameterType::BINARY]
+            'DELETE FROM product_option WHERE product_id IN (:ids) AND product_version_id = :version;',
+            ['ids' => Uuid::fromHexToBytesList($variantIds), 'version' => Uuid::fromHexToBytes($context->getVersionId())],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
         $configuratorSettingPayload = $this->getProductConfiguratorSettingPayload($payload, $parentId);
         $this->connection->executeStatement(
-            'DELETE FROM `product_configurator_setting` WHERE `product_id` = :parentId AND `id` NOT IN (:ids);',
+            'DELETE FROM product_configurator_setting WHERE product_id = :parentId AND product_version_id = :version AND id NOT IN (:ids);',
             [
                 'parentId' => Uuid::fromHexToBytes($parentId),
+                'version' => Uuid::fromHexToBytes($context->getVersionId()),
                 'ids' => Uuid::fromHexToBytesList(array_column($configuratorSettingPayload, 'id')),
             ],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'parentId' => ParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         $this->syncService->sync([

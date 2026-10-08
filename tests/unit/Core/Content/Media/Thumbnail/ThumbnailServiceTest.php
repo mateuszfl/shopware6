@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\Thumbnail;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\FilesystemOperator;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -80,6 +81,9 @@ class ThumbnailServiceTest extends TestCase
         $this->dispatcher = static::createStub(EventDispatcherInterface::class);
         $this->indexer = static::createStub(EntityIndexer::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->thumbnailSizeCalculator = new ThumbnailSizeCalculator();
         $this->logger = new NullLogger();
         $this->filesystem = new Filesystem();
@@ -112,6 +116,9 @@ class ThumbnailServiceTest extends TestCase
             ->with(static::isInstanceOf(MediaIndexingMessage::class));
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
@@ -162,6 +169,9 @@ class ThumbnailServiceTest extends TestCase
             ->with(static::isInstanceOf(MediaIndexingMessage::class));
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
@@ -265,6 +275,9 @@ class ThumbnailServiceTest extends TestCase
         $mediaThumbnailEntity->setMedia($mediaEntity);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
@@ -316,6 +329,9 @@ class ThumbnailServiceTest extends TestCase
         $mediaThumbnailEntity->setMedia($mediaEntity);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
@@ -363,6 +379,9 @@ class ThumbnailServiceTest extends TestCase
         $mediaThumbnailEntity->setMedia($mediaEntity);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->once())
             ->method('transactional')
             ->willReturnCallback(function (\Closure $func) use ($mediaEntity, $mediaFolderEntity) {
@@ -543,6 +562,9 @@ class ThumbnailServiceTest extends TestCase
             });
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
                 return [
@@ -601,6 +623,9 @@ class ThumbnailServiceTest extends TestCase
             });
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) {
                 return [
@@ -671,6 +696,9 @@ class ThumbnailServiceTest extends TestCase
         $paths = ['/thumbnail/good.png', '/thumbnail/bad.png'];
         $call = 0;
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllKeyValue')
             ->willReturnCallback(static function ($sql, $params) use (&$call, $paths) {
                 $path = $paths[$call] ?? '/thumbnail/extra.png';
@@ -748,6 +776,9 @@ class ThumbnailServiceTest extends TestCase
         $filesystemPublic->method('write')->willReturnCallback(static function (): void {});
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllKeyValue')->willReturnCallback(static function ($sql, $params): array {
             return [Uuid::fromBytesToHex($params['ids'][0]) => '/thumbnail.jpg'];
         });

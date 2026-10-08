@@ -4,17 +4,20 @@ namespace Shopware\Tests\Unit\Core\Content\Seo;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Content\Seo\SeoUrl\SeoUrlCollection;
+use Shopware\Core\Content\Seo\SeoUrl\SeoUrlDefinition;
 use Shopware\Core\Content\Seo\SeoUrlPersister;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelEntity;
+use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticEntityRepository;
 use Symfony\Component\Clock\NativeClock;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -28,6 +31,9 @@ class SeoUrlPersisterTest extends TestCase
     public function testUpdateSeoUrlsWithNewSeoPaths(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $seoUrlPersister = $this->createSeoUrlPersister($connection);
 
         $seoUrls = [
@@ -179,6 +185,9 @@ class SeoUrlPersisterTest extends TestCase
     public function testForceUpdateSeoUrlsPersistsNewSeoPaths(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $seoUrlPersister = $this->createSeoUrlPersister($connection);
 
         $seoUrls = [
@@ -219,6 +228,9 @@ class SeoUrlPersisterTest extends TestCase
     public function testUpdateSeoUrlsWithInuseSeoPaths(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $seoUrlPersister = $this->createSeoUrlPersister($connection);
 
         $seoUrls = [
@@ -248,17 +260,17 @@ class SeoUrlPersisterTest extends TestCase
             ->method('fetchAllAssociative')
             ->willReturn([
                 [
-                    'id' => 'id1',
-                    'languageId' => Uuid::randomHex(),
-                    'salesChannelId' => Uuid::randomHex(),
-                    'foreignKey' => Uuid::randomHex(),
+                    'id' => $id1,
+                    'languageId' => Uuid::randomBytes(),
+                    'salesChannelId' => Uuid::randomBytes(),
+                    'foreignKey' => Uuid::randomBytes(),
                     'routeName' => 'test-route',
                 ],
                 [
-                    'id' => 'id2',
-                    'languageId' => Uuid::randomHex(),
-                    'salesChannelId' => Uuid::randomHex(),
-                    'foreignKey' => Uuid::randomHex(),
+                    'id' => $id2,
+                    'languageId' => Uuid::randomBytes(),
+                    'salesChannelId' => Uuid::randomBytes(),
+                    'foreignKey' => Uuid::randomBytes(),
                     'routeName' => 'test-route',
                 ],
             ]);
@@ -325,6 +337,9 @@ class SeoUrlPersisterTest extends TestCase
         $transactions = 0;
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->atLeastOnce())
             ->method('createQueryBuilder')
             ->willReturn($queryBuilder);
@@ -381,7 +396,7 @@ class SeoUrlPersisterTest extends TestCase
     {
         return new SeoUrlPersister(
             $connection,
-            static::createStub(EntityRepository::class),
+            StaticEntityRepository::of(SeoUrlCollection::class, [], new SeoUrlDefinition()),
             static::createStub(EventDispatcherInterface::class),
             new NativeClock()
         );

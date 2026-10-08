@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Category\Service;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Breadcrumb\BreadcrumbException;
 use Shopware\Core\Content\Breadcrumb\Struct\Breadcrumb;
 use Shopware\Core\Content\Breadcrumb\Struct\BreadcrumbCollection;
@@ -16,6 +17,7 @@ use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Content\Seo\MainCategory\MainCategoryCollection;
 use Shopware\Core\Content\Seo\SeoUrlRoute\EntityRouteResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -237,10 +239,10 @@ class CategoryBreadcrumbBuilder
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(id)) as id',
-            'LOWER(HEX(foreign_key)) as categoryId',
-            'path_info as pathInfo',
-            'seo_path_info as seoPathInfo',
+            IndexingSql::hex($this->connection, 'id') . ' as id',
+            IndexingSql::hex($this->connection, 'foreign_key') . ' as ' . $this->connection->quoteSingleIdentifier('categoryId'),
+            'path_info as ' . $this->connection->quoteSingleIdentifier('pathInfo'),
+            'seo_path_info as ' . $this->connection->quoteSingleIdentifier('seoPathInfo'),
         );
         $query->from('seo_url');
         $query->where('seo_url.is_canonical = 1');
@@ -250,8 +252,8 @@ class CategoryBreadcrumbBuilder
         $query->andWhere('seo_url.foreign_key IN (:categoryIds)');
         $routeName = $this->entityRouteResolver->getRouteNameForEntityName(CategoryDefinition::ENTITY_NAME, $salesChannel->getTypeId());
         $query->setParameter('routeName', $routeName);
-        $query->setParameter('languageId', Uuid::fromHexToBytes($context->getLanguageId()));
-        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannel->getId()));
+        $query->setParameter('languageId', Uuid::fromHexToBytes($context->getLanguageId()), ParameterType::BINARY);
+        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannel->getId()), ParameterType::BINARY);
         $query->setParameter('categoryIds', Uuid::fromHexToBytesList($categoryIds), ArrayParameterType::BINARY);
 
         return $query->executeQuery()->fetchAllAssociative();

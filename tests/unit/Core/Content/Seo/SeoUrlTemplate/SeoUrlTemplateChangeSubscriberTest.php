@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Seo\SeoUrlTemplate;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Seo\SeoUrlTemplate\SeoUrlTemplateChangeSubscriber;
@@ -56,6 +57,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
     {
         // Inserts carry route and entity name in the payload, no lookup needed.
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllAssociative');
 
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -82,6 +86,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
     public function testDispatchesIndexingMessageWhenTemplateChanged(): void
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
             ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
         ]);
@@ -115,6 +122,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         // An idempotent API update that submits the identical template again must
         // not trigger the expensive reindexing pass.
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllAssociative');
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus->expects($this->never())->method('dispatch');
@@ -141,6 +151,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         // Defensive: without a change set the previous value is unknown, so the
         // subscriber must regenerate rather than silently skip.
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
             ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
         ]);
@@ -163,6 +176,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         // Partial writes such as custom-fields-only saves must not trigger the
         // expensive reindexing pass.
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllAssociative');
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus->expects($this->never())->method('dispatch');
@@ -184,6 +200,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         // sales channel; those fall back to the default template, so there is nothing
         // to regenerate.
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllAssociative');
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus->expects($this->never())->method('dispatch');
@@ -210,6 +229,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
     public function testIgnoresWritesOfOtherEntities(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->expects($this->never())->method('fetchAllAssociative');
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus->expects($this->never())->method('dispatch');
@@ -226,6 +248,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
     {
         // Multiple writes resolving to the same route must produce a single message.
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
             ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
             ['routeName' => 'frontend.detail.page', 'entityName' => 'product'],
@@ -255,6 +280,9 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
     public function testIgnoresRoutesWithEmptyRouteOrEntityName(): void
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
             ['routeName' => '', 'entityName' => 'category'],
             ['routeName' => 'frontend.navigation.page', 'entityName' => ''],

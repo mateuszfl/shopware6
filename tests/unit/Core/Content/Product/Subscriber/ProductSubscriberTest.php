@@ -4,6 +4,7 @@ namespace Shopware\Tests\Unit\Core\Content\Product\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -954,6 +955,7 @@ class ProductSubscriberTest extends TestCase
                 ],
                 [
                     'parentIds' => ArrayParameterType::BINARY,
+                    'versionId' => ParameterType::BINARY,
                 ]
             );
 
@@ -1018,6 +1020,7 @@ class ProductSubscriberTest extends TestCase
                 ],
                 [
                     'parentIds' => ArrayParameterType::BINARY,
+                    'versionId' => ParameterType::BINARY,
                 ]
             );
 

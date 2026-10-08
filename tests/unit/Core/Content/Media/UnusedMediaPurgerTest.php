@@ -3,7 +3,9 @@
 namespace Shopware\Tests\Unit\Core\Content\Media;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Media\Event\UnusedMediaSearchEvent;
 use Shopware\Core\Content\Media\MediaCollection;
@@ -82,7 +84,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -140,7 +142,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2, $media3, $media4], $media);
@@ -181,7 +183,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia(4, 0)));
 
         static::assertSame([$media1, $media2, $media3, $media4], $media);
@@ -227,7 +229,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -272,7 +274,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -324,7 +326,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -365,7 +367,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -393,7 +395,7 @@ class UnusedMediaPurgerTest extends TestCase
 
                     self::assertInstanceOf(EqualsAnyFilter::class, $filters[0]);
                     self::assertSame('media.mediaFolder.id', $filters[0]->getField());
-                    self::assertSame(['id1', 'id2', 'id3', 'id4'], $filters[0]->getValue());
+                    self::assertSame([Uuid::fromStringToHex('folder-1'), Uuid::fromStringToHex('folder-2'), Uuid::fromStringToHex('folder-3'), Uuid::fromStringToHex('folder-4')], $filters[0]->getValue());
 
                     return [$id1, $id2];
                 },
@@ -407,20 +409,20 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
 
         $connection
             ->method('fetchOne')
-            ->willReturn('id1');
+            ->willReturn(Uuid::fromStringToHex('folder-1'));
 
         $connection
             ->method('fetchAllAssociativeIndexed')
             ->willReturn([
-                'id2' => ['id' => 'id2', 'parent_id' => 'id1'],
-                'id3' => ['id' => 'id3', 'parent_id' => 'id2'],
-                'id4' => ['id' => 'id4', 'parent_id' => 'id1'],
-                'id5' => ['id' => 'id4', 'parent_id' => 'some-other-parent'],
-                'id6' => ['id' => 'id4', 'parent_id' => 'id5'],
+                Uuid::fromStringToHex('folder-2') => ['id' => Uuid::fromStringToHex('folder-2'), 'parent_id' => Uuid::fromStringToHex('folder-1')],
+                Uuid::fromStringToHex('folder-3') => ['id' => Uuid::fromStringToHex('folder-3'), 'parent_id' => Uuid::fromStringToHex('folder-2')],
+                Uuid::fromStringToHex('folder-4') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => Uuid::fromStringToHex('folder-1')],
+                Uuid::fromStringToHex('folder-5') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => 'some-other-parent'],
+                Uuid::fromStringToHex('folder-6') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => Uuid::fromStringToHex('folder-5')],
             ]);
 
         $purger = new UnusedMediaPurger($repo, $connection, new EventDispatcher(), new NativeClock());
@@ -464,7 +466,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -504,7 +506,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -546,7 +548,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media1, $media2], $media);
@@ -588,7 +590,7 @@ class UnusedMediaPurgerTest extends TestCase
             $event->markAsUsed([$id1]);
         });
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), $eventDispatcher, new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), $eventDispatcher, new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([$media2], $media);
@@ -625,7 +627,7 @@ class UnusedMediaPurgerTest extends TestCase
             $event->markAsUsed([$id1, $id2]);
         });
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), $eventDispatcher, new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), $eventDispatcher, new NativeClock());
         $media = array_merge([], ...iterator_to_array($purger->getNotUsedMedia()));
 
         static::assertSame([], $media);
@@ -656,7 +658,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -713,7 +715,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -762,7 +764,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia(4, 0);
 
         static::assertSame(
@@ -814,7 +816,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -863,7 +865,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -919,7 +921,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -964,7 +966,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -995,7 +997,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
 
         try {
             $purger->deleteNotUsedMedia(null, null, null, 'product');
@@ -1025,7 +1027,7 @@ class UnusedMediaPurgerTest extends TestCase
 
                     self::assertInstanceOf(EqualsAnyFilter::class, $filters[0]);
                     self::assertSame('media.mediaFolder.id', $filters[0]->getField());
-                    self::assertSame(['id1', 'id2', 'id3', 'id4'], $filters[0]->getValue());
+                    self::assertSame([Uuid::fromStringToHex('folder-1'), Uuid::fromStringToHex('folder-2'), Uuid::fromStringToHex('folder-3'), Uuid::fromStringToHex('folder-4')], $filters[0]->getValue());
 
                     return [$id1, $id2];
                 },
@@ -1036,20 +1038,20 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
 
         $connection
             ->method('fetchOne')
-            ->willReturn('id1');
+            ->willReturn(Uuid::fromStringToHex('folder-1'));
 
         $connection
             ->method('fetchAllAssociativeIndexed')
             ->willReturn([
-                'id2' => ['id' => 'id2', 'parent_id' => 'id1'],
-                'id3' => ['id' => 'id3', 'parent_id' => 'id2'],
-                'id4' => ['id' => 'id4', 'parent_id' => 'id1'],
-                'id5' => ['id' => 'id4', 'parent_id' => 'some-other-parent'],
-                'id6' => ['id' => 'id4', 'parent_id' => 'id5'],
+                Uuid::fromStringToHex('folder-2') => ['id' => Uuid::fromStringToHex('folder-2'), 'parent_id' => Uuid::fromStringToHex('folder-1')],
+                Uuid::fromStringToHex('folder-3') => ['id' => Uuid::fromStringToHex('folder-3'), 'parent_id' => Uuid::fromStringToHex('folder-2')],
+                Uuid::fromStringToHex('folder-4') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => Uuid::fromStringToHex('folder-1')],
+                Uuid::fromStringToHex('folder-5') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => 'some-other-parent'],
+                Uuid::fromStringToHex('folder-6') => ['id' => Uuid::fromStringToHex('folder-4'), 'parent_id' => Uuid::fromStringToHex('folder-5')],
             ]);
 
         $purger = new UnusedMediaPurger($repo, $connection, new EventDispatcher(), new NativeClock());
@@ -1097,7 +1099,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -1141,7 +1143,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -1188,7 +1190,7 @@ class UnusedMediaPurgerTest extends TestCase
             $event->markAsUsed([$id1]);
         });
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), $eventDispatcher, new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), $eventDispatcher, new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -1234,7 +1236,7 @@ class UnusedMediaPurgerTest extends TestCase
             $event->markAsUsed([$id1, $id2]);
         });
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), $eventDispatcher, new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), $eventDispatcher, new NativeClock());
         $purger->deleteNotUsedMedia();
 
         static::assertSame(
@@ -1270,7 +1272,7 @@ class UnusedMediaPurgerTest extends TestCase
             $mediaDefinition
         );
 
-        $purger = new UnusedMediaPurger($repo, static::createStub(Connection::class), new EventDispatcher(), new NativeClock());
+        $purger = new UnusedMediaPurger($repo, $this->connection(), new EventDispatcher(), new NativeClock());
         $purger->deleteNotUsedMedia(null, null, 3);
 
         static::assertSame(
@@ -1450,5 +1452,15 @@ class UnusedMediaPurgerTest extends TestCase
         $media->setId($id);
 
         return $media;
+    }
+
+    private function connection(): Connection&Stub
+    {
+        $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
+
+        return $connection;
     }
 }

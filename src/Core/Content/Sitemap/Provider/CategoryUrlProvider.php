@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Sitemap\Provider;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Category\CategoryEntity;
 use Shopware\Core\Content\Category\Event\SalesChannelCategoryIdsFetchedEvent;
@@ -128,8 +129,8 @@ class CategoryUrlProvider extends AbstractUrlProvider
         $query->setMaxResults($limit);
 
         $query->addSelect(
-            '`category`.created_at',
-            '`category`.updated_at',
+            'category.created_at',
+            'category.updated_at',
         );
 
         $wheres = [];
@@ -140,22 +141,22 @@ class CategoryUrlProvider extends AbstractUrlProvider
         ]);
 
         foreach ($categoryIds as $id) {
-            $wheres[] = '`category`.path LIKE ' . $query->createNamedParameter('%|' . $id . '|%');
+            $wheres[] = 'category.path LIKE ' . $query->createNamedParameter('%|' . $id . '|%');
         }
 
         $query->andWhere('(' . implode(' OR ', $wheres) . ')');
-        $query->andWhere('`category`.version_id = :versionId');
-        $query->andWhere('`category`.active = 1');
-        $query->andWhere('`category`.type != :linkType');
-        $query->andWhere('`category`.type != :folderType');
+        $query->andWhere('category.version_id = :versionId');
+        $query->andWhere('category.active = 1');
+        $query->andWhere('category.type != :linkType');
+        $query->andWhere('category.type != :folderType');
 
         $excludedCategoryIds = $this->getExcludedCategoryIds($context);
         if ($excludedCategoryIds !== []) {
-            $query->andWhere('`category`.id NOT IN (:categoryIds)');
+            $query->andWhere('category.id NOT IN (:categoryIds)');
             $query->setParameter('categoryIds', Uuid::fromHexToBytesList($excludedCategoryIds), ArrayParameterType::BINARY);
         }
 
-        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
         $query->setParameter('linkType', CategoryDefinition::TYPE_LINK);
         $query->setParameter('folderType', CategoryDefinition::TYPE_FOLDER);
 

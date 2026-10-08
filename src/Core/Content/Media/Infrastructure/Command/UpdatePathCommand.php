@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Media\Infrastructure\Command;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Media\Core\Application\MediaPathUpdater;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Log\Package;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -41,9 +42,9 @@ class UpdatePathCommand extends Command
         $output->writeln('Updating media paths...');
 
         if ($input->getOption('force')) {
-            $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM media');
+            $ids = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media');
         } else {
-            $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM media WHERE path IS NULL');
+            $ids = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media WHERE path IS NULL');
         }
 
         $progressBar = new ProgressBar($output, \count($ids));
@@ -62,9 +63,9 @@ class UpdatePathCommand extends Command
         $output->writeln('');
 
         if ($input->getOption('force')) {
-            $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM media_thumbnail');
+            $ids = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media_thumbnail');
         } else {
-            $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM media_thumbnail WHERE path IS NULL');
+            $ids = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media_thumbnail WHERE path IS NULL');
         }
 
         $progressBar = new ProgressBar($output, \count($ids));

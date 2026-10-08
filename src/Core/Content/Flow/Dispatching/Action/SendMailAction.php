@@ -278,7 +278,7 @@ class SendMailAction extends FlowAction implements DelayableAction
                 return $recipients['data'];
             case self::RECIPIENT_CONFIG_ADMIN:
                 $admins = $this->connection->fetchAllAssociative(
-                    'SELECT first_name, last_name, email FROM user WHERE admin = true'
+                    'SELECT first_name, last_name, email FROM ' . $this->connection->quoteSingleIdentifier('user') . ' WHERE admin = 1'
                 );
                 $emails = [];
                 foreach ($admins as $admin) {

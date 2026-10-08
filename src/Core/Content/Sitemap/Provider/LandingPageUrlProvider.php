@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Sitemap\Provider;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\LandingPage\LandingPageDefinition;
 use Shopware\Core\Content\LandingPage\LandingPageEntity;
 use Shopware\Core\Content\Seo\SeoUrlRoute\EntityRouteResolver;
@@ -123,8 +124,8 @@ class LandingPageUrlProvider extends AbstractUrlProvider
             $query->setParameter('landingPageIds', Uuid::fromHexToBytesList($excludedLandingPageIds), ArrayParameterType::BINARY);
         }
 
-        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
-        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()));
+        $query->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
+        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($context->getSalesChannelId()), ParameterType::BINARY);
 
         $this->eventDispatcher->dispatch(
             new SitemapQueryEvent($query, $limit, $offset, $context, self::QUERY_EVENT_NAME)

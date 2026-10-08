@@ -8,6 +8,7 @@ use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\ProductExport\ProductExportEntity;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\MessageQueue\ScheduledTask\ScheduledTaskCollection;
@@ -69,12 +70,10 @@ final class ProductExportGenerateTaskHandler extends ScheduledTaskHandler
     private function fetchSalesChannelIds(): array
     {
         return $this->connection->fetchFirstColumn(
-            <<<'SQL'
-                SELECT LOWER(HEX(id))
-                FROM `sales_channel`
-                WHERE `type_id` IN (:typeIds)
-                  AND `active` = 1
-            SQL,
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . '
+                FROM sales_channel
+                WHERE type_id IN (:typeIds)
+                  AND active = 1',
             ['typeIds' => Uuid::fromHexToBytesList(ProductExportEntity::ALLOWED_SALES_CHANNEL_TYPE_IDS)],
             ['typeIds' => ArrayParameterType::BINARY]
         );
@@ -88,9 +87,8 @@ final class ProductExportGenerateTaskHandler extends ScheduledTaskHandler
         $productExports = [];
         /** @var list<array<string, mixed>> $rows */
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT
-                    LOWER(HEX(product_export.id)) AS id,
+            '                SELECT
+                    ' . IndexingSql::hex($this->connection, 'product_export.id') . ' AS id,
                     product_export.generated_at,
                     product_export.next_generation_at,
                     product_export.interval,
@@ -107,8 +105,7 @@ final class ProductExportGenerateTaskHandler extends ScheduledTaskHandler
                   AND (
                         product_export.storefront_sales_channel_id = :salesChannelId
                         OR sales_channel_domain.sales_channel_id = :salesChannelId
-                  )
-            SQL,
+                  )',
             ['salesChannelId' => Uuid::fromHexToBytes($salesChannelId)],
             ['salesChannelId' => ParameterType::BINARY]
         );

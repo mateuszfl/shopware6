@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\Stock;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -27,6 +28,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Write\EntityExistence;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\EntityWriteGatewayInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\WriteContext;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineState\StateMachineStateEntity;
 use Shopware\Core\System\StateMachine\Event\StateMachineTransitionEvent;
 use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticDefinitionInstanceRegistry;
@@ -52,6 +54,9 @@ class OrderStockSubscriberTest extends TestCase
     {
         $this->ids = new IdsCollection();
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->stockStorage = static::createMock(StockStorage::class);
 
         // Compiles the definition: WriteCommand constructors need getPrimaryKeys()
@@ -151,12 +156,12 @@ class OrderStockSubscriberTest extends TestCase
         $this->assertOrderItemStockChanges(
             beforeState: [],
             afterState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
-                $item2 => ['id' => $item2, 'quantity' => '10', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
+                $item2 => ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '10', 'referenced_id' => $product2],
             ],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 0, 'newQuantity' => 10],
-                ['lineItemId' => $item2, 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 0, 'newQuantity' => 10],
+                ['lineItemId' => Uuid::fromHexToBytes($item2), 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
             ],
             commands: [
                 new InsertCommand($this->definition, [], ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, false), '/0'),
@@ -175,13 +180,13 @@ class OrderStockSubscriberTest extends TestCase
 
         $this->assertOrderItemStockChanges(
             beforeState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
-                $item2 => ['id' => $item2, 'quantity' => '10', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
+                $item2 => ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '10', 'referenced_id' => $product2],
             ],
             afterState: [],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
-                ['lineItemId' => $item2, 'productId' => $product2, 'quantityBefore' => 10, 'newQuantity' => 0],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
+                ['lineItemId' => Uuid::fromHexToBytes($item2), 'productId' => $product2, 'quantityBefore' => 10, 'newQuantity' => 0],
             ],
             commands: [
                 new DeleteCommand($this->definition, ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, true)),
@@ -200,14 +205,14 @@ class OrderStockSubscriberTest extends TestCase
 
         $this->assertOrderItemStockChanges(
             beforeState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
             ],
             afterState: [
-                $item2 => ['id' => $item2, 'quantity' => '10', 'referenced_id' => $product2],
+                $item2 => ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '10', 'referenced_id' => $product2],
             ],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
-                ['lineItemId' => $item2, 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
+                ['lineItemId' => Uuid::fromHexToBytes($item2), 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
             ],
             commands: [
                 new DeleteCommand($this->definition, ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, true)),
@@ -226,16 +231,16 @@ class OrderStockSubscriberTest extends TestCase
 
         $this->assertOrderItemStockChanges(
             beforeState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
-                $item2 => ['id' => $item2, 'quantity' => '5', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
+                $item2 => ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '5', 'referenced_id' => $product2],
             ],
             afterState: [
-                $item1 => ['id' => $item1, 'quantity' => '20', 'referenced_id' => $product1],
-                $item2 => ['id' => $item2, 'quantity' => '3', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '20', 'referenced_id' => $product1],
+                $item2 => ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '3', 'referenced_id' => $product2],
             ],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 20],
-                ['lineItemId' => $item2, 'productId' => $product2, 'quantityBefore' => 5, 'newQuantity' => 3],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 20],
+                ['lineItemId' => Uuid::fromHexToBytes($item2), 'productId' => $product2, 'quantityBefore' => 5, 'newQuantity' => 3],
             ],
             commands: [
                 new UpdateCommand($this->definition, ['quantity' => 20], ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, true), '/0'),
@@ -253,14 +258,14 @@ class OrderStockSubscriberTest extends TestCase
 
         $this->assertOrderItemStockChanges(
             beforeState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
             ],
             afterState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product2],
             ],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
-                ['lineItemId' => $item1, 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 10],
             ],
             commands: [
                 new UpdateCommand($this->definition, ['referenced_id' => $product2], ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, true), '/0'),
@@ -277,14 +282,14 @@ class OrderStockSubscriberTest extends TestCase
 
         $this->assertOrderItemStockChanges(
             beforeState: [
-                $item1 => ['id' => $item1, 'quantity' => '10', 'referenced_id' => $product1],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'referenced_id' => $product1],
             ],
             afterState: [
-                $item1 => ['id' => $item1, 'quantity' => '15', 'referenced_id' => $product2],
+                $item1 => ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '15', 'referenced_id' => $product2],
             ],
             expectedUpdates: [
-                ['lineItemId' => $item1, 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
-                ['lineItemId' => $item1, 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 15],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product1, 'quantityBefore' => 10, 'newQuantity' => 0],
+                ['lineItemId' => Uuid::fromHexToBytes($item1), 'productId' => $product2, 'quantityBefore' => 0, 'newQuantity' => 15],
             ],
             commands: [
                 new UpdateCommand($this->definition, ['quantity' => 15, 'referenced_id' => $product2], ['id' => $this->ids->getBytes('item-1')], $this->buildExistence($item1, true), '/0'),
@@ -375,8 +380,8 @@ class OrderStockSubscriberTest extends TestCase
         $event = new StateMachineTransitionEvent(OrderDefinition::ENTITY_NAME, $this->ids->get('order-1'), $fromState, $toState, $context);
 
         $this->connection->method('fetchAllAssociative')->willReturn([
-            ['id' => $item1, 'quantity' => '10', 'product_id' => $product1],
-            ['id' => $item2, 'quantity' => '10', 'product_id' => $product2],
+            ['id' => Uuid::fromHexToBytes($item1), 'quantity' => '10', 'product_id' => $product1],
+            ['id' => Uuid::fromHexToBytes($item2), 'quantity' => '10', 'product_id' => $product2],
         ]);
 
         $this->stockStorage->expects($this->once())
@@ -386,12 +391,12 @@ class OrderStockSubscriberTest extends TestCase
                 static::assertInstanceOf(StockAlteration::class, $changes[0]);
                 static::assertInstanceOf(StockAlteration::class, $changes[1]);
 
-                static::assertSame($item1, $changes[0]->lineItemId);
+                static::assertSame(Uuid::fromHexToBytes($item1), $changes[0]->lineItemId);
                 static::assertSame($product1, $changes[0]->productId);
                 static::assertSame($quantityBefore, $changes[0]->quantityBefore);
                 static::assertSame($quantityAfter, $changes[0]->newQuantity);
 
-                static::assertSame($item2, $changes[1]->lineItemId);
+                static::assertSame(Uuid::fromHexToBytes($item2), $changes[1]->lineItemId);
                 static::assertSame($product2, $changes[1]->productId);
                 static::assertSame($quantityBefore, $changes[1]->quantityBefore);
                 static::assertSame($quantityAfter, $changes[1]->newQuantity);
@@ -431,7 +436,7 @@ class OrderStockSubscriberTest extends TestCase
      */
     private function assertOrderItemStockChanges(array $beforeState, array $afterState, array $expectedUpdates, array $commands): void
     {
-        $this->connection->method('fetchAllAssociativeIndexed')->willReturnOnConsecutiveCalls($beforeState, $afterState);
+        $this->connection->method('fetchAllAssociative')->willReturnOnConsecutiveCalls(array_map(static fn (string $id, array $row): array => ['id' => $id, ...$row], array_keys($beforeState), array_values($beforeState)), array_map(static fn (string $id, array $row): array => ['id' => $id, ...$row], array_keys($afterState), array_values($afterState)));
 
         $this->stockStorage->expects($this->once())
             ->method('alter')

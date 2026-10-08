@@ -4,12 +4,14 @@ namespace Shopware\Core\Content\Seo;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Seo\Event\SeoUrlUpdateEvent;
 use Shopware\Core\Content\Seo\SeoUrl\SeoUrlCollection;
 use Shopware\Core\Content\Seo\SeoUrl\SeoUrlEntity;
 use Shopware\Core\Content\Seo\Validation\Constraint\ValidSeoPathInfo;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -73,6 +75,7 @@ class SeoUrlPersister
         $dateTime = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
         $table = $this->seoUrlRepository->getDefinition()->getEntityName();
         $insertQuery = new MultiInsertQueryQueue($this->connection, 250, false, false);
+        $insertQuery->setConflictTarget($table, ['language_id', 'sales_channel_id', 'seo_path_info']);
         foreach (['foreign_key', 'path_info', 'seo_path_info', 'route_name', 'is_canonical', 'is_modified', 'is_deleted'] as $updateField) {
             $insertQuery->addUpdateFieldOnDuplicateKey($table, $updateField);
         }
@@ -96,21 +99,22 @@ class SeoUrlPersister
             $salesChannelId = $seoUrl['salesChannelId'] ??= null;
 
             // skip duplicates
-            if (isset($processed[$fk][$salesChannelId])) {
+            $salesChannelKey = $salesChannelId ?? '';
+            if (isset($processed[$fk][$salesChannelKey])) {
                 continue;
             }
 
             if (!isset($processed[$fk])) {
                 $processed[$fk] = [];
             }
-            $processed[$fk][$salesChannelId] = true;
+            $processed[$fk][$salesChannelKey] = true;
 
             $updatedFks[] = $fk;
 
             if (($seoUrl['error'] ?? '') !== '') {
                 continue;
             }
-            $existing = $canonicals[$fk][$salesChannelId] ?? null;
+            $existing = $canonicals[$fk][$salesChannelKey] ?? null;
 
             if ($existing !== null) {
                 // entity has override or does not change
@@ -148,7 +152,7 @@ class SeoUrlPersister
 
             $insert['created_at'] = $dateTime;
 
-            $insertQuery->addInsert($table, $insert);
+            $insertQuery->addInsert($table, $insert, array_fill_keys(['id', 'language_id', 'sales_channel_id', 'foreign_key'], ParameterType::BINARY));
         }
 
         $inuseSeoUrls = $this->findInUseCanonicalSeoUrls($seoPathInfos, $languageId, $salesChannelId);
@@ -213,11 +217,11 @@ class SeoUrlPersister
 
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(seo_url.id)) as id',
-            'LOWER(HEX(seo_url.foreign_key)) foreignKey',
-            'LOWER(HEX(seo_url.sales_channel_id)) salesChannelId',
-            'seo_url.is_modified as isModified',
-            'seo_url.seo_path_info seoPathInfo',
+            IndexingSql::hex($this->connection, 'seo_url.id') . ' as id',
+            IndexingSql::hex($this->connection, 'seo_url.foreign_key') . ' AS ' . $this->connection->quoteSingleIdentifier('foreignKey'),
+            IndexingSql::hex($this->connection, 'seo_url.sales_channel_id') . ' AS ' . $this->connection->quoteSingleIdentifier('salesChannelId'),
+            'seo_url.is_modified as ' . $this->connection->quoteSingleIdentifier('isModified'),
+            'seo_url.seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'),
         );
         $query->from('seo_url', 'seo_url');
 
@@ -227,7 +231,7 @@ class SeoUrlPersister
         $query->andWhere('seo_url.foreign_key IN (:foreign_keys)');
 
         $query->setParameter('routeName', $routeName);
-        $query->setParameter('language_id', $languageId);
+        $query->setParameter('language_id', $languageId, ParameterType::BINARY);
         $query->setParameter('foreign_keys', $fks, ArrayParameterType::BINARY);
 
         $rows = $query->executeQuery()->fetchAllAssociative();
@@ -237,11 +241,11 @@ class SeoUrlPersister
             $row['isModified'] = (bool) $row['isModified'];
             $foreignKey = (string) $row['foreignKey'];
             if (!isset($canonicals[$foreignKey])) {
-                $canonicals[$foreignKey] = [$row['salesChannelId'] => $row];
+                $canonicals[$foreignKey] = [$row['salesChannelId'] ?? '' => $row];
 
                 continue;
             }
-            $canonicals[$foreignKey][$row['salesChannelId']] = $row;
+            $canonicals[$foreignKey][$row['salesChannelId'] ?? ''] = $row;
         }
 
         return $canonicals;
@@ -258,19 +262,30 @@ class SeoUrlPersister
             return [];
         }
 
-        $query = 'SELECT id, sales_channel_id salesChannelId, foreign_key foreignKey, route_name routeName
+        $query = 'SELECT id, sales_channel_id AS ' . $this->connection->quoteSingleIdentifier('salesChannelId') . ', foreign_key AS ' . $this->connection->quoteSingleIdentifier('foreignKey') . ', route_name AS ' . $this->connection->quoteSingleIdentifier('routeName') . '
         FROM seo_url
         WHERE is_canonical = 1 AND language_id = :languageId AND seo_path_info IN (:seoPathInfos)';
 
         $params = ['seoPathInfos' => $seoPathInfos, 'languageId' => Uuid::fromHexToBytes($languageId)];
-        $types = ['seoPathInfos' => ArrayParameterType::BINARY];
+        $types = ['seoPathInfos' => ArrayParameterType::STRING, 'languageId' => ParameterType::BINARY];
 
         if ($salesChannelId !== null) {
             $query .= ' AND sales_channel_id = :salesChannelId';
             $params['salesChannelId'] = Uuid::fromHexToBytes($salesChannelId);
+            $types['salesChannelId'] = ParameterType::BINARY;
         }
 
-        return $this->connection->fetchAllAssociative($query, $params, $types);
+        $rows = $this->connection->fetchAllAssociative($query, $params, $types);
+        foreach ($rows as &$row) {
+            foreach (['id', 'salesChannelId', 'foreignKey'] as $column) {
+                if ($row[$column] !== null) {
+                    $row[$column] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row[$column]));
+                }
+            }
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**
@@ -311,11 +326,12 @@ class SeoUrlPersister
                     'foreignKey' => $seoUrl['foreignKey'],
                     'salesChannelId' => $seoUrl['salesChannelId'],
                     'routeName' => (string) $seoUrl['routeName'],
-                ]
+                ],
+                ['languageId' => ParameterType::BINARY, 'foreignKey' => ParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY],
             );
 
             if ($id !== false) {
-                $ids[] = $id;
+                $ids[] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($id));
             }
         }
 
@@ -351,7 +367,7 @@ class SeoUrlPersister
 
         if ($salesChannelId) {
             $query->andWhere('sales_channel_id = :salesChannelId');
-            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
         }
 
         RetryableQuery::retryable($this->connection, static function () use ($query): void {
@@ -380,7 +396,7 @@ class SeoUrlPersister
 
         if ($salesChannelId) {
             $query->andWhere('sales_channel_id = :salesChannelId');
-            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
         }
 
         $query->executeStatement();

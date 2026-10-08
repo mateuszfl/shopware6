@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Newsletter\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Newsletter\NewsletterEvents;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenEvent;
 use Shopware\Core\Framework\Log\Package;
@@ -50,16 +51,17 @@ class NewsletterRecipientSalutationSubscriber implements EventSubscriberInterfac
     {
         $this->connection->executeStatement(
             '
-                UPDATE `newsletter_recipient`
-                SET `salutation_id` = (
-                    SELECT `id`
-                    FROM `salutation`
-                    WHERE `salutation_key` = :notSpecified
+                UPDATE newsletter_recipient
+                SET salutation_id = (
+                    SELECT id
+                    FROM salutation
+                    WHERE salutation_key = :notSpecified
                     LIMIT 1
                 )
-                WHERE `id` = :id AND `salutation_id` is NULL
+                WHERE id = :id AND salutation_id is NULL
             ',
-            ['id' => Uuid::fromHexToBytes($id), 'notSpecified' => SalutationDefinition::NOT_SPECIFIED]
+            ['id' => Uuid::fromHexToBytes($id), 'notSpecified' => SalutationDefinition::NOT_SPECIFIED],
+            ['id' => ParameterType::BINARY]
         );
     }
 }

@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Category\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -443,6 +444,9 @@ class CategoryBreadcrumbBuilderTest extends TestCase
     ]): Connection
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $queryBuilder = static::createStub(QueryBuilder::class);
         $result = static::createStub(Result::class);
         $result->method('fetchAllAssociative')->willReturn($seoUrls);

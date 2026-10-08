@@ -125,7 +125,7 @@ class ProductSearchTermInterpreter implements ProductSearchTermInterpreterInterf
             }
 
             // looks like a number
-            if (\preg_match('/\d/', $token) === 1) {
+            if (\preg_match('/\\d/', $token) === 1) {
                 $slops['normal'][] = '%' . $token . '%';
                 $tokenSlops[$token] = $slops;
 
@@ -231,7 +231,7 @@ class ProductSearchTermInterpreter implements ProductSearchTermInterpreterInterf
         $currentLanguageId = $context->getLanguageId();
 
         $configurations = $this->connection->fetchAllAssociative(
-            'SELECT `and_logic`, `language_id` FROM `product_search_config` WHERE `language_id` IN (:language)',
+            'SELECT and_logic, language_id FROM product_search_config WHERE language_id IN (:language)',
             ['language' => Uuid::fromHexToBytesList([$currentLanguageId, Defaults::LANGUAGE_SYSTEM])],
             ['language' => ArrayParameterType::BINARY]
         );

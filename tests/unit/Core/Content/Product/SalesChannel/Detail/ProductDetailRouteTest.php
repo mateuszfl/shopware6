@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Shopware\Tests\Unit\Core\Content\Product\SalesChannel\Detail;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -96,6 +97,9 @@ class ProductDetailRouteTest extends TestCase
         $this->productTranslationRepository = static::createStub(EntityRepository::class);
         $this->systemConfig = static::createStub(SystemConfigService::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->breadcrumbBuilder = static::createStub(CategoryBreadcrumbBuilder::class);
         $this->cmsPageLoader = static::createStub(SalesChannelCmsPageLoader::class);
         $this->productCloseoutFilterFactory = new ProductCloseoutFilterFactory();
@@ -175,6 +179,9 @@ class ProductDetailRouteTest extends TestCase
     public function testLoadParentSearchUsesMatchedVariantWhenFindBestVariantEnabled(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -234,6 +241,9 @@ class ProductDetailRouteTest extends TestCase
     {
         $mainVariantId = Uuid::randomHex();
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -281,6 +291,9 @@ class ProductDetailRouteTest extends TestCase
     public function testLoadVariantListingConfig(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -327,6 +340,9 @@ class ProductDetailRouteTest extends TestCase
         $mainVariantId = Uuid::randomHex();
         $bestVariantId = Uuid::randomHex();
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -391,6 +407,9 @@ class ProductDetailRouteTest extends TestCase
     public function testResolveVariantIdFromEvent(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -439,6 +458,9 @@ class ProductDetailRouteTest extends TestCase
     public function testResolveVariantIdFromEventWithWrongTypeForDisplayParent(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')
@@ -483,6 +505,9 @@ class ProductDetailRouteTest extends TestCase
     public function testResolveVariantIdFromEventWithDisplayParent(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection
             ->expects($this->once())
             ->method('fetchAssociative')

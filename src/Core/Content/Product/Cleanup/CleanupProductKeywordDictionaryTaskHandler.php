@@ -37,7 +37,7 @@ final class CleanupProductKeywordDictionaryTaskHandler extends ScheduledTaskHand
             $result = RetryableQuery::retryable(
                 $this->connection,
                 fn (): int => (int) $this->connection->executeStatement(
-                    'DELETE FROM product_keyword_dictionary WHERE keyword NOT IN (SELECT DISTINCT keyword FROM product_search_keyword) LIMIT 1000',
+                    'DELETE FROM product_keyword_dictionary WHERE id IN (SELECT id FROM (SELECT id FROM product_keyword_dictionary WHERE keyword NOT IN (SELECT DISTINCT keyword FROM product_search_keyword) ORDER BY id LIMIT 1000) unused_keywords)',
                 )
             );
         } while ($result > 0);

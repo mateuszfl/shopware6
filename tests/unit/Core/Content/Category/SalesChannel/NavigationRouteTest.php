@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Category\SalesChannel;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -49,6 +50,9 @@ class NavigationRouteTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = $this->createMock(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->categoryRepository = static::createStub(SalesChannelRepository::class);
         $this->cacheTagCollector = static::createStub(CacheTagCollector::class);
         $this->categoryTreePathResolver = static::createStub(CategoryTreePathResolver::class);

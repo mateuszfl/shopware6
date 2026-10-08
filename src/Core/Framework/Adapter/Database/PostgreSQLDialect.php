@@ -166,6 +166,19 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
         return $expression . ' IS NOT DISTINCT FROM ' . $placeholder;
     }
 
+    public function jsonOverlaps(string $left, string $right): string
+    {
+        // Evaluate operands once; unlike containment, overlap never descends into nested arrays.
+        return '(SELECT CASE WHEN l IS NULL OR r IS NULL THEN NULL '
+            . 'WHEN jsonb_typeof(l) = \'object\' AND jsonb_typeof(r) = \'object\' THEN EXISTS ('
+            . 'SELECT 1 FROM jsonb_each(l) a JOIN jsonb_each(r) b ON a.key = b.key AND a.value = b.value) '
+            . 'ELSE EXISTS (SELECT 1 FROM '
+            . 'jsonb_array_elements(CASE WHEN jsonb_typeof(l) = \'array\' THEN l ELSE jsonb_build_array(l) END) a '
+            . 'JOIN '
+            . 'jsonb_array_elements(CASE WHEN jsonb_typeof(r) = \'array\' THEN r ELSE jsonb_build_array(r) END) b '
+            . 'ON a.value = b.value) END FROM (SELECT ' . $left . '::jsonb AS l, ' . $right . '::jsonb AS r) sw_overlap)';
+    }
+
     public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
     {
         $parts = [];

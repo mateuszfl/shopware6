@@ -4,10 +4,12 @@ namespace Shopware\Tests\Unit\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Seo\SeoResolver;
@@ -159,17 +161,17 @@ class SeoResolverTest extends TestCase
     {
         $salesChannelId = Uuid::randomHex();
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $firstResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/plain',
                 'seoPathInfo' => 'Main-product/SWDEMO10001',
             ],
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/query',
@@ -179,7 +181,6 @@ class SeoResolverTest extends TestCase
         $secondResult = FakeResultFactory::createResult([], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -194,10 +195,10 @@ class SeoResolverTest extends TestCase
     {
         $salesChannelId = Uuid::randomHex();
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $firstResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/plain',
@@ -207,7 +208,6 @@ class SeoResolverTest extends TestCase
         $secondResult = FakeResultFactory::createResult([], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -227,10 +227,10 @@ class SeoResolverTest extends TestCase
     {
         $salesChannelId = Uuid::randomHex();
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $firstResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/flag',
@@ -240,7 +240,6 @@ class SeoResolverTest extends TestCase
         $secondResult = FakeResultFactory::createResult([], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -261,12 +260,11 @@ class SeoResolverTest extends TestCase
         $salesChannelId = Uuid::randomHex();
         $storedSeoPath = 'Latest-Product/SW10005?test12345';
 
-        $connection = static::createStub(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
+        $connection = $this->connection();
 
         $matchResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/flag',
@@ -305,10 +303,9 @@ class SeoResolverTest extends TestCase
         // returns the requested path verbatim as a non-canonical result. The exact-match
         // (LIKE-removal) behaviour itself is covered by the integration test
         // testResolveSeoPathWithDifferentQueryStringDoesNotMatchCanonicalQuery against a real DB.
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $emptyResult = FakeResultFactory::createResult([], $connection);
         $connection->method('executeQuery')->willReturn($emptyResult, $emptyResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -340,9 +337,9 @@ class SeoResolverTest extends TestCase
     public function testDeprecatedResolveProjectsAllFieldsToArray(): void
     {
         $salesChannelId = Uuid::randomHex();
-        $foreignId = Uuid::randomHex();
+        $foreignId = Uuid::randomBytes();
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => $foreignId,
@@ -355,7 +352,6 @@ class SeoResolverTest extends TestCase
         $secondResult = FakeResultFactory::createResult([], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
         $data = $seoResolver->resolve(Uuid::randomHex(), $salesChannelId, 'awesome-product');
@@ -377,17 +373,17 @@ class SeoResolverTest extends TestCase
         // query-bearing variant. The query-matching variant is returned SECOND, so only the
         // usort query tie-break (not insertion order) can make it win. This guards the core of
         // the fix: a request carrying `?test=123` must resolve to the row stored with that query.
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         $firstResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/plain',
                 'seoPathInfo' => 'Main-product/SWDEMO10001',
             ],
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => true,
                 'pathInfo' => '/detail/variant',
@@ -397,7 +393,6 @@ class SeoResolverTest extends TestCase
         $secondResult = FakeResultFactory::createResult([], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -417,11 +412,11 @@ class SeoResolverTest extends TestCase
     {
         $salesChannelId = Uuid::randomHex();
 
-        $connection = static::createStub(Connection::class);
+        $connection = $this->connection();
         // First query: returns a non-canonical row pointing at /detail/1234.
         $firstResult = FakeResultFactory::createResult([
             [
-                'id' => Uuid::randomHex(),
+                'id' => Uuid::randomBytes(),
                 'salesChannelId' => $salesChannelId,
                 'isCanonical' => false,
                 'pathInfo' => '/detail/1234',
@@ -437,7 +432,6 @@ class SeoResolverTest extends TestCase
         ], $connection);
 
         $connection->method('executeQuery')->willReturn($firstResult, $secondResult);
-        $connection->method('getDatabasePlatform')->willReturn(static::createStub(AbstractPlatform::class));
 
         $seoResolver = new SeoResolver($connection);
 
@@ -450,15 +444,15 @@ class SeoResolverTest extends TestCase
 
     private function getMockConnection(string $salesChannelId, bool $isCanonical, string $pathInfo): Connection&Stub
     {
-        $mock = static::createStub(Connection::class);
+        $mock = $this->connection();
         $firstResult = FakeResultFactory::createResult([[
-            'id' => Uuid::randomHex(),
+            'id' => Uuid::randomBytes(),
             'salesChannelId' => $salesChannelId,
             'isCanonical' => $isCanonical,
             'pathInfo' => $pathInfo,
         ]], $mock);
         $canonicalResult = FakeResultFactory::createResult([[
-            'id' => Uuid::randomHex(),
+            'id' => Uuid::randomBytes(),
             'isCanonical' => $isCanonical,
             'seoPathInfo' => $pathInfo,
         ]], $mock);
@@ -466,9 +460,6 @@ class SeoResolverTest extends TestCase
         $mock
             ->method('executeQuery')
             ->willReturn($firstResult, $canonicalResult);
-        $mock
-            ->method('getDatabasePlatform')
-            ->willReturn(static::createStub(AbstractPlatform::class));
 
         return $mock;
     }
@@ -506,7 +497,7 @@ class SeoResolverTest extends TestCase
             'is_canonical' => 1,
             'is_modified' => 0,
             'is_deleted' => 0,
-        ]);
+        ], array_fill_keys(['id', 'sales_channel_id', 'language_id', 'foreign_key'], ParameterType::BINARY));
 
         $connection->insert('seo_url', [
             'id' => Uuid::fromHexToBytes(Uuid::randomHex()),
@@ -519,7 +510,17 @@ class SeoResolverTest extends TestCase
             'is_canonical' => 1,
             'is_modified' => 0,
             'is_deleted' => 1,
-        ]);
+        ], array_fill_keys(['id', 'sales_channel_id', 'language_id', 'foreign_key'], ParameterType::BINARY));
+
+        return $connection;
+    }
+
+    private function connection(): Connection&MockObject
+    {
+        $connection = static::createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
 
         return $connection;
     }

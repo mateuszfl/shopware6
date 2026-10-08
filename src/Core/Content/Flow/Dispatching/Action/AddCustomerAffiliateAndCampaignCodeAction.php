@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Flow\Dispatching\Action;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerCollection;
 use Shopware\Core\Content\Flow\Dispatching\DelayableAction;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
@@ -60,7 +61,8 @@ class AddCustomerAffiliateAndCampaignCodeAction extends FlowAction implements De
             'SELECT affiliate_code, campaign_code FROM customer WHERE id = :id',
             [
                 'id' => Uuid::fromHexToBytes($customerId),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
 
         if (!$data) {

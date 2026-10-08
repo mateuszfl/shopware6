@@ -118,6 +118,11 @@ final class MySQLDialect extends AbstractDatabaseDialect
         return $expression . ' <=> ' . $placeholder;
     }
 
+    public function jsonOverlaps(string $left, string $right): string
+    {
+        return 'JSON_OVERLAPS(' . $left . ', ' . $right . ')';
+    }
+
     public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
     {
         $parts = [];

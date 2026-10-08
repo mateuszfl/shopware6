@@ -5,6 +5,7 @@ namespace Shopware\Core\Content\Media\Commands;
 use Doctrine\DBAL\Connection;
 use League\Flysystem\FilesystemOperator;
 use Shopware\Core\Content\Media\Aggregate\MediaThumbnail\MediaThumbnailCollection;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\Log\Package;
@@ -78,7 +79,7 @@ class DeleteThumbnailsCommand extends Command
             return self::FAILURE;
         }
 
-        $thumbnails = $this->connection->fetchAllKeyValue('SELECT LOWER(HEX(`id`)) as id, `path` FROM `media_thumbnail`');
+        $thumbnails = $this->connection->fetchAllKeyValue('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id, path FROM media_thumbnail');
 
         if ($orphansOnly) {
             $deletedCount = $this->deleteOrphanedThumbnailFiles(array_values(array_filter($thumbnails)));
@@ -122,7 +123,7 @@ class DeleteThumbnailsCommand extends Command
 
         $this->thumbnailRepository->delete($ids, Context::createCLIContext());
 
-        $this->connection->executeStatement('UPDATE `media` SET `thumbnails_ro` = NULL;');
+        $this->connection->executeStatement('UPDATE media SET thumbnails_ro = NULL;');
     }
 
     /**

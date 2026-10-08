@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Product\SalesChannel\Listing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -57,6 +58,9 @@ class ProductListingLoaderTest extends TestCase
         $this->productRepository = $this->createMock(SalesChannelRepository::class);
         $this->systemConfigService = $this->createMock(SystemConfigService::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->eventDispatcher = new EventDispatcher();
         $this->productCloseoutFilterFactory = static::createStub(AbstractProductCloseoutFilterFactory::class);
         $this->salesChannelContext = Generator::generateSalesChannelContext();

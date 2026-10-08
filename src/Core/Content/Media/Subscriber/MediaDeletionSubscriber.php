@@ -14,6 +14,7 @@ use Shopware\Core\Content\Media\MediaDefinition;
 use Shopware\Core\Content\Media\Message\DeleteFileHandler;
 use Shopware\Core\Content\Media\Message\DeleteFileMessage;
 use Shopware\Core\Content\Media\Upload\MediaUploadService;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityDeleteEvent;
@@ -137,7 +138,7 @@ class MediaDeletionSubscriber implements EventSubscriberInterface
     private function handleFolderDeletion(array $folderIds, Context $context): void
     {
         $media = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(id)) as id FROM media WHERE media_folder_id IN (:ids)',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id FROM media WHERE media_folder_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($folderIds)],
             ['ids' => ArrayParameterType::BINARY]
         );
@@ -158,7 +159,7 @@ class MediaDeletionSubscriber implements EventSubscriberInterface
     {
         $ids = \array_values($ids);
         $children = $this->connection->fetchFirstColumn(
-            'SELECT LOWER(HEX(id)) FROM media_folder WHERE parent_id IN (:ids)',
+            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media_folder WHERE parent_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

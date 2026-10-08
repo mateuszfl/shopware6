@@ -4,6 +4,7 @@ namespace Shopware\Core\Content\Cms\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Cms\CmsException;
 use Shopware\Core\Content\Cms\CmsPageDefinition;
@@ -164,9 +165,10 @@ class CmsPageDefaultChangeSubscriber implements EventSubscriberInterface
             [
                 'cmsPageId' => Uuid::fromHexToBytes($cmsPageId),
                 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
-            ]
+            ],
+            ['cmsPageId' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
-        return $count === '1';
+        return (int) $count === 1;
     }
 }

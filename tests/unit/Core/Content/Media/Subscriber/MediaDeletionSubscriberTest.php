@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Media\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\Filesystem;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -76,6 +77,9 @@ class MediaDeletionSubscriberTest extends TestCase
         $this->filesystemPrivate = new Filesystem(new InMemoryFilesystemAdapter());
         $this->deleteFileHandler = new DeleteFileHandler($this->filesystemPublic, $this->filesystemPrivate);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $this->thumbnailRepository = new StaticEntityRepository([]);
         $this->mediaRepository = new StaticEntityRepository([]);
     }

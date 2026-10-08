@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Flow\Dispatching\Action;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
@@ -98,6 +99,9 @@ class SendMailActionTest extends TestCase
         $context = Context::createDefaultContext();
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $encoder = static::createStub(JsonEntityEncoder::class);
         $encoder->method('encode')->willReturn(['encoded']);
 

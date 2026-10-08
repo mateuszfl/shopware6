@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Content\Seo;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -53,6 +54,9 @@ class SeoUrlUpdaterTest extends TestCase
         $this->seoUrlGenerator = $this->createMock(SeoUrlGenerator::class);
         $this->seoUrlPersister = $this->createMock(SeoUrlPersister::class);
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
     }
 
     public function testUpdateWithoutDomain(): void

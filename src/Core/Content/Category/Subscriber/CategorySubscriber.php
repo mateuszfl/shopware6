@@ -3,6 +3,7 @@
 namespace Shopware\Core\Content\Category\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Category\SalesChannel\SalesChannelCategoryEntity;
 use Shopware\Core\Content\Category\Service\AbstractCategoryUrlGenerator;
@@ -111,7 +112,8 @@ class CategorySubscriber implements EventSubscriberInterface
             [
                 'cmsPageId' => Uuid::fromHexToBytes($cmsPageId),
                 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
-            ]
+            ],
+            ['cmsPageId' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return $cmsPageIdResult !== false;

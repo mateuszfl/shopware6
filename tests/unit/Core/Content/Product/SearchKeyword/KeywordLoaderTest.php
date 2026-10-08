@@ -27,6 +27,9 @@ class KeywordLoaderTest extends TestCase
         ]];
 
         $connection = static::createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('executeQuery')

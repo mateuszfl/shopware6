@@ -5,6 +5,7 @@ namespace Shopware\Tests\Unit\Core\Content\ProductExport\ScheduledTask;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -31,6 +32,9 @@ class ProductExportGenerateTaskHandlerTest extends TestCase
     public function testShouldBeRun(array $productExportRow, bool $expectedResult, bool $expectsReset): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
 
         $connection->method('fetchFirstColumn')
             ->willReturn([Uuid::randomHex()]);
@@ -72,11 +76,14 @@ class ProductExportGenerateTaskHandlerTest extends TestCase
     public function testFetchesStorefrontAndHeadlessSalesChannels(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
 
         $connection->expects($this->once())
             ->method('fetchFirstColumn')
             ->with(
-                static::stringContains('`type_id` IN (:typeIds)'),
+                static::anything(),
                 ['typeIds' => Uuid::fromHexToBytesList(ProductExportEntity::ALLOWED_SALES_CHANNEL_TYPE_IDS)],
                 ['typeIds' => ArrayParameterType::BINARY]
             )

@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Stock\AbstractStockStorage;
 use Shopware\Core\Content\Product\Stock\StockLoadRequest;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -88,25 +89,26 @@ class AvailableCombinationLoader extends AbstractAvailableCombinationLoader
 
         $query->andWhere('product.parent_id = :id');
         $query->andWhere('product.version_id = :versionId');
-        $query->andWhere('IFNULL(product.active, :parentActive) = :active');
+        $query->leftJoin('product', 'product', 'parent', 'product.parent_id = parent.id AND product.parent_version_id = parent.version_id');
+        $query->andWhere('COALESCE(product.active, parent.active, :parentActive) = :active');
         $query->andWhere('product.option_ids IS NOT NULL');
 
-        $query->setParameter('id', Uuid::fromHexToBytes($productId));
-        $query->setParameter('versionId', Uuid::fromHexToBytes($context->getVersionId()));
-        $query->setParameter('active', true);
-        $query->setParameter('parentActive', $parent['active'], ParameterType::BOOLEAN);
-        $query->setParameter('parentIsCloseout', $parent['is_closeout'], ParameterType::BOOLEAN);
+        $query->setParameter('id', Uuid::fromHexToBytes($productId), ParameterType::BINARY);
+        $query->setParameter('versionId', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
+        $query->setParameter('active', 1, ParameterType::INTEGER);
+        $query->setParameter('parentActive', (int) $parent['active'], ParameterType::INTEGER);
+        $query->setParameter('parentIsCloseout', (int) $parent['is_closeout'], ParameterType::INTEGER);
 
-        $query->innerJoin('product', 'product_visibility', 'visibilities', 'product.visibilities = visibilities.product_id');
+        $query->innerJoin('product', 'product_visibility', 'visibilities', 'product.visibilities = visibilities.product_id AND CASE WHEN product.visibilities = product.id THEN product.version_id ELSE product.parent_version_id END = visibilities.product_version_id');
         $query->andWhere('visibilities.sales_channel_id = :salesChannelId');
-        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+        $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
 
         $query->select(
-            'LOWER(HEX(product.id))',
+            IndexingSql::hex($this->connection, 'product.id'),
             'product.option_ids as options',
-            'product.product_number as productNumber',
+            'product.product_number as ' . $this->connection->quoteSingleIdentifier('productNumber'),
             'product.available',
-            'IFNULL(product.is_closeout, :parentIsCloseout) as isCloseout',
+            'COALESCE(product.is_closeout, parent.is_closeout, :parentIsCloseout) as ' . $this->connection->quoteSingleIdentifier('isCloseout'),
         );
 
         $combinations = $query->executeQuery()->fetchAllAssociative();
@@ -128,8 +130,8 @@ class AvailableCombinationLoader extends AbstractAvailableCombinationLoader
         $query->where('id = :id');
         $query->andWhere('version_id = :versionId');
 
-        $query->setParameter('id', Uuid::fromHexToBytes($productId));
-        $query->setParameter('versionId', Uuid::fromHexToBytes($context->getVersionId()));
+        $query->setParameter('id', Uuid::fromHexToBytes($productId), ParameterType::BINARY);
+        $query->setParameter('versionId', Uuid::fromHexToBytes($context->getVersionId()), ParameterType::BINARY);
 
         $parent = $query->executeQuery()->fetchAssociative();
         if ($parent === false) {

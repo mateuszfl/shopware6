@@ -23,6 +23,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\DateTimeField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\ApiAware;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Inherited;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\PrimaryKey;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Required;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\SearchRanking;
@@ -30,7 +31,9 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\FloatField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ListField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\OneToManyAssociationField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\ReferenceVersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StringField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\DateTimeFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\FkFieldSerializer;
@@ -38,7 +41,9 @@ use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\FloatFieldSeria
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\IdFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\ListFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\OneToManyAssociationFieldSerializer;
+use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\ReferenceVersionFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\StringFieldSerializer;
+use Shopware\Core\Framework\DataAbstractionLayer\FieldSerializer\VersionFieldSerializer;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Aggregation\Bucket\DateHistogramAggregation;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Aggregation\Bucket\TermsAggregation;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Aggregation\Metric\RangeAggregation;
@@ -63,6 +68,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\FieldSorting;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\EntityScoreQueryBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\SearchTermInterpreter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\Tokenizer;
+use Shopware\Core\Framework\DataAbstractionLayer\Version\VersionDefinition;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\HtmlSanitizer;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -156,6 +162,42 @@ class CriteriaSearchAggregationContractTest extends TestCase
                 $this->connection->executeStatement('DROP SCHEMA sw_search_collation CASCADE');
             }
             $this->connection->close();
+        }
+    }
+
+    public function testUuidRangeBoundsAcceptHexAndLegacyBytesIncludingInheritedAndVersionFields(): void
+    {
+        $binary = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb ? 'BYTEA' : 'BINARY(16)';
+        $this->connection->executeStatement("CREATE TABLE sw_range_boundary (id $binary, version_id $binary, reference_version_id $binary, reference_id $binary, inherited_id $binary)");
+        try {
+            foreach (range(0, 3) as $i) {
+                $bytes = Uuid::fromHexToBytes(self::id($i));
+                $this->connection->insert('sw_range_boundary', ['id' => $bytes, 'version_id' => $bytes, 'reference_version_id' => $bytes, 'reference_id' => $bytes, 'inherited_id' => null], array_fill_keys(['id', 'version_id', 'reference_version_id', 'reference_id', 'inherited_id'], ParameterType::BINARY));
+            }
+            $container = new ContainerBuilder();
+            $registry = new DefinitionInstanceRegistry($container, [], []);
+            $container->set(DefaultFieldAccessorBuilder::class, new DefaultFieldAccessorBuilder($this->connection));
+            foreach ([IdFieldSerializer::class, FkFieldSerializer::class, VersionFieldSerializer::class, ReferenceVersionFieldSerializer::class] as $serializer) {
+                $container->set($serializer, static::createStub($serializer));
+            }
+            $definition = new RangeBoundaryContractDefinition();
+            $registry->register($definition);
+            $registry->register(new VersionDefinition());
+            $parser = new SqlQueryParser(new EntityDefinitionQueryHelper($this->connection), $this->connection);
+            $context = Context::createDefaultContext();
+            $context->setConsiderInheritance(true);
+            $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+            foreach (['id', 'referenceId', 'versionId', 'referenceVersionId', 'inheritedId'] as $field) {
+                foreach ([RangeFilter::GT => [2, 3], RangeFilter::GTE => [1, 2, 3], RangeFilter::LT => [0], RangeFilter::LTE => [0, 1]] as $bound => $expected) {
+                    foreach ([self::id(1), Uuid::fromHexToBytes(self::id(1))] as $value) {
+                        $parsed = $parser->parse(new RangeFilter($field, [$bound => $value]), $definition, $context, 'r');
+                        $sql = 'SELECT ' . $dialect->hexExpression('r.id') . ' FROM sw_range_boundary r LEFT JOIN (SELECT id, reference_id AS inherited_id FROM sw_range_boundary) ' . EntityDefinitionQueryHelper::escape('r.parent', $this->connection) . ' ON r.id = ' . EntityDefinitionQueryHelper::escape('r.parent', $this->connection) . '.id WHERE ' . implode(' AND ', $parsed->getWheres()) . ' ORDER BY r.id';
+                        static::assertSame(array_map(self::id(...), $expected), $this->connection->fetchFirstColumn($sql, $parsed->getParameters(), $parsed->getTypes()), $field . ':' . $bound);
+                    }
+                }
+            }
+        } finally {
+            $this->connection->executeStatement('DROP TABLE sw_range_boundary');
         }
     }
 
@@ -430,6 +472,34 @@ class SearchChildContractDefinition extends EntityDefinition
             new FkField('product_id', 'productId', SearchContractDefinition::class),
             new StringField('label', 'label'),
             new FloatField('amount', 'amount'),
+        ]);
+    }
+}
+
+/**
+ * @internal
+ */
+#[Package('framework')]
+class RangeBoundaryContractDefinition extends EntityDefinition
+{
+    public function getEntityName(): string
+    {
+        return 'sw_range_boundary';
+    }
+
+    protected function defaultFields(): array
+    {
+        return [];
+    }
+
+    protected function defineFields(): FieldCollection
+    {
+        return new FieldCollection([
+            (new IdField('id', 'id'))->addFlags(new PrimaryKey()),
+            new VersionField(),
+            new ReferenceVersionField(self::class, 'reference_version_id'),
+            new FkField('reference_id', 'referenceId', self::class),
+            (new FkField('inherited_id', 'inheritedId', self::class))->addFlags(new Inherited()),
         ]);
     }
 }
