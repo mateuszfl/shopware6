@@ -131,7 +131,7 @@ final class DocumentAppFeatureDefinition extends AppFeatureDefinition
     {
         /** @var array<string, string> $claimedBy */
         $claimedBy = $this->connection->fetchAllKeyValue(
-            'SELECT `name`, `app_name` FROM `app_feature` WHERE `type` = :type AND `app_name` != :appName',
+            'SELECT name, app_name FROM app_feature WHERE type = :type AND app_name != :appName',
             ['type' => self::TYPE, 'appName' => $appName],
         );
 

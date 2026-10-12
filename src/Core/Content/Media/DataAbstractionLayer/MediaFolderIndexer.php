@@ -8,7 +8,6 @@ use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderCollection;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderDefinition;
 use Shopware\Core\Content\Media\Event\MediaFolderIndexerEvent;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -115,8 +114,8 @@ class MediaFolderIndexer extends EntityIndexer
         $children = [];
         foreach ($ids as $id) {
             $folder = $this->connection->fetchAssociative(
-                'SELECT ' . IndexingSql::hex($this->connection, 'child.id') . ' as id,
-                       ' . IndexingSql::hex($this->connection, 'parent.media_folder_configuration_id') . ' AS parent_configuration_id
+                'SELECT sw_uuid_hex(child.id) as id,
+                       sw_uuid_hex(parent.media_folder_configuration_id) AS parent_configuration_id
                 FROM media_folder child
                     LEFT JOIN media_folder as parent
                         ON parent.id = child.parent_id
@@ -183,7 +182,7 @@ class MediaFolderIndexer extends EntityIndexer
     private function fetchChildren(array $parentIds): array
     {
         $childIds = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id FROM media_folder WHERE parent_id IN (:ids) AND use_parent_configuration = 1',
+            'SELECT sw_uuid_hex(id) as id FROM media_folder WHERE parent_id IN (:ids) AND use_parent_configuration = 1',
             ['ids' => Uuid::fromHexToBytesList($parentIds)],
             ['ids' => ArrayParameterType::BINARY]
         );
@@ -206,7 +205,7 @@ class MediaFolderIndexer extends EntityIndexer
     {
         /** @var list<string> $parentIds */
         $parentIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'media_folder.parent_id') . ' as id FROM media_folder WHERE id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(media_folder.parent_id) as id FROM media_folder WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

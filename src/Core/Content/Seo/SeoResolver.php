@@ -69,7 +69,7 @@ class SeoResolver extends AbstractSeoResolver
         $normalizedQueryString = $this->normalizeQueryString($context->queryString);
 
         $query = (new QueryBuilder($this->connection))
-            ->select('id', 'path_info AS ' . $this->connection->quoteSingleIdentifier('pathInfo'), 'seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'), 'is_canonical AS ' . $this->connection->quoteSingleIdentifier('isCanonical'), 'sales_channel_id AS ' . $this->connection->quoteSingleIdentifier('salesChannelId'))
+            ->select('id', 'path_info', 'seo_path_info', 'is_canonical', 'sales_channel_id')
             ->from('seo_url')
             ->where('language_id = :language_id')
             ->andWhere('(sales_channel_id = :sales_channel_id OR sales_channel_id IS NULL)')
@@ -100,7 +100,7 @@ class SeoResolver extends AbstractSeoResolver
         $query->andWhere('(' . implode(' OR ', $seoPathConditions) . ')');
         $query->setTitle('seo-url::resolve');
 
-        /** @var list<array{id: string, pathInfo: string, seoPathInfo: string, isCanonical: string|null, salesChannelId: string|null}> $seoPaths */
+        /** @var list<array{id: string, path_info: string, seo_path_info: string, is_canonical: string|null, sales_channel_id: string|null}> $seoPaths */
         $seoPaths = $query->executeQuery()->fetchAllAssociative();
 
         foreach ($seoPaths as &$path) {
@@ -109,25 +109,25 @@ class SeoResolver extends AbstractSeoResolver
         unset($path);
 
         usort($seoPaths, function ($a, $b) use ($normalizedQueryString) {
-            if ($a['isCanonical'] === null) {
+            if ($a['is_canonical'] === null) {
                 return 1;
             }
 
-            if ($b['isCanonical'] === null) {
+            if ($b['is_canonical'] === null) {
                 return -1;
             }
 
-            if ($a['salesChannelId'] === null) {
+            if ($a['sales_channel_id'] === null) {
                 return 1;
             }
 
-            if ($b['salesChannelId'] === null) {
+            if ($b['sales_channel_id'] === null) {
                 return -1;
             }
 
             if ($normalizedQueryString !== null) {
-                $aMatches = $this->storedQueryMatches($a['seoPathInfo'], $normalizedQueryString);
-                $bMatches = $this->storedQueryMatches($b['seoPathInfo'], $normalizedQueryString);
+                $aMatches = $this->storedQueryMatches($a['seo_path_info'], $normalizedQueryString);
+                $bMatches = $this->storedQueryMatches($b['seo_path_info'], $normalizedQueryString);
                 if ($aMatches !== $bMatches) {
                     return $aMatches ? -1 : 1;
                 }
@@ -136,18 +136,18 @@ class SeoResolver extends AbstractSeoResolver
             return 0;
         });
 
-        $seoPath = ['pathInfo' => $seoPathInfo, 'isCanonical' => false];
+        $seoPath = ['path_info' => $seoPathInfo, 'is_canonical' => false];
 
         foreach ($seoPaths as $path) {
             $seoPath = $path;
-            if ($path['isCanonical']) {
+            if ($path['is_canonical']) {
                 break;
             }
         }
 
-        if (!$seoPath['isCanonical']) {
+        if (!$seoPath['is_canonical']) {
             $query = (new QueryBuilder($this->connection))
-                ->select('path_info AS ' . $this->connection->quoteSingleIdentifier('pathInfo'), 'seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'))
+                ->select('path_info', 'seo_path_info')
                 ->from('seo_url')
                 ->where('language_id = :language_id')
                 ->andWhere('sales_channel_id = :sales_channel_id')
@@ -157,7 +157,7 @@ class SeoResolver extends AbstractSeoResolver
                 ->setMaxResults(1)
                 ->setParameter('language_id', Uuid::fromHexToBytes($context->languageId), ParameterType::BINARY)
                 ->setParameter('sales_channel_id', Uuid::fromHexToBytes($context->salesChannelId), ParameterType::BINARY)
-                ->setParameter('pathInfo', '/' . ltrim((string) $seoPath['pathInfo'], '/'));
+                ->setParameter('pathInfo', '/' . ltrim((string) $seoPath['path_info'], '/'));
 
             $query->setTitle('seo-url::resolve-fallback');
 
@@ -169,18 +169,18 @@ class SeoResolver extends AbstractSeoResolver
 
             $canonicalQueryResult = $query->executeQuery()->fetchAssociative();
             if ($canonicalQueryResult) {
-                $seoPath['canonicalPathInfo'] = '/' . ltrim((string) $canonicalQueryResult['seoPathInfo'], '/');
+                $seoPath['canonicalPathInfo'] = '/' . ltrim((string) $canonicalQueryResult['seo_path_info'], '/');
             }
         }
 
-        $seoPath['pathInfo'] = '/' . ltrim((string) $seoPath['pathInfo'], '/');
+        $seoPath['path_info'] = '/' . ltrim((string) $seoPath['path_info'], '/');
 
         return new ResolvedSeoUrl(
-            pathInfo: $seoPath['pathInfo'],
-            isCanonical: (bool) $seoPath['isCanonical'],
+            pathInfo: $seoPath['path_info'],
+            isCanonical: (bool) $seoPath['is_canonical'],
             id: $seoPath['id'] ?? null,
             canonicalPathInfo: $seoPath['canonicalPathInfo'] ?? null,
-            seoPathInfo: $seoPath['seoPathInfo'] ?? null,
+            seoPathInfo: $seoPath['seo_path_info'] ?? null,
         );
     }
 

@@ -2,6 +2,7 @@
 
 namespace Shopware\Tests\Integration\Core\Maintenance\System\Service;
 
+use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Maintenance\System\Service\DatabaseConnectionFactory;
@@ -35,6 +36,9 @@ class SetupDatabaseAdapterTest extends TestCase
             $setupDatabaseAdapter->initializeShopwareDb($connection, $testDbName);
 
             static::assertTrue($setupDatabaseAdapter->hasShopwareTables($connection, $testDbName));
+            static::assertSame('00ff80', $connection->fetchOne('SELECT sw_uuid_hex(?)', ["\x00\xff\x80"], [ParameterType::BINARY]));
+            static::assertFalse($setupDatabaseAdapter->initializeShopwareDb($connection, $testDbName));
+            static::assertSame('00ff80', $connection->fetchOne('SELECT sw_uuid_hex(?)', ["\x00\xff\x80"], [ParameterType::BINARY]));
         } finally {
             $setupDatabaseAdapter->dropDatabase($connection, $testDbName);
 

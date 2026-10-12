@@ -160,7 +160,7 @@ class ReferencedDocumentResolverTest extends TestCase
         $connection = static::createStub(Connection::class);
         $connection->method('createQueryBuilder')->willReturn(new FakeQueryBuilder($connection, $rows));
         $connection->method('fetchOne')->willReturn(
-            $storedOrderVersionId === null ? false : Uuid::fromHexToBytes($storedOrderVersionId),
+            $storedOrderVersionId ?? false,
         );
 
         return new ReferencedDocumentResolver(new ReferenceInvoiceLoader($connection), $connection);
@@ -178,12 +178,12 @@ class ReferencedDocumentResolverTest extends TestCase
     ): array {
         return [
             'id' => $documentId,
-            'orderId' => $this->orderId,
-            'orderVersionId' => $orderVersionId,
-            'versionId' => $orderRowVersionId ?? $orderVersionId,
-            'deepLinkCode' => '',
+            'order_id' => $this->orderId,
+            'order_version_id' => $orderVersionId,
+            'version_id' => $orderRowVersionId ?? $orderVersionId,
+            'deep_link_code' => '',
             'config' => $config,
-            'documentNumber' => $documentNumber,
+            'document_number' => $documentNumber,
         ];
     }
 }

@@ -10,7 +10,6 @@ use Shopware\Core\Checkout\Cart\CachedRuleLoader;
 use Shopware\Core\Content\Rule\RuleDefinition;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\CompiledFieldCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
@@ -211,7 +210,7 @@ class RuleAreaUpdater implements EventSubscriberInterface
     private function getAreas(array $ids, CompiledFieldCollection $associationFields): array
     {
         $query = new QueryBuilder($this->connection);
-        $query->select('' . IndexingSql::hex($this->connection, 'rule.id') . ' AS array_key')
+        $query->select('sw_uuid_hex(rule.id) AS array_key')
             ->from('rule')
             ->andWhere('rule.id IN (:ids)');
 

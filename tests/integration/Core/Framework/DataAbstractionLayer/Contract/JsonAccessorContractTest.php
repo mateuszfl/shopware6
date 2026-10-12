@@ -5,6 +5,7 @@ namespace Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contrac
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Adapter\Database\JsonPath;
 use Shopware\Core\Framework\Context;
@@ -38,6 +39,7 @@ class JsonAccessorContractTest extends TestCase
             $this->connection->executeStatement('SET search_path TO sw_json_accessor');
             $this->connection->executeStatement('CREATE COLLATION sw_type_ci (provider = icu, locale = \'und-u-ks-level1\', deterministic = false)');
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $this->connection->executeStatement('CREATE TABLE sw_json_value (id INT PRIMARY KEY, payload ' . ($endpoint->platform === 'postgresql' ? 'JSONB' : 'JSON') . ')');
     }
 

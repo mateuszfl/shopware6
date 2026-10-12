@@ -192,10 +192,10 @@ class CustomerEmailUniqueChecker
 
         /** @var list<array{id: string, email: string, bound_sales_channel_id: string|null}> $customers */
         $customers = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`id`)) as `id`, `email`, LOWER(HEX(`bound_sales_channel_id`)) as `bound_sales_channel_id`
-             FROM `customer`
-             WHERE `email` IN (:emails)
-             AND `guest` = 0',
+            'SELECT sw_uuid_hex(id) as id, email, sw_uuid_hex(bound_sales_channel_id) as bound_sales_channel_id
+             FROM customer
+             WHERE email IN (:emails)
+             AND guest = 0',
             ['emails' => $emails],
             ['emails' => ArrayParameterType::STRING],
         );

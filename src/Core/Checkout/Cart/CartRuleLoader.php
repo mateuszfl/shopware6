@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Cart;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Error\ErrorCollection;
 use Shopware\Core\Checkout\Cart\Exception\CartTokenNotFoundException;
@@ -311,8 +312,9 @@ class CartRuleLoader implements ResetInterface
         }
 
         $currencyFactor = $this->connection->fetchOne(
-            'SELECT `factor` FROM `currency` WHERE `id` = :currencyId',
-            ['currencyId' => Uuid::fromHexToBytes($currencyId)]
+            'SELECT factor FROM currency WHERE id = :currencyId',
+            ['currencyId' => Uuid::fromHexToBytes($currencyId)],
+            ['currencyId' => ParameterType::BINARY]
         );
 
         if (!$currencyFactor) {

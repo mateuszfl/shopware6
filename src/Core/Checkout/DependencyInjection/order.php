@@ -118,6 +118,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service('order.repository'),
             service(OrderConverter::class),
             service(CartSerializationCleaner::class),
+            service(Connection::class),
         ]);
 
     $services->set(LineItemDownloadLoader::class)

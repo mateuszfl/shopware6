@@ -5,7 +5,6 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Indexing;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -73,7 +72,7 @@ class ChildCountUpdater
 
         $aggregations = $this->connection->fetchAllKeyValue(
             \sprintf(
-                'SELECT ' . IndexingSql::hex($this->connection, 'parent_id') . ', COUNT(id) FROM %s WHERE parent_id IN (:ids) %s GROUP BY parent_id',
+                'SELECT sw_uuid_hex(parent_id), COUNT(id) FROM %s WHERE parent_id IN (:ids) %s GROUP BY parent_id',
                 $entity,
                 $versionAware ? 'AND version_id = :version' : ''
             ),

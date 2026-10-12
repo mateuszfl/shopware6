@@ -6,7 +6,6 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Media\MediaDefinition;
 use Shopware\Core\Content\Media\Upload\MediaFileExtensionListProvider;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\InsertCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\UpdateCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\WriteCommand;
@@ -129,7 +128,7 @@ class MediaFileExtensionWriteValidator implements EventSubscriberInterface
         }
 
         return $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', private FROM media WHERE id IN (:ids)',
+            'SELECT sw_uuid_hex(id), private FROM media WHERE id IN (:ids)',
             ['ids' => array_values($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

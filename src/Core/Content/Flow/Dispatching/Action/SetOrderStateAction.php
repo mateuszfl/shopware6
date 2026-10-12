@@ -12,7 +12,6 @@ use Shopware\Core\Content\Flow\Dispatching\TransactionFailedException;
 use Shopware\Core\Content\Flow\FlowException;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Adapter\Database\JsonPath;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -157,7 +156,7 @@ class SetOrderStateAction extends FlowAction implements DelayableAction, Transac
     private function getMachineId(string $machine, string $orderId): ?string
     {
         return $this->connection->fetchOne(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM ' . $machine . ' WHERE order_id = :id AND version_id = :version ORDER BY created_at DESC',
+            'SELECT sw_uuid_hex(id) FROM ' . $machine . ' WHERE order_id = :id AND version_id = :version ORDER BY created_at DESC',
             [
                 'id' => Uuid::fromHexToBytes($orderId),
                 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
@@ -174,7 +173,7 @@ class SetOrderStateAction extends FlowAction implements DelayableAction, Transac
         $numericPrice = $dialect->jsonScalar($price->sql, 'number');
 
         return $this->connection->fetchOne(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM ' . self::ORDER_DELIVERY . ' WHERE order_id = :id AND version_id = :version ORDER BY CASE WHEN ' . $numericPrice . ' IS NULL THEN 1 ELSE 0 END, ' . $numericPrice . ' DESC, CASE WHEN created_at IS NULL THEN 1 ELSE 0 END, created_at DESC, id ASC',
+            'SELECT sw_uuid_hex(id) FROM ' . self::ORDER_DELIVERY . ' WHERE order_id = :id AND version_id = :version ORDER BY CASE WHEN ' . $numericPrice . ' IS NULL THEN 1 ELSE 0 END, ' . $numericPrice . ' DESC, CASE WHEN created_at IS NULL THEN 1 ELSE 0 END, created_at DESC, id ASC',
             [
                 ...$price->parameters,
                 'id' => Uuid::fromHexToBytes($orderId),
@@ -242,7 +241,7 @@ class SetOrderStateAction extends FlowAction implements DelayableAction, Transac
     private function getMachineIdFromOrderTransaction(string $orderId, Context $context): ?string
     {
         return $this->connection->fetchOne(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM ' . self::ORDER_TRANSACTION . ' WHERE order_id = :id AND version_id = :version ORDER BY created_at DESC',
+            'SELECT sw_uuid_hex(id) FROM ' . self::ORDER_TRANSACTION . ' WHERE order_id = :id AND version_id = :version ORDER BY created_at DESC',
             [
                 'id' => Uuid::fromHexToBytes($orderId),
                 'version' => Uuid::fromHexToBytes($context->getVersionId()),

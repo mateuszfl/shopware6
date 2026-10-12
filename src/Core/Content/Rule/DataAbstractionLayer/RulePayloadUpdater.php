@@ -8,7 +8,6 @@ use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Rule\DataAbstractionLayer\Indexing\ConditionTypeNotFound;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\App\Event\AppScriptConditionEvents;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -53,7 +52,7 @@ class RulePayloadUpdater implements EventSubscriberInterface
     public function update(array $ids): array
     {
         $conditions = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'rc.rule_id') . ' as array_key, rc.*, rs.script, rs.identifier, rs.updated_at as last_modified
+            'SELECT sw_uuid_hex(rc.rule_id) as array_key, rc.*, rs.script, rs.identifier, rs.updated_at as last_modified
             FROM rule_condition rc
             LEFT JOIN app_script_condition rs ON rc.script_id = rs.id AND rs.active = 1
             WHERE rc.rule_id IN (:ids)

@@ -17,7 +17,6 @@ use Shopware\Core\Content\Product\SalesChannel\ProductAvailableFilter;
 use Shopware\Core\Content\Product\SalesChannel\Search\ResolvedCriteriaProductSearchRoute;
 use Shopware\Core\Content\Product\SalesChannel\Suggest\ProductSuggestRoute;
 use Shopware\Core\Content\ProductStream\Service\AbstractProductStreamBuilder;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
@@ -230,9 +229,9 @@ class ProductListingLoader
         $config = $this->connection->fetchAllAssociative(
             '-- product-listing-loader::resolve-previews
             SELECT
-                parent.variant_listing_config as ' . $this->connection->quoteSingleIdentifier('variantListingConfig') . ',
-                ' . IndexingSql::hex($this->connection, 'child.id') . ' as id,
-                ' . IndexingSql::hex($this->connection, 'parent.id') . ' as ' . $this->connection->quoteSingleIdentifier('parentId') . '
+                parent.variant_listing_config,
+                sw_uuid_hex(child.id) as id,
+                sw_uuid_hex(parent.id) as parent_id
              FROM product as child
                 INNER JOIN product as parent
                     ON parent.id = child.parent_id
@@ -248,17 +247,17 @@ class ProductListingLoader
 
         $mapping = [];
         foreach ($config as $item) {
-            if ($item['variantListingConfig'] === null) {
+            if ($item['variant_listing_config'] === null) {
                 continue;
             }
-            $variantListingConfig = json_decode((string) $item['variantListingConfig'], true, 512, \JSON_THROW_ON_ERROR);
+            $variantListingConfig = json_decode((string) $item['variant_listing_config'], true, 512, \JSON_THROW_ON_ERROR);
 
             if (isset($variantListingConfig['mainVariantId']) && $variantListingConfig['mainVariantId']) {
                 $mapping[$item['id']] = $variantListingConfig['mainVariantId'];
             }
 
             if (isset($variantListingConfig['displayParent']) && $variantListingConfig['displayParent']) {
-                $mapping[$item['id']] = $item['parentId'];
+                $mapping[$item['id']] = $item['parent_id'];
             }
         }
 

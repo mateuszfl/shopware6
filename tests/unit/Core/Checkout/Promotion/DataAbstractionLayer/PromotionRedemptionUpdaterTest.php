@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Checkout\Promotion\DataAbstractionLayer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -41,6 +42,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     protected function setUp(): void
     {
         $this->connectionMock = static::createStub(Connection::class);
+        $this->connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $this->connectionMock->method('transactional')->willReturnCallback(fn (\Closure $callback) => $callback($this->connectionMock));
         $this->promotionRedemptionUpdater = new PromotionRedemptionUpdater($this->connectionMock);
     }
 
@@ -58,6 +62,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testUpdateEmptyIds(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->never())
             ->method('fetchAllAssociative');
@@ -68,6 +75,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testNoLiveVersion(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->never())
             ->method('fetchAllAssociative');
@@ -92,6 +102,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testItemDeleteNoLiveVersion(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->never())
             ->method('fetchAllAssociative');
@@ -107,6 +120,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testItemDeleteEmptyCommands(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->never())
             ->method('fetchAllAssociative');
@@ -122,6 +138,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testItemDelete(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->exactly(2))
             ->method('fetchAllAssociative')
@@ -167,6 +186,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
         $orderId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($this->exactly(2))
             ->method('fetchAllAssociative')
@@ -177,29 +199,13 @@ class PromotionRedemptionUpdaterTest extends TestCase
                 []
             );
 
-        $countStatement = static::createStub(Statement::class);
-        $releaseStatement = $this->createMock(Statement::class);
+        $connection->method('prepare')->willReturn(static::createStub(Statement::class));
+        $connection->expects($this->once())->method('executeStatement')->willReturnCallback(static function (string $sql, array $values) use ($orderId): int {
+            static::assertSame('individual-code', $values['code']);
+            static::assertSame($orderId, $values['orderId']);
 
-        $connection
-            ->method('prepare')
-            ->willReturnCallback(static fn (string $sql) => str_contains($sql, 'promotion_individual_code') ? $releaseStatement : $countStatement);
-
-        $params = [
-            ['code', 'individual-code'],
-            ['orderId', $orderId],
-        ];
-        $matcher = $this->exactly(\count($params));
-        $releaseStatement->expects($matcher)
-            ->method('bindValue')
-            ->willReturnCallback(static function (string $key, $value) use ($matcher, $params): void {
-                self::assertSame($params[$matcher->numberOfInvocations() - 1][0], $key);
-                self::assertSame($params[$matcher->numberOfInvocations() - 1][1], $value);
-            });
-
-        $releaseStatement
-            ->expects($this->once())
-            ->method('executeStatement')
-            ->willReturn(1);
+            return 1;
+        });
 
         $registry = new StaticDefinitionInstanceRegistry(
             [OrderLineItemDefinition::class],
@@ -267,6 +273,9 @@ class PromotionRedemptionUpdaterTest extends TestCase
     public function testLineItemCreated(EntityWriteResult $writeResult, bool $shouldCalled): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(static fn (\Closure $callback) => $callback($connection));
         $connection
             ->expects($shouldCalled ? $this->once() : $this->never())
             ->method('fetchAllAssociative')

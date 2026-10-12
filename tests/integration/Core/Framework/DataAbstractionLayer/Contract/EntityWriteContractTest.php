@@ -15,6 +15,7 @@ use Shopware\Core\Checkout\Payment\PaymentException;
 use Shopware\Core\Content\Product\DataAbstractionLayer\ProductExceptionHandler;
 use Shopware\Core\Content\Product\Exception\DuplicateProductNumberException;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Acl\AclCriteriaValidator;
 use Shopware\Core\Framework\Api\Sync\SyncFkResolver;
@@ -115,6 +116,7 @@ class EntityWriteContractTest extends TestCase
         } elseif ($this->connection->getDatabase() !== 'shopware_json_test') {
             throw new \RuntimeException('The write contract requires shopware_json_test on MySQL');
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $binary = $this->postgres ? 'BYTEA' : 'BINARY(16)';
         $json = $this->postgres ? 'JSONB' : 'JSON';
         $boolean = $this->postgres ? 'BOOLEAN' : 'TINYINT(1)';

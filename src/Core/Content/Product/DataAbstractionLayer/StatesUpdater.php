@@ -9,7 +9,6 @@ use Shopware\Core\Content\Product\Events\ProductStatesBeforeChangeEvent;
 use Shopware\Core\Content\Product\Events\ProductStatesChangedEvent;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\State;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Feature;
@@ -44,7 +43,7 @@ class StatesUpdater
             Feature::deprecatedMethodMessage(self::class, 'update', 'v6.8.0.0')
         );
 
-        $sql = 'SELECT ' . IndexingSql::hex($this->connection, 'product.id') . ' as id,
+        $sql = 'SELECT sw_uuid_hex(product.id) as id,
                 CASE WHEN EXISTS(SELECT 1 FROM product_download WHERE product.id = product_download.product_id AND product.version_id = product_download.product_version_id) THEN 1 ELSE 0 END as has_downloads,
                 product.type,
                 product.states

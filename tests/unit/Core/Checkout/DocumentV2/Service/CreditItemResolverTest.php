@@ -39,7 +39,7 @@ class CreditItemResolverTest extends TestCase
         $order = $this->createOrder([$creditA, $creditB]);
 
         $unprocessed = $this
-            ->createResolver([Uuid::fromHexToBytes($creditA->getId())], [])
+            ->createResolver([$creditA->getId()], [])
             ->resolve($order, Uuid::randomHex());
 
         static::assertSame([$creditB], array_values($unprocessed->getElements()));
@@ -52,7 +52,7 @@ class CreditItemResolverTest extends TestCase
         $order = $this->createOrder([$creditA, $creditB]);
 
         $unprocessed = $this
-            ->createResolver([], [Uuid::fromHexToBytes($creditB->getId())])
+            ->createResolver([], [$creditB->getId()])
             ->resolve($order, Uuid::randomHex());
 
         static::assertSame([$creditA], array_values($unprocessed->getElements()));
@@ -77,8 +77,8 @@ class CreditItemResolverTest extends TestCase
         $order = $this->createOrder([$creditA, $creditB]);
 
         $resolver = $this->createResolver(
-            [Uuid::fromHexToBytes($creditA->getId())],
-            [Uuid::fromHexToBytes($creditB->getId())],
+            [$creditA->getId()],
+            [$creditB->getId()],
         );
 
         $this->expectExceptionObject(DocumentV2Exception::noUnprocessedCreditLineItems($order->getId()));
@@ -87,8 +87,8 @@ class CreditItemResolverTest extends TestCase
     }
 
     /**
-     * @param list<string> $invoicedCreditIds binary ids returned for the referenced-invoice query
-     * @param list<string> $priorlyCreditedIds binary ids returned for the prior-credit-note query
+     * @param list<string> $invoicedCreditIds hexadecimal ids returned for the referenced-invoice query
+     * @param list<string> $priorlyCreditedIds hexadecimal ids returned for the prior-credit-note query
      */
     private function createResolver(array $invoicedCreditIds, array $priorlyCreditedIds): CreditItemResolver
     {

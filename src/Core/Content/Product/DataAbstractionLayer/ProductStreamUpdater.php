@@ -104,7 +104,7 @@ class ProductStreamUpdater extends AbstractProductStreamUpdater
 
         /** @var list<string> $oldMatches */
         $oldMatches = $this->connection->fetchFirstColumn(
-            'SELECT ' . IndexingSql::hex($this->connection, 'product_id') . ' FROM product_stream_mapping WHERE product_stream_id = :id AND product_version_id = :version',
+            'SELECT sw_uuid_hex(product_id) FROM product_stream_mapping WHERE product_stream_id = :id AND product_version_id = :version',
             ['id' => $binaryStreamId, 'version' => Uuid::fromHexToBytes($message->getContext()->getVersionId())],
             ['id' => ParameterType::BINARY, 'version' => ParameterType::BINARY],
         );

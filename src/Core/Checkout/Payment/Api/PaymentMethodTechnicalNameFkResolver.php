@@ -39,7 +39,7 @@ class PaymentMethodTechnicalNameFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT technical_name, LOWER(HEX(id)) FROM payment_method WHERE technical_name IN (:names)',
+            'SELECT technical_name, sw_uuid_hex(id) FROM payment_method WHERE technical_name IN (:names)',
             ['names' => $names],
             ['names' => ArrayParameterType::STRING]
         );

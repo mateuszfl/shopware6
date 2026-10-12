@@ -8,7 +8,6 @@ use Shopware\Core\Content\Seo\SeoUrlRoute\EntitySeoUrlRouteInterface;
 use Shopware\Core\Content\Seo\SeoUrlRoute\SeoUrlRouteInterface;
 use Shopware\Core\Content\Seo\SeoUrlRoute\SeoUrlRouteRegistry;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -138,8 +137,8 @@ class SeoUrlUpdater
     private function loadUrlTemplate(string $routeName, bool $isHeadless): array
     {
         $query = 'SELECT DISTINCT
-               ' . IndexingSql::hex($this->connection, 'sales_channel.id') . ' as ' . $this->connection->quoteSingleIdentifier('salesChannelId') . ',
-               ' . IndexingSql::hex($this->connection, 'domains.language_id') . ' as ' . $this->connection->quoteSingleIdentifier('languageId') . '
+               sw_uuid_hex(sales_channel.id) as sales_channel_id,
+               sw_uuid_hex(domains.language_id) as language_id
              FROM sales_channel_domain as domains
              INNER JOIN sales_channel
                ON domains.sales_channel_id = sales_channel.id
@@ -157,7 +156,7 @@ class SeoUrlUpdater
         }
 
         $salesChannelTemplates = $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'sales_channel_id') . ' as sales_channel_id, template
+            'SELECT sw_uuid_hex(sales_channel_id) as sales_channel_id, template
              FROM seo_url_template
              WHERE route_name LIKE :route
                AND is_headless = :isHeadless',
@@ -174,15 +173,15 @@ class SeoUrlUpdater
 
         $result = [];
         foreach ($domains as $domain) {
-            $template = $salesChannelTemplates[$domain['salesChannelId']] ?? $default;
+            $template = $salesChannelTemplates[$domain['sales_channel_id']] ?? $default;
 
             if ($template === null) {
                 continue;
             }
 
             $result[] = [
-                'salesChannelId' => $domain['salesChannelId'],
-                'languageId' => $domain['languageId'],
+                'salesChannelId' => $domain['sales_channel_id'],
+                'languageId' => $domain['language_id'],
                 'template' => (string) $template,
             ];
         }

@@ -8,7 +8,6 @@ use Psr\Clock\ClockInterface;
 use Shopware\Core\Content\Media\Event\UnusedMediaSearchEvent;
 use Shopware\Core\Content\Media\Event\UnusedMediaSearchStartEvent;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
@@ -280,7 +279,7 @@ class UnusedMediaPurger
 
         if ($folderEntity) {
             $rootMediaFolderId = $this->connection->fetchOne(
-                'SELECT ' . IndexingSql::hex($this->connection, 'media_folder.id') . ' FROM media_default_folder
+                'SELECT sw_uuid_hex(media_folder.id) FROM media_default_folder
                 INNER JOIN media_folder ON (media_default_folder.id = media_folder.default_folder_id)
                 WHERE entity = :entity',
                 ['entity' => $folderEntity]
@@ -293,7 +292,7 @@ class UnusedMediaPurger
 
             /** @var array<string, array{id: string, parent_id: string}> $folders */
             $folders = $this->connection->fetchAllAssociativeIndexed(
-                'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', ' . IndexingSql::hex($this->connection, 'id') . ' as id, ' . IndexingSql::hex($this->connection, 'parent_id') . ' as parent_id, name FROM media_folder WHERE id != :id',
+                'SELECT sw_uuid_hex(id), sw_uuid_hex(id) as id, sw_uuid_hex(parent_id) as parent_id, name FROM media_folder WHERE id != :id',
                 ['id' => Uuid::fromHexToBytes($rootMediaFolderId)],
                 ['id' => ParameterType::BINARY],
             );

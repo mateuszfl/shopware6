@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Shopware\Tests\Unit\Core\Checkout\Document\Renderer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -72,12 +73,12 @@ class CreditNoteRendererTest extends TestCase
 
         $invoiceData = [[
             'id' => $invoiceId,
-            'orderId' => $orderId,
-            'orderVersionId' => $orderVersionId,
-            'versionId' => $orderVersionId,
-            'deepLinkCode' => 'deep-link-code',
+            'order_id' => $orderId,
+            'order_version_id' => $orderVersionId,
+            'version_id' => $orderVersionId,
+            'deep_link_code' => 'deep-link-code',
             'config' => '{"documentNumber": "INVOICE-1"}',
-            'documentNumber' => 'INVOICE-1',
+            'document_number' => 'INVOICE-1',
         ]];
 
         $orderSearchResult = new EntitySearchResult(
@@ -237,12 +238,12 @@ class CreditNoteRendererTest extends TestCase
 
         $invoiceData = [[
             'id' => $invoiceId,
-            'orderId' => $orderId,
-            'orderVersionId' => $orderVersionId,
-            'versionId' => $orderVersionId,
-            'deepLinkCode' => 'deep-link-code',
+            'order_id' => $orderId,
+            'order_version_id' => $orderVersionId,
+            'version_id' => $orderVersionId,
+            'deep_link_code' => 'deep-link-code',
             'config' => '{"documentNumber": "INVOICE-1"}',
-            'documentNumber' => 'INVOICE-1',
+            'document_number' => 'INVOICE-1',
         ]];
 
         $orderSearchResult = new EntitySearchResult(
@@ -304,12 +305,12 @@ class CreditNoteRendererTest extends TestCase
 
         $invoiceData = [[
             'id' => $invoiceId,
-            'orderId' => $orderId,
-            'orderVersionId' => $orderVersionId,
-            'versionId' => $orderVersionId,
-            'deepLinkCode' => 'deep-link-code',
+            'order_id' => $orderId,
+            'order_version_id' => $orderVersionId,
+            'version_id' => $orderVersionId,
+            'deep_link_code' => 'deep-link-code',
             'config' => '{"documentNumber": "INVOICE-1"}',
-            'documentNumber' => 'INVOICE-1',
+            'document_number' => 'INVOICE-1',
         ]];
 
         $orderSearchResult = new EntitySearchResult(
@@ -437,6 +438,8 @@ class CreditNoteRendererTest extends TestCase
         $queryBuilder->method('executeQuery')->willReturn($result);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $connection->method('createQueryBuilder')->willReturn($queryBuilder);
         $referenceInvoiceLoader = new ReferenceInvoiceLoader($connection);
@@ -456,10 +459,10 @@ class CreditNoteRendererTest extends TestCase
         $connection->method('fetchFirstColumn')
             ->willReturnCallback(static function ($sql, $params) use ($invoiceCreditIds, $creditNoteCreditIds) {
                 if (\array_key_exists('creditTechnicalName', $params)) {
-                    return array_map(static fn ($hexIds) => Uuid::fromHexToBytes($hexIds), $creditNoteCreditIds);
+                    return $creditNoteCreditIds;
                 }
 
-                return array_map(static fn ($hexIds) => Uuid::fromHexToBytes($hexIds), $invoiceCreditIds);
+                return $invoiceCreditIds;
             });
 
         return new CreditNoteRenderer(

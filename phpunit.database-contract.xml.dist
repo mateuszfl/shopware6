@@ -37,6 +37,14 @@
         <testsuite name="database-content">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/ContentSqlContractTest.php</file>
         </testsuite>
+        <testsuite name="database-checkout">
+            <file>tests/integration/Core/Checkout/Contract/CheckoutPersistenceContractTest.php</file>
+            <file>tests/integration/Core/Checkout/Contract/PromotionCodeGatewayTest.php</file>
+            <file>tests/integration/Core/Checkout/Contract/PaymentSqlContractTest.php</file>
+        </testsuite>
+        <testsuite name="database-functions">
+            <file>tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php</file>
+        </testsuite>
         <testsuite name="database-contract-replication">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/PostgreSQLReplicationFixtureTest.php</file>
         </testsuite>

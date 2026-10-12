@@ -8,7 +8,6 @@ use Shopware\Core\Content\Product\SalesChannel\Listing\Filter;
 use Shopware\Core\Content\Product\SalesChannel\Listing\ProductListingResult;
 use Shopware\Core\Content\Property\Aggregate\PropertyGroupOption\PropertyGroupOptionCollection;
 use Shopware\Core\Content\Property\PropertyGroupCollection;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Aggregation\Bucket\FilterAggregation;
@@ -165,7 +164,7 @@ class PropertyListingFilterHandler extends AbstractListingFilterHandler
         }
 
         $grouped = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'property_group_id') . ' as property_group_id, ' . IndexingSql::hex($this->connection, 'id') . ' as id
+            'SELECT sw_uuid_hex(property_group_id) as property_group_id, sw_uuid_hex(id) as id
              FROM property_group_option
              WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],

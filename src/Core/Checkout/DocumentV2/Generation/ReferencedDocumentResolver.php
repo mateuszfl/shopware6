@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\DocumentV2\Generation;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Document\Service\ReferenceInvoiceLoader;
 use Shopware\Core\Checkout\DocumentV2\DocumentV2Exception;
 use Shopware\Core\Checkout\DocumentV2\Struct\ReferencedDocument;
@@ -63,15 +64,16 @@ final readonly class ReferencedDocumentResolver
         }
 
         $storedOrderVersionId = $this->connection->fetchOne(
-            'SELECT `order_version_id` FROM `document` WHERE `id` = :id',
+            'SELECT sw_uuid_hex(order_version_id) FROM document WHERE id = :id',
             ['id' => Uuid::fromHexToBytes($documentId)],
+            ['id' => ParameterType::BINARY],
         );
 
         if (!\is_string($storedOrderVersionId)) {
             return true;
         }
 
-        return Uuid::fromBytesToHex($storedOrderVersionId) !== Defaults::LIVE_VERSION;
+        return $storedOrderVersionId !== Defaults::LIVE_VERSION;
     }
 
     /**

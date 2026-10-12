@@ -9,7 +9,6 @@ use Shopware\Core\Content\Category\Aggregate\CategoryTranslation\CategoryTransla
 use Shopware\Core\Content\Category\CategoryCollection;
 use Shopware\Core\Content\Category\CategoryDefinition;
 use Shopware\Core\Content\Category\Event\CategoryIndexerEvent;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
@@ -261,7 +260,7 @@ FROM category_tree
 WHERE depth > 0
 SQL;
 
-        return $this->connection->fetchFirstColumn(\sprintf($sql, IndexingSql::hex($this->connection, 'id')), [
+        return $this->connection->fetchFirstColumn(\sprintf($sql, 'sw_uuid_hex(id)'), [
             'version' => Uuid::fromHexToBytes($versionId),
             'categoryIds' => Uuid::fromHexToBytesList($categoryIds),
         ], [

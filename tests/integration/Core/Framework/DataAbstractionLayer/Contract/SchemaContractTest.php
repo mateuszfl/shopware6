@@ -10,6 +10,7 @@ use Doctrine\DBAL\Logging\Middleware;
 use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\SchemaBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
@@ -64,6 +65,7 @@ class SchemaContractTest extends TestCase
                 static::assertFalse(TableHelper::tableExists($this->connection, $table), 'Fixture requires absent owned tables');
             }
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $this->ownsTables = true;
     }
 

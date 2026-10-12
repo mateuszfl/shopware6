@@ -35,7 +35,7 @@ class CustomerNewsletterSalesChannelsUpdater
         $selection = $reverseUpdate
             ? 'customer.id IN (:ids)'
             : 'EXISTS(SELECT 1 FROM newsletter_recipient selected WHERE selected.email = customer.email AND selected.id IN (:ids))';
-        $aggregate = IndexingSql::objectMap($this->connection, IndexingSql::hex($this->connection, 'recipient.id'), IndexingSql::hex($this->connection, 'recipient.sales_channel_id'));
+        $aggregate = IndexingSql::objectMap($this->connection, 'sw_uuid_hex(recipient.id)', 'sw_uuid_hex(recipient.sales_channel_id)');
         $sql = 'UPDATE customer SET newsletter_sales_channel_ids = (SELECT ' . $aggregate . ' FROM newsletter_recipient recipient WHERE recipient.email = customer.email AND recipient.status IN (:states)) WHERE ' . $selection;
 
         RetryableQuery::retryable($this->connection, function () use ($sql, $ids): void {
@@ -64,7 +64,7 @@ class CustomerNewsletterSalesChannelsUpdater
             $parameters = array_replace($parameters, $fragment->parameters);
             $types = array_replace($types, $fragment->types);
         }
-        $customerIds = $this->connection->fetchFirstColumn('SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM customer WHERE ' . implode(' OR ', $expressions), $parameters, $types);
+        $customerIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM customer WHERE ' . implode(' OR ', $expressions), $parameters, $types);
         if ($customerIds !== []) {
             $this->update($customerIds, true);
         }

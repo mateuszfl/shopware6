@@ -279,6 +279,11 @@ class CategoryBreadcrumbBuilderTest extends TestCase
         static::assertSame('Home sweet home 2', $firstBreadcrumb->name);
         static::assertSame('seoPathInfo/1', $firstBreadcrumb->path);
         static::assertCount(1, $firstBreadcrumb->seoUrls);
+        static::assertSame([
+            'id' => '019192b9cd82711482744d7b456b6c00',
+            'pathInfo' => 'pathInfo/1',
+            'seoPathInfo' => 'seoPathInfo/1',
+        ], $firstBreadcrumb->seoUrls[0]);
     }
 
     public function testConvertCategoriesToBreadcrumbUrlsWithSeoUrlsOnlyPathInfo(): void
@@ -423,23 +428,26 @@ class CategoryBreadcrumbBuilderTest extends TestCase
     }
 
     /**
-     * @param array<int, array{categoryId: string, pathInfo: string, seoPathInfo: string}> $seoUrls
+     * @param array<int, array{id: string, category_id: string, path_info: string, seo_path_info: string}> $seoUrls
      */
     private function getConnectionMock(array $seoUrls = [
         [
-            'categoryId' => '019192b9cd82711482744d7b456b6c01',
-            'pathInfo' => 'pathInfo/1',
-            'seoPathInfo' => 'seoPathInfo/1',
+            'id' => '019192b9cd82711482744d7b456b6c00',
+            'category_id' => '019192b9cd82711482744d7b456b6c01',
+            'path_info' => 'pathInfo/1',
+            'seo_path_info' => 'seoPathInfo/1',
         ],
         [
-            'categoryId' => '019192b9cd82711482744d7b456b6c02',
-            'pathInfo' => 'pathInfo/1',
-            'seoPathInfo' => '',
+            'id' => '019192b9cd82711482744d7b456b6c00',
+            'category_id' => '019192b9cd82711482744d7b456b6c02',
+            'path_info' => 'pathInfo/1',
+            'seo_path_info' => '',
         ],
         [
-            'categoryId' => '019192b9cd82711482744d7b456b6c03',
-            'pathInfo' => 'navigation/1',
-            'seoPathInfo' => '',
+            'id' => '019192b9cd82711482744d7b456b6c00',
+            'category_id' => '019192b9cd82711482744d7b456b6c03',
+            'path_info' => 'navigation/1',
+            'seo_path_info' => '',
         ],
     ]): Connection
     {

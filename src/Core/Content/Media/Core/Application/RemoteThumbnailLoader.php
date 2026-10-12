@@ -10,7 +10,6 @@ use Shopware\Core\Content\Media\Aggregate\MediaThumbnail\MediaThumbnailEntity;
 use Shopware\Core\Content\Media\Core\Params\UrlParams;
 use Shopware\Core\Content\Media\Extension\ResolveRemoteThumbnailUrlExtension;
 use Shopware\Core\Content\Media\MediaEntity;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\PartialEntity;
 use Shopware\Core\Framework\Extensions\ExtensionDispatcher;
@@ -156,8 +155,8 @@ class RemoteThumbnailLoader implements ResetInterface
         $sizes = $this->connection->fetchAllAssociative(
             '
             SELECT
-                ' . IndexingSql::hex($this->connection, 'mfcmts.media_folder_configuration_id') . ' AS configuration_id,
-                ' . IndexingSql::hex($this->connection, 'mts.id') . ' AS media_thumbnail_size_id,
+                sw_uuid_hex(mfcmts.media_folder_configuration_id) AS configuration_id,
+                sw_uuid_hex(mts.id) AS media_thumbnail_size_id,
                 mts.width,
                 mts.height
             FROM media_folder_configuration_media_thumbnail_size mfcmts
@@ -180,8 +179,8 @@ class RemoteThumbnailLoader implements ResetInterface
         /** @var list<array{folder_id: string, configuration_id: string, create_thumbnails: string}> $folderConfigurations */
         $folderConfigurations = $this->connection->fetchAllAssociative(
             'SELECT
-                ' . IndexingSql::hex($this->connection, 'mf.id') . ' AS folder_id,
-                ' . IndexingSql::hex($this->connection, 'mf.media_folder_configuration_id') . ' AS configuration_id,
+                sw_uuid_hex(mf.id) AS folder_id,
+                sw_uuid_hex(mf.media_folder_configuration_id) AS configuration_id,
                 mfc.create_thumbnails
             FROM media_folder mf
             INNER JOIN media_folder_configuration mfc ON mf.media_folder_configuration_id = mfc.id'

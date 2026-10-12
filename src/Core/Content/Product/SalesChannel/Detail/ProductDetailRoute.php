@@ -21,7 +21,6 @@ use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductDefinition;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Adapter\Request\RequestParamHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -247,8 +246,8 @@ class ProductDetailRoute extends AbstractProductDetailRoute
         $productData = $this->connection->fetchAssociative(
             '-- product-detail-route::check-variant-listing-config
             SELECT
-                variant_listing_config as ' . $this->connection->quoteSingleIdentifier('variantListingConfig') . ',
-                ' . IndexingSql::hex($this->connection, 'parent_id') . ' as ' . $this->connection->quoteSingleIdentifier('parentId') . '
+                variant_listing_config,
+                sw_uuid_hex(parent_id) as parent_id
             FROM product
             WHERE id = :id
             AND version_id = :versionId',
@@ -264,8 +263,8 @@ class ProductDetailRoute extends AbstractProductDetailRoute
         }
 
         $mainVariantId = null;
-        if ($productData['variantListingConfig'] !== null) {
-            $variantListingConfig = json_decode((string) $productData['variantListingConfig'], true, 512, \JSON_THROW_ON_ERROR);
+        if ($productData['variant_listing_config'] !== null) {
+            $variantListingConfig = json_decode((string) $productData['variant_listing_config'], true, 512, \JSON_THROW_ON_ERROR);
 
             if (
                 !isset($variantListingConfig['displayParent'])
@@ -276,7 +275,7 @@ class ProductDetailRoute extends AbstractProductDetailRoute
             }
         }
 
-        return [$mainVariantId, $productData['parentId'] ?? $productId];
+        return [$mainVariantId, $productData['parent_id'] ?? $productId];
     }
 
     /**

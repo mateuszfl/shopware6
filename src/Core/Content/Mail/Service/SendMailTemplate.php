@@ -9,7 +9,6 @@ use Shopware\Core\Content\Mail\MailException;
 use Shopware\Core\Content\MailTemplate\MailTemplateCollection;
 use Shopware\Core\Content\MailTemplate\MailTemplateEntity;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -101,7 +100,7 @@ class SendMailTemplate
     private function buildContext(string $languageId, Context $context): Context
     {
         $parent = $this->connection->fetchOne(
-            'SELECT ' . IndexingSql::hex($this->connection, 'language.parent_id') . ' FROM language WHERE language.id = :languageId',
+            'SELECT sw_uuid_hex(language.parent_id) FROM language WHERE language.id = :languageId',
             ['languageId' => Uuid::fromHexToBytes($languageId)],
             ['languageId' => ParameterType::BINARY]
         );

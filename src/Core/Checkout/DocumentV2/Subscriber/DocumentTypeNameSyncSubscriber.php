@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\DocumentV2\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Document\Aggregate\DocumentBaseConfig\DocumentBaseConfigDefinition;
 use Shopware\Core\Checkout\Document\Aggregate\DocumentBaseConfigSalesChannel\DocumentBaseConfigSalesChannelDefinition;
 use Shopware\Core\Checkout\Document\DocumentDefinition;
@@ -74,8 +75,9 @@ class DocumentTypeNameSyncSubscriber implements EventSubscriberInterface
         }
 
         $technicalName = $this->connection->fetchOne(
-            'SELECT `technical_name` FROM `document_type` WHERE `id` = :id LIMIT 1',
+            'SELECT technical_name FROM document_type WHERE id = :id LIMIT 1',
             ['id' => $documentTypeId],
+            ['id' => ParameterType::BINARY],
         );
 
         $command->addPayload('type_name', \is_string($technicalName) ? $technicalName : null);

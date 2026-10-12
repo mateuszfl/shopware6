@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Cart;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\Cart\Error\ErrorCollection;
 use Shopware\Core\Checkout\Cart\Event\CartLoadedEvent;
@@ -10,6 +11,7 @@ use Shopware\Core\Checkout\Cart\Event\CartSavedEvent;
 use Shopware\Core\Checkout\Cart\Event\CartVerifyPersistEvent;
 use Shopware\Core\Checkout\CheckoutPermissions;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Feature;
@@ -42,8 +44,8 @@ class CartPersister extends AbstractCartPersister
     public function load(string $token, SalesChannelContext $context): Cart
     {
         $content = $this->connection->fetchAssociative(
-            '#cart-persister::load
-            SELECT `cart`.`payload`, `cart`.`rule_ids`, `cart`.`compressed` FROM cart WHERE `token` = :token',
+            '-- cart-persister::load
+            SELECT cart.payload, cart.rule_ids, cart.compressed FROM cart WHERE token = :token',
             ['token' => $token]
         );
 
@@ -52,7 +54,14 @@ class CartPersister extends AbstractCartPersister
         }
 
         try {
-            $cart = $this->compressor->unserialize($content['payload'], (int) $content['compressed']);
+            $payload = $content['payload'];
+            if (\is_resource($payload)) {
+                $payload = stream_get_contents($payload);
+            }
+            if (!\is_string($payload)) {
+                throw CartException::deserializeFailed();
+            }
+            $cart = $this->compressor->unserialize($payload, (int) $content['compressed']);
         } catch (\Throwable) {
             // When we can't decode it, we have to delete it
             throw CartException::tokenNotFound($token);
@@ -75,8 +84,8 @@ class CartPersister extends AbstractCartPersister
     public function exists(string $token, SalesChannelContext $context): bool
     {
         return (bool) $this->connection->fetchOne(
-            '#cart-persister::exists
-            SELECT 1 FROM cart WHERE `token` = :token',
+            '-- cart-persister::exists
+            SELECT 1 FROM cart WHERE token = :token',
             ['token' => $token]
         );
     }
@@ -108,15 +117,18 @@ class CartPersister extends AbstractCartPersister
 
         if (!$cart->isPersisted()) {
             $sql = <<<'SQL'
-                INSERT INTO `cart` (`token`, `payload`, `rule_ids`, `compressed`, `created_at`)
+                INSERT INTO cart (token, payload, rule_ids, compressed, created_at)
                 VALUES (:token, :payload, :rule_ids, :compressed, :now)
-                ON DUPLICATE KEY UPDATE `payload` = :payload, `compressed` = :compressed, `rule_ids` = :rule_ids, `created_at` = :now;
             SQL;
+            $sql .= (new DatabasePlatformResolver($this->connection))->dialect()->insertConflictClause(
+                ['token'],
+                ['payload', 'compressed', 'rule_ids', 'created_at'],
+            );
         } else {
             $sql = <<<'SQL'
-                UPDATE `cart`
-                SET `payload` = :payload, `rule_ids` = :rule_ids, `compressed` = :compressed, `created_at` = :now
-                WHERE `token` = :token;
+                UPDATE cart
+                SET payload = :payload, rule_ids = :rule_ids, compressed = :compressed, created_at = :now
+                WHERE token = :token;
             SQL;
         }
 
@@ -130,7 +142,10 @@ class CartPersister extends AbstractCartPersister
             'compressed' => $compressed,
         ];
 
-        $query = new RetryableQuery($this->connection, $this->connection->prepare($sql));
+        $query = new RetryableQuery($this->connection, $this->connection->prepare($sql), [
+            'token' => ParameterType::STRING, 'payload' => ParameterType::BINARY,
+            'rule_ids' => ParameterType::STRING, 'now' => ParameterType::STRING, 'compressed' => ParameterType::INTEGER,
+        ]);
         $result = $query->execute($data);
 
         if ($cart->isPersisted() && (int) $result === 0) {
@@ -145,7 +160,7 @@ class CartPersister extends AbstractCartPersister
     {
         $query = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('DELETE FROM `cart` WHERE `token` = :token')
+            $this->connection->prepare('DELETE FROM cart WHERE token = :token')
         );
         $query->execute(['token' => $token]);
     }
@@ -153,7 +168,7 @@ class CartPersister extends AbstractCartPersister
     public function replace(string $oldToken, string $newToken, SalesChannelContext $context): void
     {
         $this->connection->executeStatement(
-            'UPDATE `cart` SET `token` = :newToken WHERE `token` = :oldToken',
+            'UPDATE cart SET token = :newToken WHERE token = :oldToken',
             ['newToken' => $newToken, 'oldToken' => $oldToken]
         );
     }
@@ -163,9 +178,9 @@ class CartPersister extends AbstractCartPersister
         $time = $this->clock->now()->modify(\sprintf('-%d day', $days));
 
         $stmt = $this->connection->prepare(<<<'SQL'
-            DELETE FROM cart
-                WHERE created_at <= :timestamp
-                LIMIT 1000;
+            DELETE FROM cart WHERE token IN (
+                SELECT token FROM (SELECT token FROM cart WHERE created_at <= :timestamp ORDER BY token LIMIT 1000) expired
+            )
         SQL);
 
         $timestamp = $time->format(Defaults::STORAGE_DATE_TIME_FORMAT);

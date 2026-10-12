@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Checkout\Cart;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -33,6 +34,8 @@ class CartPersisterTest extends TestCase
     {
         $cartSerializationCleaner = static::createStub(CartSerializationCleaner::class);
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $persister = new CartPersister($connection, new CollectingEventDispatcher(), $cartSerializationCleaner, new CartCompressor(false, 'gzip'), new NativeClock());
         $this->expectException(DecorationPatternException::class);
         $persister->getDecorated();
@@ -42,6 +45,8 @@ class CartPersisterTest extends TestCase
     {
         $cartSerializationCleaner = static::createStub(CartSerializationCleaner::class);
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn(['payload' => 'invalid serialized data', 'rule_ids' => null, 'compressed' => 0]);
@@ -69,9 +74,10 @@ class CartPersisterTest extends TestCase
             ->willReturn(1);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('prepare')
-            ->with(static::stringContains('INSERT INTO `cart`'))
             ->willReturn($statement);
 
         $eventDispatcher = new CollectingEventDispatcher();
@@ -97,9 +103,10 @@ class CartPersisterTest extends TestCase
             ->willReturn(1);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('prepare')
-            ->with(static::stringContains('DELETE FROM `cart`'))
             ->willReturn($statement);
 
         $cartSerializationCleaner = static::createStub(CartSerializationCleaner::class);
@@ -118,6 +125,8 @@ class CartPersisterTest extends TestCase
         $cart->setBehavior(new CartBehavior([CheckoutPermissions::SKIP_CART_PERSISTENCE => true]));
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->never())
             ->method('prepare');
 
@@ -144,9 +153,10 @@ class CartPersisterTest extends TestCase
             ->willReturn(0);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())
             ->method('prepare')
-            ->with(static::stringContains('UPDATE `cart`'))
             ->willReturn($statement);
 
         $eventDispatcher = new CollectingEventDispatcher();

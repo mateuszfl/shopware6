@@ -4,11 +4,13 @@ namespace Shopware\Core\Checkout\Document\Renderer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Checkout\Customer\Validation\Constraint\CustomerVatIdentification;
 use Shopware\Core\Checkout\Document\Struct\DocumentGenerateOperation;
 use Shopware\Core\Checkout\DocumentV2\Renderer\AbstractDocumentRenderer as DocumentV2Renderer;
 use Shopware\Core\Checkout\Order\OrderEntity;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Deprecation\BCChange\ExperimentalReplacement;
 use Shopware\Core\Framework\Feature;
@@ -42,16 +44,19 @@ abstract class AbstractDocumentRenderer
      */
     protected function getOrdersLanguageId(array $ids, string $versionId, Connection $connection): array
     {
+        $orderTable = $connection->quoteSingleIdentifier('order');
+        $aggregate = IndexingSql::aggregate($connection, 'sw_uuid_hex(id)', ',', 'id');
+
         return $connection->fetchAllAssociative(
-            '
-            SELECT LOWER(HEX(language_id)) as language_id, GROUP_CONCAT(DISTINCT LOWER(HEX(id))) as ids
-            FROM `order`
-            WHERE `id` IN (:ids)
-            AND `version_id` = :versionId
-            AND `language_id` IS NOT NULL
-            GROUP BY `language_id`',
+            "
+            SELECT sw_uuid_hex(language_id) as language_id, {$aggregate} as ids
+            FROM {$orderTable}
+            WHERE id IN (:ids)
+            AND version_id = :versionId
+            AND language_id IS NOT NULL
+            GROUP BY language_id",
             ['ids' => Uuid::fromHexToBytesList($ids), 'versionId' => Uuid::fromHexToBytes($versionId)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
     }
 

@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Cart\Command;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\Cart\CartCompressor;
 use Shopware\Core\Checkout\Cart\CartException;
@@ -95,7 +96,7 @@ class CartMigrateCommand extends Command
         $query->andWhere('cart.auto_increment > :lastId');
         $query->addOrderBy('cart.auto_increment');
         $query->setMaxResults(50);
-        $query->setParameter('lastId', 0);
+        $query->setParameter('lastId', 0, ParameterType::INTEGER);
 
         return new LastIdQuery($query);
     }
@@ -119,7 +120,11 @@ class CartMigrateCommand extends Command
         $this->progress->setFormat("<info>[%message%]</info>\n%current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%");
         $this->progress->setMessage('Migrating carts from Redis to SQL');
 
-        $queue = new MultiInsertQueryQueue($this->connection, 50, false, true);
+        $queue = new MultiInsertQueryQueue($this->connection, 50);
+        $queue->setConflictTarget('cart', ['token']);
+        foreach (['payload', 'compressed', 'rule_ids', 'created_at'] as $column) {
+            $queue->addUpdateFieldOnDuplicateKey('cart', $column);
+        }
 
         $created = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
 
@@ -147,7 +152,7 @@ class CartMigrateCommand extends Command
             $migratedCart['rule_ids'] = \json_encode($content['rule_ids'], \JSON_THROW_ON_ERROR);
             $migratedCart['created_at'] = $created;
 
-            $queue->addInsert('cart', $migratedCart);
+            $queue->addInsert('cart', $migratedCart, ['payload' => ParameterType::BINARY, 'compressed' => ParameterType::INTEGER]);
 
             if ($index % 50 === 0) {
                 $queue->execute();
@@ -192,7 +197,11 @@ class CartMigrateCommand extends Command
             foreach ($rows as $row) {
                 $key = RedisCartPersister::PREFIX . $row['token'];
 
-                $cart = $this->cartCompressor->unserialize($row['payload'], (int) $row['compressed']);
+                $payload = \is_resource($row['payload']) ? stream_get_contents($row['payload']) : $row['payload'];
+                if (!\is_string($payload)) {
+                    throw CartException::deserializeFailed();
+                }
+                $cart = $this->cartCompressor->unserialize($payload, (int) $row['compressed']);
 
                 $content = ['cart' => $cart, 'rule_ids' => \json_decode((string) $row['rule_ids'], true, 512, \JSON_THROW_ON_ERROR)];
 

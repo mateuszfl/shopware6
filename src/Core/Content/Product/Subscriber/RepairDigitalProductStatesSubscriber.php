@@ -8,7 +8,6 @@ use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\Product\DataAbstractionLayer\StatesUpdater;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Adapter\Storage\AbstractKeyValueStorage;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Update\Event\UpdatePostFinishEvent;
@@ -73,7 +72,7 @@ final readonly class RepairDigitalProductStatesSubscriber implements EventSubscr
             while (true) {
                 /** @var list<string> $ids */
                 $ids = $this->connection->fetchFirstColumn(
-                    'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' AS id
+                    'SELECT sw_uuid_hex(id) AS id
                     FROM product
                     WHERE version_id = :versionId
                       AND type = :type

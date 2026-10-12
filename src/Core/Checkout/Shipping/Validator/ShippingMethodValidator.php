@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Shipping\Validator;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Shipping\Aggregate\ShippingMethodPrice\ShippingMethodPriceDefinition;
 use Shopware\Core\Checkout\Shipping\ShippingMethodDefinition;
 use Shopware\Core\Checkout\Shipping\ShippingMethodEntity;
@@ -303,10 +304,10 @@ class ShippingMethodValidator implements EventSubscriberInterface
         sort($priceIds);
 
         $rows = $this->connection->fetchAllNumeric(
-            'SELECT LOWER(HEX(`id`)), LOWER(HEX(`shipping_method_id`)), `currency_price` IS NOT NULL
-             FROM `shipping_method_price`
-             WHERE `id` IN (:ids)
-             ORDER BY `id`
+            'SELECT sw_uuid_hex(id), sw_uuid_hex(shipping_method_id), currency_price IS NOT NULL
+             FROM shipping_method_price
+             WHERE id IN (:ids)
+             ORDER BY id
              FOR UPDATE',
             ['ids' => Uuid::fromHexToBytesList($priceIds)],
             ['ids' => ArrayParameterType::BINARY]
@@ -333,7 +334,7 @@ class ShippingMethodValidator implements EventSubscriberInterface
     private function lockShippingMethods(array $parameters, array $types): void
     {
         $this->connection->fetchFirstColumn(
-            'SELECT `id` FROM `shipping_method` WHERE `id` IN (:ids) ORDER BY `id` FOR UPDATE',
+            'SELECT id FROM shipping_method WHERE id IN (:ids) ORDER BY id FOR UPDATE',
             $parameters,
             $types
         );
@@ -353,16 +354,15 @@ class ShippingMethodValidator implements EventSubscriberInterface
         $this->lockShippingMethods($parameters, $types);
 
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`shipping_method`.`id`)) AS `id`,
-                    `shipping_method`.`active` AS `active`,
-                    COUNT(`shipping_method_price`.`id`) AS `price_count`
-             FROM `shipping_method`
-             LEFT JOIN `shipping_method_price`
-                 ON `shipping_method_price`.`shipping_method_id` = `shipping_method`.`id`
-                 AND `shipping_method_price`.`currency_price` IS NOT NULL
-             WHERE `shipping_method`.`id` IN (:ids)
-             GROUP BY `shipping_method`.`id`, `shipping_method`.`active`
-             FOR UPDATE',
+            'SELECT sw_uuid_hex(shipping_method.id) AS id,
+                    shipping_method.active AS active,
+                    COUNT(shipping_method_price.id) AS price_count
+             FROM shipping_method
+             LEFT JOIN shipping_method_price
+                 ON shipping_method_price.shipping_method_id = shipping_method.id
+                 AND shipping_method_price.currency_price IS NOT NULL
+             WHERE shipping_method.id IN (:ids)
+             GROUP BY shipping_method.id, shipping_method.active',
             $parameters,
             $types
         );
@@ -384,8 +384,9 @@ class ShippingMethodValidator implements EventSubscriberInterface
     private function findShippingMethod(string $shippingMethodId): array
     {
         return $this->connection->executeQuery(
-            'SELECT `tax_type`, `tax_id` FROM `shipping_method` WHERE `id` = :id',
-            ['id' => $shippingMethodId]
+            'SELECT tax_type, tax_id FROM shipping_method WHERE id = :id',
+            ['id' => $shippingMethodId],
+            ['id' => ParameterType::BINARY]
         )->fetchAssociative() ?: [];
     }
 

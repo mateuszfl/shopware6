@@ -9,7 +9,6 @@ use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\ProductStream\Event\ProductStreamIndexerEvent;
 use Shopware\Core\Content\ProductStream\ProductStreamCollection;
 use Shopware\Core\Content\ProductStream\ProductStreamDefinition;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -95,7 +94,7 @@ class ProductStreamIndexer extends EntityIndexer
 
         $filters = $this->connection->fetchAllAssociative(
             'SELECT
-                ' . IndexingSql::hex($this->connection, 'product_stream_id') . ' as array_key,
+                sw_uuid_hex(product_stream_id) as array_key,
                 product_stream_filter.*
              FROM product_stream_filter
              WHERE product_stream_id IN (:ids)

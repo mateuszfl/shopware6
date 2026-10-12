@@ -5,6 +5,7 @@ namespace Shopware\Core\Checkout\Order\Api;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Driver\Exception;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Order\SalesChannel\OrderService;
 use Shopware\Core\Checkout\Payment\Cart\PaymentRefundProcessor;
 use Shopware\Core\Checkout\Payment\PaymentException;
@@ -192,8 +193,8 @@ class OrderActionController extends AbstractController
 
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(hex(document.document_type_id)) as doc_type',
-            'LOWER(hex(document.id)) as doc_id',
+            'sw_uuid_hex(document.document_type_id) as doc_type',
+            'sw_uuid_hex(document.id) as doc_id',
             'document.created_at as newest_date',
             'document.sent as sent',
         );
@@ -202,16 +203,16 @@ class OrderActionController extends AbstractController
         $query->where('document.order_id = :orderId');
 
         if ($entity === 'order') {
-            $query->setParameter('orderId', Uuid::fromHexToBytes($referencedId));
+            $query->setParameter('orderId', Uuid::fromHexToBytes($referencedId), ParameterType::BINARY);
         } else {
             $fetchOrder = $this->connection->createQueryBuilder();
             $fetchOrder->select('order_id')->from($entity)->where('id = :id');
 
-            $fetchOrder->setParameter('id', Uuid::fromHexToBytes($referencedId));
+            $fetchOrder->setParameter('id', Uuid::fromHexToBytes($referencedId), ParameterType::BINARY);
 
             $orderId = $fetchOrder->executeQuery()->fetchOne();
 
-            $query->setParameter('orderId', $orderId);
+            $query->setParameter('orderId', $orderId === false ? null : Uuid::fromHexToBytes(Uuid::fromBytesToHex($orderId)), ParameterType::BINARY);
         }
 
         $query->andWhere('document_type.technical_name IN (:documentTypes)');

@@ -12,6 +12,7 @@ use Doctrine\DBAL\Types\Types;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -135,6 +136,7 @@ class EntityReaderContractTest extends TestCase
         fwrite(\STDERR, '[dal-reader] platform=' . $endpoint->platform . ' endpoint=' . $endpoint->serverId . "\n");
         $this->dropSchema();
         $this->createSchema();
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $this->seed();
 
         $container = new ContainerBuilder();

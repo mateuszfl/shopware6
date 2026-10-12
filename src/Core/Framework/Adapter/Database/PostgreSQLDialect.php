@@ -37,7 +37,7 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
 
     public function hexExpression(string $expression): string
     {
-        return 'encode(' . $expression . ', \'hex\')';
+        return 'sw_uuid_hex(' . $expression . ')';
     }
 
     public function binaryText(string $expression): string

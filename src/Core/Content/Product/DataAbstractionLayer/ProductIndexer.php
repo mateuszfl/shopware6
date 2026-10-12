@@ -12,7 +12,6 @@ use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\Stock\AbstractStockStorage;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -291,7 +290,7 @@ class ProductIndexer extends EntityIndexer
     private function getChildrenIds(array $ids, string $versionId): array
     {
         $childrenIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'id') . ' as id FROM product WHERE parent_id IN (:ids) AND version_id = :version',
+            'SELECT DISTINCT sw_uuid_hex(id) as id FROM product WHERE parent_id IN (:ids) AND version_id = :version',
             ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($versionId)],
             ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
@@ -307,7 +306,7 @@ class ProductIndexer extends EntityIndexer
     private function getParentIds(array $ids, string $versionId): array
     {
         $parentIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'product.parent_id') . ' as id FROM product WHERE id IN (:ids) AND version_id = :version',
+            'SELECT DISTINCT sw_uuid_hex(product.parent_id) as id FROM product WHERE id IN (:ids) AND version_id = :version',
             ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes($versionId)],
             ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
@@ -323,7 +322,7 @@ class ProductIndexer extends EntityIndexer
     private function filterVariants(array $ids, string $versionId): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'id') . '
+            'SELECT DISTINCT sw_uuid_hex(id)
              FROM product
              WHERE id IN (:ids)
              AND parent_id IS NULL AND version_id = :version',

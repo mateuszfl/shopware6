@@ -42,7 +42,9 @@ final class CleanupCustomerRecoveryTaskHandler extends ScheduledTaskHandler
 
         do {
             $result = $this->connection->executeStatement(
-                'DELETE FROM customer_recovery WHERE created_at <= :timestamp LIMIT :limit',
+                'DELETE FROM customer_recovery WHERE id IN (
+                    SELECT id FROM (SELECT id FROM customer_recovery WHERE created_at <= :timestamp ORDER BY id LIMIT :limit) expired
+                )',
                 [
                     'timestamp' => $threshold->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     'limit' => self::BATCH_SIZE,

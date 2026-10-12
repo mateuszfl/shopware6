@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
@@ -111,6 +112,7 @@ class CriteriaSearchAggregationContractTest extends TestCase
             $this->connection->executeStatement('SET search_path TO sw_search_collation');
             $this->connection->executeStatement('CREATE COLLATION sw_type_ci (provider = icu, locale = \'und-u-ks-level1\', deterministic = false)');
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $text = $pg ? 'VARCHAR(255) COLLATE sw_type_ci' : 'VARCHAR(255) COLLATE utf8mb4_unicode_ci';
         $binary = $pg ? 'BYTEA' : 'BINARY(16)';
         $date = $pg ? 'TIMESTAMP(3) WITHOUT TIME ZONE' : 'DATETIME(3)';

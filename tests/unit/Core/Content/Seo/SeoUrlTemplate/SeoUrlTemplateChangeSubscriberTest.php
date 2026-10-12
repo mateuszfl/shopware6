@@ -90,7 +90,7 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
-            ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
+            ['route_name' => 'frontend.navigation.page', 'entity_name' => 'category'],
         ]);
 
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -155,7 +155,7 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
-            ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
+            ['route_name' => 'frontend.navigation.page', 'entity_name' => 'category'],
         ]);
 
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -252,8 +252,8 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
-            ['routeName' => 'frontend.navigation.page', 'entityName' => 'category'],
-            ['routeName' => 'frontend.detail.page', 'entityName' => 'product'],
+            ['route_name' => 'frontend.navigation.page', 'entity_name' => 'category'],
+            ['route_name' => 'frontend.detail.page', 'entity_name' => 'product'],
         ]);
 
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -284,8 +284,8 @@ class SeoUrlTemplateChangeSubscriberTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('quoteSingleIdentifier')->willReturnCallback((new MySQLPlatform())->quoteSingleIdentifier(...));
         $connection->method('fetchAllAssociative')->willReturn([
-            ['routeName' => '', 'entityName' => 'category'],
-            ['routeName' => 'frontend.navigation.page', 'entityName' => ''],
+            ['route_name' => '', 'entity_name' => 'category'],
+            ['route_name' => 'frontend.navigation.page', 'entity_name' => ''],
         ]);
 
         $messageBus = $this->createMock(MessageBusInterface::class);

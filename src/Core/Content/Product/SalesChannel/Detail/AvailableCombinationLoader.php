@@ -6,7 +6,6 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Stock\AbstractStockStorage;
 use Shopware\Core\Content\Product\Stock\StockLoadRequest;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -104,19 +103,19 @@ class AvailableCombinationLoader extends AbstractAvailableCombinationLoader
         $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
 
         $query->select(
-            IndexingSql::hex($this->connection, 'product.id'),
+            'sw_uuid_hex(product.id)',
             'product.option_ids as options',
-            'product.product_number as ' . $this->connection->quoteSingleIdentifier('productNumber'),
+            'product.product_number',
             'product.available',
-            'COALESCE(product.is_closeout, parent.is_closeout, :parentIsCloseout) as ' . $this->connection->quoteSingleIdentifier('isCloseout'),
+            'COALESCE(product.is_closeout, parent.is_closeout, :parentIsCloseout) as is_closeout',
         );
 
         $combinations = $query->executeQuery()->fetchAllAssociative();
 
-        /** @var array<string, array{options: string, productNumber: string, available: string, isCloseout: string}> $unique */
+        /** @var array<string, array{options: string, product_number: string, available: string, is_closeout: string}> $unique */
         $unique = FetchModeHelper::groupUnique($combinations);
 
-        return $unique;
+        return array_map(static fn (array $row): array => ['options' => $row['options'], 'productNumber' => $row['product_number'], 'available' => $row['available'], 'isCloseout' => $row['is_closeout']], $unique);
     }
 
     /**

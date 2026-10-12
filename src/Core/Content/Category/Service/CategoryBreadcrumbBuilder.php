@@ -17,7 +17,6 @@ use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductCollection;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Content\Seo\MainCategory\MainCategoryCollection;
 use Shopware\Core\Content\Seo\SeoUrlRoute\EntityRouteResolver;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -239,10 +238,10 @@ class CategoryBreadcrumbBuilder
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            IndexingSql::hex($this->connection, 'id') . ' as id',
-            IndexingSql::hex($this->connection, 'foreign_key') . ' as ' . $this->connection->quoteSingleIdentifier('categoryId'),
-            'path_info as ' . $this->connection->quoteSingleIdentifier('pathInfo'),
-            'seo_path_info as ' . $this->connection->quoteSingleIdentifier('seoPathInfo'),
+            'sw_uuid_hex(id) AS id',
+            'sw_uuid_hex(foreign_key) AS category_id',
+            'path_info',
+            'seo_path_info',
         );
         $query->from('seo_url');
         $query->where('seo_url.is_canonical = 1');
@@ -256,7 +255,12 @@ class CategoryBreadcrumbBuilder
         $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannel->getId()), ParameterType::BINARY);
         $query->setParameter('categoryIds', Uuid::fromHexToBytesList($categoryIds), ArrayParameterType::BINARY);
 
-        return $query->executeQuery()->fetchAllAssociative();
+        return array_map(static fn (array $row): array => [
+            'id' => $row['id'],
+            'categoryId' => $row['category_id'],
+            'pathInfo' => $row['path_info'],
+            'seoPathInfo' => $row['seo_path_info'],
+        ], $query->executeQuery()->fetchAllAssociative());
     }
 
     /**

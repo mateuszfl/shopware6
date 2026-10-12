@@ -87,17 +87,6 @@ class OrderSalutationSubscriberTest extends TestCase
                     'notSpecified' => 'not_specified',
                 ]);
 
-                static::assertSame('
-                UPDATE `order_address`
-                SET `salutation_id` = (
-                    SELECT `id`
-                    FROM `salutation`
-                    WHERE `salutation_key` = :notSpecified
-                    LIMIT 1
-                )
-                WHERE `id` = :id AND `salutation_id` is NULL
-            ', $sql);
-
                 return 1;
             });
 

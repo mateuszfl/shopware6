@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\DocumentV2\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Document\Aggregate\DocumentBaseConfig\DocumentBaseConfigDefinition;
 use Shopware\Core\Checkout\DocumentV2\DocumentV2Exception;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWriteEvent;
@@ -201,8 +202,9 @@ class DocumentBaseConfigSyncSubscriber implements EventSubscriberInterface
         }
 
         $raw = $this->connection->fetchOne(
-            'SELECT `config` FROM `document_base_config` WHERE `id` = :id LIMIT 1',
+            'SELECT config FROM document_base_config WHERE id = :id LIMIT 1',
             ['id' => $id],
+            ['id' => ParameterType::BINARY],
         );
 
         return $this->decodeConfig(\is_string($raw) ? $raw : null);

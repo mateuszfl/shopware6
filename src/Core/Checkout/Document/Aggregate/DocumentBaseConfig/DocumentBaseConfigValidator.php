@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Document\Aggregate\DocumentBaseConfig;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\DocumentV2\Config\DocumentConfigLoader;
 use Shopware\Core\Checkout\DocumentV2\Renderer\DocumentRendererRegistry;
@@ -303,8 +304,9 @@ class DocumentBaseConfigValidator implements EventSubscriberInterface
 
         if ($command instanceof UpdateCommand && ($typeName === null || $global === null || $needsStoredInfixes)) {
             $existing = $this->connection->fetchAssociative(
-                'SELECT `type_name`, `global`, `filename_infixes` FROM `document_base_config` WHERE `id` = :id',
+                'SELECT type_name, global, filename_infixes FROM document_base_config WHERE id = :id',
                 ['id' => $command->getPrimaryKey()['id']],
+                ['id' => ParameterType::BINARY],
             );
 
             if (\is_array($existing)) {
@@ -327,8 +329,9 @@ class DocumentBaseConfigValidator implements EventSubscriberInterface
     private function fetchGlobalInfixes(string $typeName, WriteCommand $command): array
     {
         return $this->decodeInfixes($this->connection->fetchOne(
-            'SELECT `filename_infixes` FROM `document_base_config` WHERE `type_name` = :typeName AND `global` = 1 AND `id` != :id LIMIT 1',
+            'SELECT filename_infixes FROM document_base_config WHERE type_name = :typeName AND global = 1 AND id != :id LIMIT 1',
             ['typeName' => $typeName, 'id' => $command->getPrimaryKey()['id']],
+            ['id' => ParameterType::BINARY],
         ));
     }
 
@@ -339,19 +342,20 @@ class DocumentBaseConfigValidator implements EventSubscriberInterface
     {
         return $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT `config`.`name`, `config`.`filename_infixes`
-                FROM `document_base_config` AS `config`
-                WHERE `config`.`type_name` = :typeName
-                  AND `config`.`global` = 0
-                  AND `config`.`id` != :id
+                SELECT config.name, config.filename_infixes
+                FROM document_base_config AS config
+                WHERE config.type_name = :typeName
+                  AND config.global = 0
+                  AND config.id != :id
                   AND EXISTS (
                       SELECT 1
-                      FROM `document_base_config_sales_channel` AS `assignment`
-                      WHERE `assignment`.`document_base_config_id` = `config`.`id`
+                      FROM document_base_config_sales_channel AS assignment
+                      WHERE assignment.document_base_config_id = config.id
                   )
-                ORDER BY `config`.`name`
+                ORDER BY config.name
                 SQL,
             ['typeName' => $typeName, 'id' => $command->getPrimaryKey()['id']],
+            ['id' => ParameterType::BINARY],
         );
     }
 

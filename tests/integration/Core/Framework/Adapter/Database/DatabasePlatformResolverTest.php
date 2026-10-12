@@ -10,6 +10,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Tools\DsnParser;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Adapter\Database\DatabaseDialectException;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Adapter\Database\MySQLDialect;
 use Shopware\Core\Framework\Adapter\Database\PostgreSQLDialect;
@@ -29,6 +30,8 @@ class DatabasePlatformResolverTest extends TestCase
         $mysql = self::connection('DIALECT_MYSQL_URL');
         $postgres = self::connection('DIALECT_POSTGRES_URL');
 
+        (new DatabaseFunctionInstaller())->install($mysql);
+        (new DatabaseFunctionInstaller())->install($postgres);
         try {
             $mysqlDialect = (new DatabasePlatformResolver($mysql))->dialect();
             $postgresDialect = (new DatabasePlatformResolver($postgres))->dialect();
@@ -38,8 +41,8 @@ class DatabasePlatformResolverTest extends TestCase
             static::assertSame('"value.with.dot"', $postgresDialect->quoteIdentifier('value.with.dot'));
             static::assertSame('`table`.`column`', $mysqlDialect->quoteQualifiedIdentifier(['table', 'column']));
             static::assertSame('"table"."column"', $postgresDialect->quoteQualifiedIdentifier(['table', 'column']));
-            static::assertSame('LOWER(HEX(`source`.`value.with.dot`))', $mysqlDialect->hex(['source', 'value.with.dot']));
-            static::assertSame('encode("source"."value.with.dot", \'hex\')', $postgresDialect->hex(['source', 'value.with.dot']));
+            static::assertSame('sw_uuid_hex(`source`.`value.with.dot`)', $mysqlDialect->hex(['source', 'value.with.dot']));
+            static::assertSame('sw_uuid_hex("source"."value.with.dot")', $postgresDialect->hex(['source', 'value.with.dot']));
             static::assertSame('`value.with.dot`', (new DatabasePlatformResolver($mysql))->dialect()->quoteIdentifier('value.with.dot'));
             static::assertFalse((new DatabasePlatformResolver($mysql))->capabilities()->supportsConflictTarget);
             static::assertTrue((new DatabasePlatformResolver($postgres))->capabilities()->supportsConflictTarget);

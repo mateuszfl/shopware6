@@ -5,6 +5,7 @@ namespace Shopware\Core\Checkout\Promotion\Validator;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionDiscount\PromotionDiscountDefinition;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionDiscount\PromotionDiscountEntity;
 use Shopware\Core\Checkout\Promotion\PromotionDefinition;
@@ -14,6 +15,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\UpdateCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\WriteCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Validation\PreWriteValidationEvent;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Framework\Validation\WriteConstraintViolationException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Validator\ConstraintViolation;
@@ -162,23 +164,31 @@ class PromotionValidator implements EventSubscriberInterface
         $this->databasePromotions = [];
         if ($promotionIds !== []) {
             $promotionQuery = $this->connection->executeQuery(
-                'SELECT * FROM `promotion` WHERE `id` IN (:ids)',
+                'SELECT * FROM promotion WHERE id IN (:ids)',
                 ['ids' => $promotionIds],
                 ['ids' => ArrayParameterType::BINARY]
             );
 
             $this->databasePromotions = $promotionQuery->fetchAllAssociative();
+            foreach ($this->databasePromotions as &$row) {
+                $row['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['id']));
+            }
+            unset($row);
         }
 
         $this->databaseDiscounts = [];
         if ($discountIds !== []) {
             $discountQuery = $this->connection->executeQuery(
-                'SELECT * FROM `promotion_discount` WHERE `id` IN (:ids)',
+                'SELECT * FROM promotion_discount WHERE id IN (:ids)',
                 ['ids' => $discountIds],
                 ['ids' => ArrayParameterType::BINARY]
             );
 
             $this->databaseDiscounts = $discountQuery->fetchAllAssociative();
+            foreach ($this->databaseDiscounts as &$row) {
+                $row['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['id']));
+            }
+            unset($row);
         }
     }
 
@@ -417,7 +427,7 @@ class PromotionValidator implements EventSubscriberInterface
         foreach ($query->executeQuery()->fetchFirstColumn() as $id) {
             // if we have a promotion id to verify
             // and a promotion with another id exists, then return that is used
-            if ($promotionId !== null && $id !== $promotionId) {
+            if ($promotionId !== null && Uuid::fromBytesToHex($id) !== Uuid::fromBytesToHex($promotionId)) {
                 return true;
             }
         }
@@ -445,7 +455,7 @@ class PromotionValidator implements EventSubscriberInterface
 
         if ($promotionId !== null) {
             $query->andWhere($qb->expr()->neq('promotion_id', ':promotion_id'))
-                ->setParameter('promotion_id', $promotionId);
+                ->setParameter('promotion_id', $promotionId, ParameterType::BINARY);
         }
 
         if (((int) $query->executeQuery()->fetchOne()) > 0) {
@@ -465,7 +475,7 @@ class PromotionValidator implements EventSubscriberInterface
 
         if ($promotionId !== null) {
             $query->andWhere($qb->expr()->neq('id', ':id'))
-                ->setParameter('id', $promotionId);
+                ->setParameter('id', $promotionId, ParameterType::BINARY);
         }
 
         return ((int) $query->executeQuery()->fetchOne()) > 0;

@@ -56,12 +56,12 @@ class HreflangLoaderTest extends TestCase
             ->method('fetchAllAssociative')
             ->willReturnOnConsecutiveCalls(
                 [
-                    ['languageId' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
-                    ['languageId' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
+                    ['language_id' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'only_locale' => false],
+                    ['language_id' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'only_locale' => false],
                 ],
                 [
-                    ['seoPathInfo' => 'nice-product', 'languageId' => $languageId1],
-                    ['seoPathInfo' => 'nice-product-en', 'languageId' => $languageId2],
+                    ['seo_path_info' => 'nice-product', 'language_id' => $languageId1],
+                    ['seo_path_info' => 'nice-product-en', 'language_id' => $languageId2],
                 ]
             );
 
@@ -100,12 +100,12 @@ class HreflangLoaderTest extends TestCase
             ->method('fetchAllAssociative')
             ->willReturnOnConsecutiveCalls(
                 [
-                    ['languageId' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'onlyLocale' => false],
-                    ['languageId' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'onlyLocale' => false],
+                    ['language_id' => $languageId1, 'id' => $domainId1, 'url' => 'https://test.de', 'locale' => 'de-DE', 'only_locale' => false],
+                    ['language_id' => $languageId2, 'id' => $domainId2, 'url' => 'https://test.de/en', 'locale' => 'en-GB', 'only_locale' => false],
                 ],
                 [
-                    ['seoPathInfo' => 'nice-product', 'languageId' => $languageId1],
-                    ['seoPathInfo' => 'nice-product-en', 'languageId' => $languageId2],
+                    ['seo_path_info' => 'nice-product', 'language_id' => $languageId1],
+                    ['seo_path_info' => 'nice-product-en', 'language_id' => $languageId2],
                 ]
             );
 

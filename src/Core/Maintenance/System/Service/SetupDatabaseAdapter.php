@@ -4,6 +4,7 @@ namespace Shopware\Core\Maintenance\System\Service;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Kernel;
 use Shopware\Core\Maintenance\MaintenanceException;
@@ -33,6 +34,8 @@ class SetupDatabaseAdapter
         if (!$hasShopwareTables = $this->hasShopwareTables($connection, $database)) {
             $connection->executeStatement($this->getBaseSchema());
         }
+
+        (new DatabaseFunctionInstaller())->install($connection);
 
         return !$hasShopwareTables;
     }

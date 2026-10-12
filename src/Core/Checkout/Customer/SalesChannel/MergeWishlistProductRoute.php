@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Customer\SalesChannel;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\Aggregate\CustomerWishlist\CustomerWishlistCollection;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Checkout\Customer\CustomerException;
@@ -143,13 +144,13 @@ class MergeWishlistProductRoute extends AbstractMergeWishlistProductRoute
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            'LOWER(HEX(`product_id`)) as `product_id`',
-            'LOWER(HEX(`id`)) as id',
+            'sw_uuid_hex(product_id) as product_id',
+            'sw_uuid_hex(id) as id',
         );
-        $query->from('`customer_wishlist_product`');
-        $query->where('`customer_wishlist_id` = :id');
-        $query->andWhere('`product_id` IN (:productIds)');
-        $query->setParameter('id', Uuid::fromHexToBytes($wishlistId));
+        $query->from('customer_wishlist_product');
+        $query->where('customer_wishlist_id = :id');
+        $query->andWhere('product_id IN (:productIds)');
+        $query->setParameter('id', Uuid::fromHexToBytes($wishlistId), ParameterType::BINARY);
         $query->setParameter('productIds', Uuid::fromHexToBytesList($productIds), ArrayParameterType::BINARY);
         $result = $query->executeQuery();
 

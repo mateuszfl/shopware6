@@ -11,7 +11,6 @@ use Shopware\Core\Content\Category\Service\DefaultCategoryLevelLoaderInterface;
 use Shopware\Core\Content\Category\Service\NavigationLoaderInterface;
 use Shopware\Core\Content\Category\Tree\CategoryTreePathResolver;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
@@ -159,7 +158,7 @@ class NavigationRoute extends AbstractNavigationRoute
     {
         $result = $this->connection->fetchAllAssociative('
             -- navigation-route::meta-information
-            SELECT ' . IndexingSql::hex($this->connection, 'id') . ', path, level
+            SELECT sw_uuid_hex(id), path, level
             FROM category
             WHERE id = :activeId OR id = :rootId
         ', ['activeId' => Uuid::fromHexToBytes($activeId), 'rootId' => Uuid::fromHexToBytes($rootId)], ['activeId' => ParameterType::BINARY, 'rootId' => ParameterType::BINARY]);

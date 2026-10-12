@@ -15,6 +15,7 @@ use Shopware\Core\Checkout\Order\OrderEvents;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionIndividualCode\PromotionIndividualCodeCollection;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionIndividualCode\PromotionIndividualCodeEntity;
 use Shopware\Core\Checkout\Promotion\Cart\PromotionProcessor;
+use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionCodeGateway;
 use Shopware\Core\Checkout\Promotion\Subscriber\PromotionIndividualCodeRedeemer;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -56,7 +57,7 @@ class PromotionIndividualCodeRedeemerTest extends TestCase
         $codeRepository = $this->createMock(EntityRepository::class);
         $codeRepository->expects($this->never())->method('search');
         $codeRepository->expects($this->never())->method('searchIds');
-        $redeemer = new PromotionIndividualCodeRedeemer($codeRepository, static::createStub(EntityRepository::class));
+        $redeemer = new PromotionIndividualCodeRedeemer($codeRepository, static::createStub(EntityRepository::class), static::createStub(PromotionCodeGateway::class));
 
         $customer = new OrderCustomerEntity();
         $customer->setId(Uuid::randomHex());
@@ -105,7 +106,7 @@ class PromotionIndividualCodeRedeemerTest extends TestCase
         ]);
 
         $orderRepository = $this->createMock(EntityRepository::class);
-        $redeemer = new PromotionIndividualCodeRedeemer($codeRepository, $orderRepository);
+        $redeemer = new PromotionIndividualCodeRedeemer($codeRepository, $orderRepository, static::createStub(PromotionCodeGateway::class));
 
         $order = new OrderEntity();
         $order->setId(Uuid::randomHex());
@@ -163,7 +164,8 @@ class PromotionIndividualCodeRedeemerTest extends TestCase
 
         $redeemer = new PromotionIndividualCodeRedeemer(
             $codeRepository,
-            static::createStub(EntityRepository::class)
+            static::createStub(EntityRepository::class),
+            static::createStub(PromotionCodeGateway::class)
         );
 
         $customer = new OrderCustomerEntity();

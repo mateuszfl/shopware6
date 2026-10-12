@@ -9,7 +9,6 @@ use Shopware\Core\Checkout\Order\Aggregate\OrderLineItem\OrderLineItemDefinition
 use Shopware\Core\Content\Product\Exception\ProductLineItemDifferentIdException;
 use Shopware\Core\Content\Product\Exception\ProductLineItemInconsistentException;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\SetNullOnDeleteCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\UpdateCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\WriteCommand;
@@ -127,7 +126,7 @@ class ProductLineItemCommandValidator implements EventSubscriberInterface
 
         /** @var array<string, int<0, max>> $products */
         $products = \array_flip($this->connection->fetchFirstColumn(
-            'SELECT DISTINCT ' . IndexingSql::hex($this->connection, 'id') . ' FROM order_line_item WHERE id IN (:ids) AND type = \'product\'',
+            'SELECT DISTINCT sw_uuid_hex(id) FROM order_line_item WHERE id IN (:ids) AND type = \'product\'',
             ['ids' => $ids],
             ['ids' => ArrayParameterType::BINARY]
         ));

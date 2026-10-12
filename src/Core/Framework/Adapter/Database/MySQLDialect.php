@@ -33,7 +33,7 @@ final class MySQLDialect extends AbstractDatabaseDialect
 
     public function hexExpression(string $expression): string
     {
-        return 'LOWER(HEX(' . $expression . '))';
+        return 'sw_uuid_hex(' . $expression . ')';
     }
 
     public function binaryText(string $expression): string

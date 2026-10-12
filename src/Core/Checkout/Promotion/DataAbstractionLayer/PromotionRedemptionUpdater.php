@@ -4,8 +4,10 @@ namespace Shopware\Core\Checkout\Promotion\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Order\OrderEvents;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityWriteResult;
@@ -52,6 +54,12 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
 
     public function beforeDelete(EntityWriteEvent $event): void
     {
+        $this->promotionIds = [];
+        $this->deletedCodes = [];
+        $event->addError(function (): void {
+            $this->promotionIds = [];
+            $this->deletedCodes = [];
+        });
         if ($event->getContext()->getVersionId() !== Defaults::LIVE_VERSION) {
             return;
         }
@@ -68,8 +76,8 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
         }
 
         $sql = <<<'SQL'
-            SELECT LOWER(HEX(`promotion_id`)) as `promotion_id`, `payload`, LOWER(HEX(`order_id`)) as `order_id` FROM `order_line_item`
-            WHERE `promotion_id` IS NOT NULL AND `id` IN (:ids) AND `version_id` = :versionId;
+            SELECT sw_uuid_hex(promotion_id) as promotion_id, payload, sw_uuid_hex(order_id) as order_id FROM order_line_item
+            WHERE promotion_id IS NOT NULL AND id IN (:ids) AND version_id = :versionId;
         SQL;
 
         /** @var list<array{promotion_id: string, payload: ?string, order_id: string}> $lineItems */
@@ -79,7 +87,7 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
                 'ids' => Uuid::fromHexToBytesList($lineItemsIds),
                 'versionId' => Uuid::fromHexToBytes($event->getContext()->getVersionId()),
             ],
-            ['ids' => ArrayParameterType::BINARY],
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY],
         );
 
         $this->promotionIds = array_values(array_unique(array_column($lineItems, 'promotion_id')));
@@ -97,17 +105,17 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
 
     public function lineItemDeleted(EntityDeletedEvent $event): void
     {
-        if ($this->promotionIds !== []) {
+        $promotionIds = $this->promotionIds;
+        $deletedCodes = $this->deletedCodes;
+        $this->promotionIds = [];
+        $this->deletedCodes = [];
+        if ($promotionIds !== []) {
             // Update all promotions, we searched beforeDelete
-            $this->update($this->promotionIds, $event->getContext());
-
-            $this->promotionIds = [];
+            $this->update($promotionIds, $event->getContext());
         }
 
-        if ($this->deletedCodes !== []) {
-            $this->releaseIndividualCodes($this->deletedCodes);
-
-            $this->deletedCodes = [];
+        if ($deletedCodes !== []) {
+            $this->releaseIndividualCodes($deletedCodes);
         }
     }
 
@@ -136,11 +144,19 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
             return;
         }
 
-        // promotion_id is ApiAware, so this counts every line item carrying one, not only the ones core writes
-        $sql = <<<'SQL'
-            SELECT LOWER(HEX(order_line_item.promotion_id)) as promotion_id,
+        sort($ids);
+        $this->connection->transactional(function () use ($ids): void {
+            $this->connection->fetchFirstColumn(
+                'SELECT id FROM promotion WHERE id IN (:ids) ORDER BY id FOR UPDATE',
+                ['ids' => Uuid::fromHexToBytesList($ids)],
+                ['ids' => ArrayParameterType::BINARY],
+            );
+
+            // promotion_id is ApiAware, so this counts every line item carrying one, not only the ones core writes
+            $sql = <<<'SQL'
+            SELECT sw_uuid_hex(order_line_item.promotion_id) as promotion_id,
                    COUNT(DISTINCT order_line_item.order_id) as total,
-                   LOWER(HEX(order_customer.customer_id)) as customer_id
+                   sw_uuid_hex(order_customer.customer_id) as customer_id
             FROM order_line_item
                      LEFT JOIN order_customer
                                ON (order_customer.order_id = order_line_item.order_id
@@ -149,28 +165,30 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
             GROUP BY order_line_item.promotion_id, order_customer.customer_id
         SQL;
 
-        /** @var list<array{promotion_id: string, total: numeric-string, customer_id: ?string}> $promotions */
-        $promotions = $this->connection->fetchAllAssociative(
-            $sql,
-            ['ids' => Uuid::fromHexToBytesList($ids), 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
-        );
+            /** @var list<array{promotion_id: string, total: numeric-string, customer_id: ?string}> $promotions */
+            $promotions = $this->connection->fetchAllAssociative(
+                $sql,
+                ['ids' => Uuid::fromHexToBytesList($ids), 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
+                ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
+            );
 
-        $update = new RetryableQuery(
-            $this->connection,
-            $this->connection->prepare('UPDATE promotion SET order_count = :count, orders_per_customer_count = :customerCount WHERE id = :id')
-        );
+            $update = new RetryableQuery(
+                $this->connection,
+                $this->connection->prepare('UPDATE promotion SET order_count = :count, orders_per_customer_count = :customerCount WHERE id = :id'),
+                ['id' => ParameterType::BINARY, 'count' => ParameterType::INTEGER],
+            );
 
-        // group the promotions to update each promotion with a single update statement
-        $promotionsGrouped = array_merge(array_fill_keys($ids, []), $this->groupByPromotion($promotions));
+            // group the promotions to update each promotion with a single update statement
+            $promotionsGrouped = array_merge(array_fill_keys($ids, []), $this->groupByPromotion($promotions));
 
-        foreach ($promotionsGrouped as $id => $totals) {
-            $update->execute([
-                'id' => Uuid::fromHexToBytes($id),
-                'count' => (int) array_sum($totals),
-                'customerCount' => $totals !== [] ? json_encode($totals, \JSON_THROW_ON_ERROR) : null,
-            ]);
-        }
+            foreach ($promotionsGrouped as $id => $totals) {
+                $update->execute([
+                    'id' => Uuid::fromHexToBytes($id),
+                    'count' => (int) array_sum($totals),
+                    'customerCount' => $totals !== [] ? json_encode($totals, \JSON_THROW_ON_ERROR) : null,
+                ]);
+            }
+        });
     }
 
     /**
@@ -184,15 +202,14 @@ class PromotionRedemptionUpdater implements EventSubscriberInterface
      */
     private function releaseIndividualCodes(array $deletedCodes): void
     {
-        $update = new RetryableQuery(
-            $this->connection,
-            $this->connection->prepare(
-                'UPDATE promotion_individual_code SET payload = NULL WHERE code = :code AND JSON_UNQUOTE(JSON_EXTRACT(payload, \'$.orderId\')) = :orderId'
-            )
-        );
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $orderId = $dialect->jsonExtract('payload', ['orderId'])->named();
+        $sql = 'UPDATE promotion_individual_code SET payload = NULL WHERE code = :code AND ' . $dialect->jsonScalar($orderId->sql) . ' = :orderId';
 
         foreach ($deletedCodes as $deletedCode) {
-            $update->execute($deletedCode);
+            RetryableQuery::retryable($this->connection, function () use ($sql, $deletedCode, $orderId): void {
+                $this->connection->executeStatement($sql, $deletedCode + $orderId->parameters, $orderId->types);
+            });
         }
     }
 

@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Document\Service;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\Document\DocumentCollection;
 use Shopware\Core\Checkout\Document\DocumentEntity;
@@ -294,7 +295,7 @@ class DocumentGenerator
     private function getDocumentTypeByName(string $documentType): ?string
     {
         $id = $this->connection->fetchOne(
-            'SELECT LOWER(HEX(id)) as id FROM document_type WHERE technical_name = :technicalName',
+            'SELECT sw_uuid_hex(id) as id FROM document_type WHERE technical_name = :technicalName',
             ['technicalName' => $documentType]
         );
 
@@ -398,7 +399,7 @@ class DocumentGenerator
     private function getReferenceId(string $orderId, string $invoiceNumber): string
     {
         return (string) $this->connection->fetchOne('
-            SELECT LOWER(HEX(document.id))
+            SELECT sw_uuid_hex(document.id)
             FROM document INNER JOIN document_type
                 ON document.document_type_id = document_type.id
             WHERE document_type.technical_name IN (:technicalNames)
@@ -414,7 +415,7 @@ class DocumentGenerator
             'orderId' => Uuid::fromHexToBytes($orderId),
         ], [
             'technicalNames' => ArrayParameterType::STRING,
-        ]);
+            'orderId' => ParameterType::BINARY]);
     }
 
     private function resolveMediaIdForA11y(DocumentGenerateOperation $operation, Context $context, RenderedDocument $document): ?string

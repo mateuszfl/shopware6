@@ -22,7 +22,6 @@ use Shopware\Core\Content\Media\MediaType\ImageType;
 use Shopware\Core\Content\Media\Subscriber\MediaDeletionSubscriber;
 use Shopware\Core\Content\Media\Thumbnail\Processor\ThumbnailProcessorInterface;
 use Shopware\Core\Content\Media\Upload\MediaUploadService;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -334,7 +333,7 @@ class ThumbnailService
 
         // create hash map for easy path access
         $paths = $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', path FROM media_thumbnail WHERE id IN (:ids)',
+            'SELECT sw_uuid_hex(id), path FROM media_thumbnail WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

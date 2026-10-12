@@ -44,6 +44,7 @@ use Shopware\Core\Checkout\Promotion\Cart\PromotionDeliveryProcessor;
 use Shopware\Core\Checkout\Promotion\Cart\PromotionItemBuilder;
 use Shopware\Core\Checkout\Promotion\Cart\PromotionProcessor;
 use Shopware\Core\Checkout\Promotion\Cart\PromotionRedemptionLocker;
+use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionCodeGateway;
 use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionExclusionUpdater;
 use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionIndexer;
 use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionRedemptionUpdater;
@@ -236,8 +237,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([
             service('promotion_individual_code.repository'),
             service('order_customer.repository'),
+            service(PromotionCodeGateway::class),
         ])
         ->tag('kernel.event_subscriber');
+
+    $services->set(PromotionCodeGateway::class)->args([service(Connection::class)]);
 
     $services->set(PromotionDateTimeService::class);
 

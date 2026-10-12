@@ -27,7 +27,6 @@ use Shopware\Core\Content\Product\SalesChannel\Price\AbstractProductPriceCalcula
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Content\Product\State;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\RuleAreas;
 use Shopware\Core\Framework\Feature;
@@ -513,7 +512,7 @@ class ProductCartProcessor implements CartProcessorInterface, CartDataCollectorI
         }
 
         $updates = $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' as id, COALESCE(updated_at, created_at) FROM product WHERE id IN (:ids) AND version_id = :liveVersionId',
+            'SELECT sw_uuid_hex(id) as id, COALESCE(updated_at, created_at) FROM product WHERE id IN (:ids) AND version_id = :liveVersionId',
             [
                 'ids' => Uuid::fromHexToBytesList(array_keys($changes)),
                 'liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),

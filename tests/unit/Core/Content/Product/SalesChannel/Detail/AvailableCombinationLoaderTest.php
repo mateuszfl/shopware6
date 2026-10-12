@@ -132,8 +132,9 @@ class AvailableCombinationLoaderTest extends TestCase
         $result->method('fetchAllAssociative')->willReturn([
             [
                 'id' => 'product-1',
+                'product_number' => 'product-1',
                 'available' => true,
-                'isCloseout' => false,
+                'is_closeout' => false,
                 'options' => json_encode([
                     'green',
                     'red',
@@ -141,16 +142,18 @@ class AvailableCombinationLoaderTest extends TestCase
             ],
             [
                 'id' => 'product-2',
+                'product_number' => 'product-2',
                 'available' => false,
-                'isCloseout' => true,
+                'is_closeout' => true,
                 'options' => json_encode([
                     'green',
                 ]),
             ],
             [
                 'id' => 'invalid',
+                'product_number' => 'invalid',
                 'available' => false,
-                'isCloseout' => false,
+                'is_closeout' => false,
                 'options' => '{ bar: "baz" }',
             ],
         ]);

@@ -9,6 +9,7 @@ use Shopware\Core\Checkout\Order\Aggregate\OrderLineItem\OrderLineItemEntity;
 use Shopware\Core\Checkout\Order\OrderEvents;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionIndividualCode\PromotionIndividualCodeCollection;
 use Shopware\Core\Checkout\Promotion\Cart\PromotionProcessor;
+use Shopware\Core\Checkout\Promotion\DataAbstractionLayer\PromotionCodeGateway;
 use Shopware\Core\Checkout\Promotion\PromotionException;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
@@ -34,7 +35,8 @@ class PromotionIndividualCodeRedeemer implements EventSubscriberInterface
      */
     public function __construct(
         private readonly EntityRepository $codesRepository,
-        private readonly EntityRepository $orderCustomerRepository
+        private readonly EntityRepository $orderCustomerRepository,
+        private readonly PromotionCodeGateway $codeGateway,
     ) {
     }
 
@@ -90,6 +92,10 @@ class PromotionIndividualCodeRedeemer implements EventSubscriberInterface
                     $customer->getCustomerId() ?? '',
                     $customer->getFirstName() . ' ' . $customer->getLastName()
                 );
+
+                $payload = $promotion->getPayload();
+                \assert($payload !== null);
+                $this->codeGateway->claim($promotion->getId(), $promotion->getCode(), $payload);
 
                 // save in database
                 $update[] = [

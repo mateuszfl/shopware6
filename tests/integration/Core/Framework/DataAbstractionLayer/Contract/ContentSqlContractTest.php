@@ -72,6 +72,7 @@ use Shopware\Core\Content\Sitemap\Service\ConfigHandler;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Sync\FkReference;
 use Shopware\Core\Framework\Api\Sync\SyncOperation;
@@ -159,6 +160,7 @@ class ContentSqlContractTest extends TestCase
             static::assertMatchesRegularExpression('/^(8\.4\.11|11\.8\.9-MariaDB)/', (string) $this->connection->fetchOne('SELECT VERSION()'));
             $this->connection->executeStatement('SET SESSION sql_mode = \'STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY\'');
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $this->dispatcher = new EventDispatcher();
     }
 

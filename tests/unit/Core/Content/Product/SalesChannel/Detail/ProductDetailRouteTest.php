@@ -186,8 +186,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => null,
-                'parentId' => null,
+                'variant_listing_config' => null,
+                'parent_id' => null,
             ]);
 
         $this->systemConfig->method('getBool')
@@ -248,8 +248,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": false, "mainVariantId": "' . $mainVariantId . '"}',
-                'parentId' => null,
+                'variant_listing_config' => '{"displayParent": false, "mainVariantId": "' . $mainVariantId . '"}',
+                'parent_id' => null,
             ]);
 
         $this->systemConfig->method('getBool')->willReturn(false);
@@ -298,8 +298,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": false, "mainVariantId": "2"}',
-                'parentId' => '2',
+                'variant_listing_config' => '{"displayParent": false, "mainVariantId": "2"}',
+                'parent_id' => '2',
             ]);
 
         $productId = Uuid::randomHex();
@@ -347,8 +347,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": false, "mainVariantId": "' . $mainVariantId . '"}',
-                'parentId' => null,
+                'variant_listing_config' => '{"displayParent": false, "mainVariantId": "' . $mainVariantId . '"}',
+                'parent_id' => null,
             ]);
 
         $productEntity = new SalesChannelProductEntity();
@@ -414,8 +414,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": true, "mainVariantId": "2"}',
-                'parentId' => '2',
+                'variant_listing_config' => '{"displayParent": true, "mainVariantId": "2"}',
+                'parent_id' => '2',
             ]);
 
         $variantId = Uuid::randomHex();
@@ -465,8 +465,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": 1, "mainVariantId": null}', // Wrong displayParent type, should be boolean
-                'parentId' => '2',
+                'variant_listing_config' => '{"displayParent": 1, "mainVariantId": null}', // Wrong displayParent type, should be boolean
+                'parent_id' => '2',
             ]);
 
         $productId = Uuid::randomHex();
@@ -512,8 +512,8 @@ class ProductDetailRouteTest extends TestCase
             ->expects($this->once())
             ->method('fetchAssociative')
             ->willReturn([
-                'variantListingConfig' => '{"displayParent": 1, "mainVariantId": "2"}',
-                'parentId' => '2',
+                'variant_listing_config' => '{"displayParent": 1, "mainVariantId": "2"}',
+                'parent_id' => '2',
             ]);
 
         $productId = Uuid::randomHex();

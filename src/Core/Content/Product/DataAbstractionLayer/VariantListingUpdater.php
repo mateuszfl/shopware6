@@ -48,7 +48,7 @@ class VariantListingUpdater
 
         $displayParent = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, 'UPPER(' . IndexingSql::hex($this->connection, 'product.id') . ')') . ' WHERE product.id = :id AND product.version_id = :versionId'),
+            $this->connection->prepare('UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, 'UPPER(sw_uuid_hex(product.id))') . ' WHERE product.id = :id AND product.version_id = :versionId'),
             ['id' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
@@ -60,7 +60,7 @@ class VariantListingUpdater
 
         $singleVariant = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, 'UPPER(' . IndexingSql::hex($this->connection, 'product.parent_id') . ')') . ' WHERE product.parent_id = :id AND product.version_id = :versionId'),
+            $this->connection->prepare('UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, 'UPPER(sw_uuid_hex(product.parent_id))') . ' WHERE product.parent_id = :id AND product.version_id = :versionId'),
             ['id' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
@@ -103,14 +103,14 @@ class VariantListingUpdater
                 $query->innerJoin($mappingAlias, 'property_group_option', $optionAlias, $optionAlias . '.id = ' . $mappingAlias . '.property_group_option_id AND ' . $optionAlias . '.property_group_id = :' . $optionAlias);
                 $query->andWhere($mappingAlias . '.product_id = product.id AND ' . $mappingAlias . '.product_version_id = :versionId');
 
-                $fields[] = IndexingSql::hex($this->connection, $optionAlias . '.id');
+                $fields[] = 'sw_uuid_hex(' . $optionAlias . '.id)';
 
                 $params[$optionAlias] = Uuid::fromHexToBytes($groupId);
             }
 
             $query->addSelect(IndexingSql::concat($this->connection, $fields));
 
-            $sql = 'UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, IndexingSql::concat($this->connection, [IndexingSql::hex($this->connection, 'product.parent_id'), '(' . $query->getSQL() . ')'])) . ' WHERE parent_id = :parentId AND version_id = :versionId';
+            $sql = 'UPDATE product SET display_group = ' . IndexingSql::hash($this->connection, IndexingSql::concat($this->connection, ['sw_uuid_hex(product.parent_id)', '(' . $query->getSQL() . ')'])) . ' WHERE parent_id = :parentId AND version_id = :versionId';
 
             RetryableQuery::retryable($this->connection, function () use ($sql, $params): void {
                 $this->connection->executeStatement($sql, $params, array_fill_keys(array_keys($params), ParameterType::BINARY));

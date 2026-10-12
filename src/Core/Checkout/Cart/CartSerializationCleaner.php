@@ -23,7 +23,7 @@ class CartSerializationCleaner
 
     public function cleanupCart(Cart $cart): void
     {
-        $customFieldAllowList = $this->connection->fetchFirstColumn('SELECT `name` FROM `custom_field` WHERE `allow_cart_expose` = 1;');
+        $customFieldAllowList = $this->connection->fetchFirstColumn('SELECT name FROM custom_field WHERE allow_cart_expose = 1;');
 
         $event = new CartBeforeSerializationEvent($cart, $customFieldAllowList);
         $this->eventDispatcher->dispatch($event);

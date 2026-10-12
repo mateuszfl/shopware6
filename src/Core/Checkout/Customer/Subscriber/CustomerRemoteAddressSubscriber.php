@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Customer\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\Event\CustomerLoginEvent;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -59,6 +60,6 @@ readonly class CustomerRemoteAddressSubscriber implements EventSubscriberInterfa
             'remote_address' => $clientIp,
         ], [
             'id' => Uuid::fromHexToBytes($event->getCustomerId()),
-        ]);
+        ], ['id' => ParameterType::BINARY]);
     }
 }

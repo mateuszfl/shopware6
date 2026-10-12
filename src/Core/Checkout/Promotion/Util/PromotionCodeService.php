@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Promotion\Util;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionIndividualCode\PromotionIndividualCodeCollection;
 use Shopware\Core\Checkout\Promotion\Exception\PatternNotComplexEnoughException;
 use Shopware\Core\Checkout\Promotion\PromotionCollection;
@@ -142,7 +143,7 @@ class PromotionCodeService
 
     public function resetPromotionCodes(string $promotionId, Context $context): void
     {
-        $this->connection->executeStatement('DELETE FROM promotion_individual_code WHERE promotion_id = :id', ['id' => Uuid::fromHexToBytes($promotionId)]);
+        $this->connection->executeStatement('DELETE FROM promotion_individual_code WHERE promotion_id = :id', ['id' => Uuid::fromHexToBytes($promotionId)], ['id' => ParameterType::BINARY]);
     }
 
     /**

@@ -8,7 +8,6 @@ use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Flow\Dispatching\CachedFlowLoader;
 use Shopware\Core\Content\Flow\Indexing\FlowBuilder\Sequence;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
@@ -39,12 +38,12 @@ class FlowPayloadUpdater
         }
 
         $listFlowSequence = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'flow.id') . ' as array_key,
-            ' . IndexingSql::hex($this->connection, 'flow.id') . ' as flow_id,
-            ' . IndexingSql::hex($this->connection, 'flow_sequence.id') . ' as sequence_id,
-            ' . IndexingSql::hex($this->connection, 'flow_sequence.parent_id') . ' as parent_id,
-            ' . IndexingSql::hex($this->connection, 'flow_sequence.rule_id') . ' as rule_id,
-            ' . IndexingSql::hex($this->connection, 'flow_sequence.app_flow_action_id') . ' as app_flow_action_id,
+            'SELECT sw_uuid_hex(flow.id) as array_key,
+            sw_uuid_hex(flow.id) as flow_id,
+            sw_uuid_hex(flow_sequence.id) as sequence_id,
+            sw_uuid_hex(flow_sequence.parent_id) as parent_id,
+            sw_uuid_hex(flow_sequence.rule_id) as rule_id,
+            sw_uuid_hex(flow_sequence.app_flow_action_id) as app_flow_action_id,
             flow_sequence.display_group as display_group,
             flow_sequence.position as position,
             flow_sequence.action_name as action_name,

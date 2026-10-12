@@ -8,6 +8,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Customer\Service\ProductReviewCountService;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
  * @internal
@@ -36,7 +37,7 @@ class ProductReviewCountServiceTest extends TestCase
 
     public function testUpdateReviewCount(): void
     {
-        $this->connection->expects($this->once())->method('fetchFirstColumn')->willReturn(['foobar', 'barfoo']);
+        $this->connection->expects($this->once())->method('fetchFirstColumn')->willReturn([Uuid::randomHex(), Uuid::randomHex()]);
         $this->connection->expects($this->exactly(2))->method('executeStatement');
 
         $this->productReviewCountService->updateReviewCount([]);

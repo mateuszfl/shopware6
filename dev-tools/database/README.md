@@ -66,7 +66,52 @@ Core helpers, batch removals and version isolation are verified by
 [INDEXING_CONTRACT.md](INDEXING_CONTRACT.md). Content cleanup, SEO, flow, stock adapters and remaining Content SQL are verified by
 [CONTENT_SQL_CONTRACT.md](CONTENT_SQL_CONTRACT.md).
 
+The checkout persistence, concurrency and transaction boundaries are documented in
+[CHECKOUT_SQL_CONTRACT.md](CHECKOUT_SQL_CONTRACT.md).
+
 ## Verification
+
+### Shared SQL functions
+
+UUID reads use the same `sw_uuid_hex(value)` SQL function on MySQL/MariaDB and
+PostgreSQL. It converts up to 16 binary bytes to lowercase hexadecimal text and
+preserves `NULL`. Static SQL can use `SELECT sw_uuid_hex(id) FROM product` without
+constructing engine-specific expressions in PHP. Result columns use `snake_case`;
+PHP maps them to public `camelCase` fields where required.
+
+New MySQL/MariaDB databases receive this prerequisite through
+`SetupDatabaseAdapter::initializeShopwareDb()`. For an existing installation,
+install it on the primary **before deploying code that uses it**:
+
+```sh
+DATABASE_FUNCTION_INSTALL_URL="$MAINTENANCE_DATABASE_URL" php dev-tools/database/install-functions.php
+```
+
+Use a maintenance account with permission to create functions in the application
+database/schema. MySQL requires `CREATE ROUTINE`; with binary logging enabled,
+the server also requires the appropriate administrative privilege or a DBA-managed
+`log_bin_trust_function_creators` setting. The tool does not change server settings
+or grants. Runtime accounts need `EXECUTE` on the function and, on PostgreSQL,
+`USAGE` on its schema; they do not need permission to create functions.
+
+The installer creates only missing functions and verifies existing metadata and
+binary/NULL behavior. It rejects conflicting definitions without replacing them.
+On PostgreSQL it installs into `current_schema()`; that schema must be on the
+application's `search_path`. Install on the primary and replicate the prerequisite
+before switching application traffic. Connection factories, requests and reconnects
+never install functions. PostgreSQL full-installer integration remains part of the
+schema-installation work; isolated DAL fixtures install the prerequisite explicitly.
+
+The maintenance contract runs independently of the Shopware kernel, against a
+disposable database whose name ends in `_test`. Its account must also be able to
+create/drop temporary schemas/databases and test roles/users:
+
+```sh
+DATABASE_FUNCTION_INSTALL_URL="$MAINTENANCE_TEST_DATABASE_URL" vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php
+```
+
+Stored-function execution costs, especially on MySQL, require production-scale
+measurement; functional fixture tests do not establish equivalent performance.
 
 Run the relevant smoke test from the repository root. It checks server
 versions, roles, test database, WAL streaming, a committed marker behind a

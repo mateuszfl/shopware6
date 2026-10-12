@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Promotion\Cart;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Cart\CartBehavior;
 use Shopware\Core\Checkout\Cart\CartDataCollectorInterface;
@@ -435,9 +436,9 @@ class PromotionCollector implements CartDataCollectorInterface
         $foundPromotionInThisOrder = $this->connection->fetchOne('SELECT 1 FROM order_line_item WHERE order_id = :orderId AND promotion_id = :promotionId', [
             'orderId' => Uuid::fromHexToBytes($orderId),
             'promotionId' => Uuid::fromHexToBytes($promotionId),
-        ]);
+        ], ['orderId' => ParameterType::BINARY, 'promotionId' => ParameterType::BINARY]);
 
-        return $foundPromotionInThisOrder === '1';
+        return (bool) $foundPromotionInThisOrder;
     }
 
     /**

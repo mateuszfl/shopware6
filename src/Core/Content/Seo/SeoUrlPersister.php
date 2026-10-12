@@ -11,7 +11,6 @@ use Shopware\Core\Content\Seo\SeoUrl\SeoUrlCollection;
 use Shopware\Core\Content\Seo\SeoUrl\SeoUrlEntity;
 use Shopware\Core\Content\Seo\Validation\Constraint\ValidSeoPathInfo;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -217,11 +216,11 @@ class SeoUrlPersister
 
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            IndexingSql::hex($this->connection, 'seo_url.id') . ' as id',
-            IndexingSql::hex($this->connection, 'seo_url.foreign_key') . ' AS ' . $this->connection->quoteSingleIdentifier('foreignKey'),
-            IndexingSql::hex($this->connection, 'seo_url.sales_channel_id') . ' AS ' . $this->connection->quoteSingleIdentifier('salesChannelId'),
-            'seo_url.is_modified as ' . $this->connection->quoteSingleIdentifier('isModified'),
-            'seo_url.seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo'),
+            'sw_uuid_hex(seo_url.id) as id',
+            'sw_uuid_hex(seo_url.foreign_key) AS foreign_key',
+            'sw_uuid_hex(seo_url.sales_channel_id) AS sales_channel_id',
+            'seo_url.is_modified',
+            'seo_url.seo_path_info',
         );
         $query->from('seo_url', 'seo_url');
 
@@ -238,6 +237,7 @@ class SeoUrlPersister
 
         $canonicals = [];
         foreach ($rows as $row) {
+            $row = ['id' => $row['id'], 'foreignKey' => $row['foreign_key'], 'salesChannelId' => $row['sales_channel_id'], 'isModified' => $row['is_modified'], 'seoPathInfo' => $row['seo_path_info']];
             $row['isModified'] = (bool) $row['isModified'];
             $foreignKey = (string) $row['foreignKey'];
             if (!isset($canonicals[$foreignKey])) {
@@ -262,7 +262,7 @@ class SeoUrlPersister
             return [];
         }
 
-        $query = 'SELECT id, sales_channel_id AS ' . $this->connection->quoteSingleIdentifier('salesChannelId') . ', foreign_key AS ' . $this->connection->quoteSingleIdentifier('foreignKey') . ', route_name AS ' . $this->connection->quoteSingleIdentifier('routeName') . '
+        $query = 'SELECT id, sales_channel_id, foreign_key, route_name
         FROM seo_url
         WHERE is_canonical = 1 AND language_id = :languageId AND seo_path_info IN (:seoPathInfos)';
 
@@ -277,6 +277,7 @@ class SeoUrlPersister
 
         $rows = $this->connection->fetchAllAssociative($query, $params, $types);
         foreach ($rows as &$row) {
+            $row = ['id' => $row['id'], 'salesChannelId' => $row['sales_channel_id'], 'foreignKey' => $row['foreign_key'], 'routeName' => $row['route_name']];
             foreach (['id', 'salesChannelId', 'foreignKey'] as $column) {
                 if ($row[$column] !== null) {
                     $row[$column] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row[$column]));

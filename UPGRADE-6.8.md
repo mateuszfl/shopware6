@@ -4,6 +4,16 @@
 
 <details>
 
+## Database UUID reads require a shared SQL function
+
+UUID reads were changed to use `sw_uuid_hex(binary_value)`. Before deploying the updated code to an existing database, install the function on the primary with a maintenance account:
+
+```sh
+DATABASE_FUNCTION_INSTALL_URL="$MAINTENANCE_DATABASE_URL" php dev-tools/database/install-functions.php
+```
+
+Grant the runtime account `EXECUTE` on the function and, for PostgreSQL, `USAGE` on its application schema. Ensure the prerequisite has replicated before routing reads to replicas. The maintenance account needs permission to create functions; MySQL binary-log restrictions may require DBA configuration. See [database setup](dev-tools/database/README.md#shared-sql-functions). Runtime connections do not create functions.
+
 ## Document generation v2 is the default
 
 The `DOCUMENT_GENERATION_REWORK` feature flag now defaults to `true`. All Shopware-driven surfaces use document generation v2: the order documents section in the Administration, Flow Builder document actions, mail attachments, bulk edit, and the customer-facing download routes.

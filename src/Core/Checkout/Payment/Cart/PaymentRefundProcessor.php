@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Payment\Cart;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransactionCaptureRefund\OrderTransactionCaptureRefundStateHandler;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransactionCaptureRefund\OrderTransactionCaptureRefundStates;
 use Shopware\Core\Checkout\Payment\Cart\PaymentHandler\AbstractPaymentHandler;
@@ -38,7 +39,7 @@ class PaymentRefundProcessor
             ->innerJoin(self::TABLE_ALIAS, 'order_transaction_capture', 'capture', 'capture.id = refund.capture_id')
             ->innerJoin(self::TABLE_ALIAS, 'order_transaction', 'transaction', 'transaction.id = capture.order_transaction_id')
             ->andWhere('refund.id = :refundId')
-            ->setParameter('refundId', Uuid::fromHexToBytes($refundId))
+            ->setParameter('refundId', Uuid::fromHexToBytes($refundId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchAssociative();
 

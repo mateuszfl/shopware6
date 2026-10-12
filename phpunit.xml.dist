@@ -170,6 +170,8 @@
         <testsuite name="integration">
             <directory>tests/integration</directory>
             <exclude>tests/integration/Core/Framework/DataAbstractionLayer/Contract</exclude>
+            <exclude>tests/integration/Core/Checkout/Contract</exclude>
+            <exclude>tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php</exclude>
         </testsuite>
         <!-- Tests that need a real Redis (nightly redis job); new redis tests must be listed here — the RedisGroupUsage Danger rule points authors to this suite -->
         <testsuite name="redis">
@@ -185,6 +187,7 @@
             <file>tests/integration/Core/Framework/ApiRoutesHaveASchemaTest.php</file>
             <file>tests/integration/Core/Framework/KernelTest.php</file>
             <directory>tests/integration/Core/Framework/Adapter</directory>
+            <exclude>tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php</exclude>
             <directory>tests/integration/Core/Framework/Api</directory>
             <directory>tests/integration/Core/Framework/App</directory>
             <directory>tests/integration/Core/Framework/CustomField</directory>

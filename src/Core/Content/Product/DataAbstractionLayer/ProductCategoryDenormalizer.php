@@ -114,9 +114,9 @@ class ProductCategoryDenormalizer
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            '' . IndexingSql::hex($this->connection, 'product.id') . ' as product_id',
+            'sw_uuid_hex(product.id) as product_id',
             IndexingSql::aggregate($this->connection, 'category.path', '', 'category.id') . ' as paths',
-            IndexingSql::aggregate($this->connection, IndexingSql::hex($this->connection, 'category.id'), '|', 'category.id') . ' as ids',
+            IndexingSql::aggregate($this->connection, 'sw_uuid_hex(category.id)', '|', 'category.id') . ' as ids',
         );
         $query->from('product');
         $query->leftJoin(

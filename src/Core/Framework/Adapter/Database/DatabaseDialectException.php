@@ -16,6 +16,11 @@ use Symfony\Component\HttpFoundation\Response;
 #[Package('framework')]
 final class DatabaseDialectException extends AdapterException
 {
+    public static function functionInstallationFailed(string $reason): self
+    {
+        return new self(Response::HTTP_INTERNAL_SERVER_ERROR, 'FRAMEWORK__DATABASE_FUNCTION_INSTALLATION_FAILED', '{{ reason }}', ['reason' => $reason]);
+    }
+
     public static function invalidIdentifier(string $identifier): self
     {
         return new self(Response::HTTP_BAD_REQUEST, 'FRAMEWORK__INVALID_DATABASE_IDENTIFIER', 'Invalid database identifier "{{ identifier }}".', ['identifier' => $identifier]);

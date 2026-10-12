@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Checkout\Cart\Order;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Cart\Cart;
@@ -52,7 +53,7 @@ class OrderPersisterTest extends TestCase
             ->method('create')
             ->with([['id' => $order->getId()]], $context->getContext());
 
-        $persister = new OrderPersister($repo, $orderConverter, static::createStub(CartSerializationCleaner::class));
+        $persister = new OrderPersister($repo, $orderConverter, static::createStub(CartSerializationCleaner::class), DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]));
         $id = $persister->persist($cart, $context);
 
         static::assertSame('test-id', $id);
@@ -80,6 +81,7 @@ class OrderPersisterTest extends TestCase
             static::createStub(EntityRepository::class),
             static::createStub(OrderConverter::class),
             static::createStub(CartSerializationCleaner::class),
+            DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]),
         );
 
         $this->expectException(CartException::class);
@@ -99,6 +101,7 @@ class OrderPersisterTest extends TestCase
             static::createStub(EntityRepository::class),
             static::createStub(OrderConverter::class),
             static::createStub(CartSerializationCleaner::class),
+            DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]),
         );
 
         $this->expectExceptionObject(CartException::customerNotLoggedIn());
@@ -116,6 +119,7 @@ class OrderPersisterTest extends TestCase
             static::createStub(EntityRepository::class),
             static::createStub(OrderConverter::class),
             static::createStub(CartSerializationCleaner::class),
+            DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]),
         );
 
         $this->expectExceptionObject(new EmptyCartException());
@@ -157,6 +161,7 @@ class OrderPersisterTest extends TestCase
             static::createStub(EntityRepository::class),
             $orderConverter,
             $cartSerializationCleaner,
+            DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]),
         );
 
         $persister->persist($cart, $context);

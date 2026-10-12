@@ -8,7 +8,6 @@ use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\ProductExport\ProductExportEntity;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\MessageQueue\ScheduledTask\ScheduledTaskCollection;
@@ -70,7 +69,7 @@ final class ProductExportGenerateTaskHandler extends ScheduledTaskHandler
     private function fetchSalesChannelIds(): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . '
+            'SELECT sw_uuid_hex(id)
                 FROM sales_channel
                 WHERE type_id IN (:typeIds)
                   AND active = 1',
@@ -88,7 +87,7 @@ final class ProductExportGenerateTaskHandler extends ScheduledTaskHandler
         /** @var list<array<string, mixed>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             '                SELECT
-                    ' . IndexingSql::hex($this->connection, 'product_export.id') . ' AS id,
+                    sw_uuid_hex(product_export.id) AS id,
                     product_export.generated_at,
                     product_export.next_generation_at,
                     product_export.interval,

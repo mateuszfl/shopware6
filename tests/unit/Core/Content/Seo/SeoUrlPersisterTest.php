@@ -261,17 +261,17 @@ class SeoUrlPersisterTest extends TestCase
             ->willReturn([
                 [
                     'id' => $id1,
-                    'languageId' => Uuid::randomBytes(),
-                    'salesChannelId' => Uuid::randomBytes(),
-                    'foreignKey' => Uuid::randomBytes(),
-                    'routeName' => 'test-route',
+                    'language_id' => Uuid::randomBytes(),
+                    'sales_channel_id' => Uuid::randomBytes(),
+                    'foreign_key' => Uuid::randomBytes(),
+                    'route_name' => 'test-route',
                 ],
                 [
                     'id' => $id2,
-                    'languageId' => Uuid::randomBytes(),
-                    'salesChannelId' => Uuid::randomBytes(),
-                    'foreignKey' => Uuid::randomBytes(),
-                    'routeName' => 'test-route',
+                    'language_id' => Uuid::randomBytes(),
+                    'sales_channel_id' => Uuid::randomBytes(),
+                    'foreign_key' => Uuid::randomBytes(),
+                    'route_name' => 'test-route',
                 ],
             ]);
 
@@ -323,10 +323,10 @@ class SeoUrlPersisterTest extends TestCase
         $canonicalResult->method('fetchAllAssociative')->willReturn([
             [
                 'id' => Uuid::randomHex(),
-                'foreignKey' => $foreignKey,
-                'salesChannelId' => $salesChannelId,
-                'isModified' => $existing['isModified'] ? 1 : 0,
-                'seoPathInfo' => $existing['seoPathInfo'],
+                'foreign_key' => $foreignKey,
+                'sales_channel_id' => $salesChannelId,
+                'is_modified' => $existing['isModified'] ? 1 : 0,
+                'seo_path_info' => $existing['seoPathInfo'],
             ],
         ]);
 

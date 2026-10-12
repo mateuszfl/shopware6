@@ -37,11 +37,12 @@ class ReferenceInvoiceLoaderTest extends TestCase
         $this->connection->expects($this->once())->method('createQueryBuilder')->willReturn(
             new FakeQueryBuilder($this->connection, [[
                 'id' => Uuid::randomHex(),
-                'orderId' => $orderId,
-                'orderVersionId' => $orderVersionId,
-                'versionId' => $versionId,
-                'deepLinkCode' => $deepLinkCode,
+                'order_id' => $orderId,
+                'order_version_id' => $orderVersionId,
+                'version_id' => $versionId,
+                'deep_link_code' => $deepLinkCode,
                 'config' => '{}',
+                'document_number' => 'INV-1',
             ]]),
         );
 

@@ -114,7 +114,7 @@ class StockStorage extends AbstractStockStorage
         );
 
         $before = $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', available FROM product WHERE id IN (:ids) AND product.version_id = :version',
+            'SELECT sw_uuid_hex(id), available FROM product WHERE id IN (:ids) AND product.version_id = :version',
             ['ids' => $bytes, 'version' => Uuid::fromHexToBytes($context->getVersionId())],
             ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
@@ -128,7 +128,7 @@ class StockStorage extends AbstractStockStorage
         });
 
         $after = $this->connection->fetchAllKeyValue(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ', available FROM product WHERE id IN (:ids) AND product.version_id = :version',
+            'SELECT sw_uuid_hex(id), available FROM product WHERE id IN (:ids) AND product.version_id = :version',
             ['ids' => $bytes, 'version' => Uuid::fromHexToBytes($context->getVersionId())],
             ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );

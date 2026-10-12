@@ -547,7 +547,7 @@ class RegisterRoute extends AbstractRegisterRoute
         $query = $this->connection->createQueryBuilder();
 
         $results = $query
-            ->select('LOWER(HEX(bound_sales_channel_id)) as bound_sales_channel_id')
+            ->select('sw_uuid_hex(bound_sales_channel_id) as bound_sales_channel_id')
             ->from('customer')
             ->where($query->expr()->eq('email', $query->createPositionalParameter($email)))
             ->executeQuery()

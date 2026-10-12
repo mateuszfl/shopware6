@@ -6,7 +6,6 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Media\Core\Application\MediaPathUpdater;
 use Shopware\Core\Content\Media\DataAbstractionLayer\MediaIndexingMessage;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexer;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexerRegistry;
@@ -56,14 +55,14 @@ class MediaPathPostUpdater extends SynchronousPostUpdateIndexer
         }
 
         $mediaWithMissingPaths = $this->connection->fetchFirstColumn(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media WHERE path IS NULL AND id IN (:ids)',
+            'SELECT sw_uuid_hex(id) FROM media WHERE path IS NULL AND id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );
         $this->updater->updateMedia($mediaWithMissingPaths);
 
         $thumbnailsWithMissingPaths = $this->connection->fetchFirstColumn(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' FROM media_thumbnail WHERE path IS NULL AND media_id IN (:ids)',
+            'SELECT sw_uuid_hex(id) FROM media_thumbnail WHERE path IS NULL AND media_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
             ['ids' => ArrayParameterType::BINARY]
         );

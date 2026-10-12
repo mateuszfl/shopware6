@@ -10,6 +10,7 @@ use Shopware\Core\Checkout\Cart\Price\Struct\CartPrice;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceAccessorBuilder;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceField;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
@@ -115,6 +116,7 @@ class JsonCriteriaContractTest extends TestCase
         if (!$pg && $this->connection->getDatabase() !== 'shopware_json_test') {
             throw new \RuntimeException('The JSON Criteria suite requires its dedicated shopware_json_test database');
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $json = $pg ? 'JSONB' : 'JSON';
         $binary = $pg ? 'BYTEA' : 'BINARY(16)';
         $this->connection->executeStatement("CREATE TABLE sw_json_product (id $binary PRIMARY KEY, payload $json, items $json, config $json, custom_fields $json, price $json, cheapest_price_accessor $json)");

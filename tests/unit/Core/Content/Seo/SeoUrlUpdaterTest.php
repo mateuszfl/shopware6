@@ -76,8 +76,8 @@ class SeoUrlUpdaterTest extends TestCase
 
         $this->connection->method('fetchAllAssociative')->willReturn([
             [
-                'salesChannelId' => Uuid::randomHex(),
-                'languageId' => Uuid::randomHex(),
+                'sales_channel_id' => Uuid::randomHex(),
+                'language_id' => Uuid::randomHex(),
             ],
         ]);
         $this->connection->method('fetchAllKeyValue')->willReturn([]);
@@ -95,8 +95,8 @@ class SeoUrlUpdaterTest extends TestCase
 
         $this->connection->method('fetchAllAssociative')->willReturn([
             [
-                'salesChannelId' => Uuid::randomHex(),
-                'languageId' => Uuid::randomHex(),
+                'sales_channel_id' => Uuid::randomHex(),
+                'language_id' => Uuid::randomHex(),
             ],
         ]);
 
@@ -117,8 +117,8 @@ class SeoUrlUpdaterTest extends TestCase
     {
         $this->connection->method('fetchAllAssociative')->willReturn([
             [
-                'salesChannelId' => Uuid::randomHex(),
-                'languageId' => Uuid::randomHex(),
+                'sales_channel_id' => Uuid::randomHex(),
+                'language_id' => Uuid::randomHex(),
             ],
         ]);
 
@@ -150,8 +150,8 @@ class SeoUrlUpdaterTest extends TestCase
     {
         $this->connection->method('fetchAllAssociative')->willReturn([
             [
-                'salesChannelId' => 'testSalsesChannelId',
-                'languageId' => 'testLanguageId',
+                'sales_channel_id' => 'testSalsesChannelId',
+                'language_id' => 'testLanguageId',
             ],
         ]);
 

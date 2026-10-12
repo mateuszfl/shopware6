@@ -122,7 +122,7 @@ class ScriptPriceStubs implements ResetInterface
     private function resolveIsoCodes(array $prices): array
     {
         if ($this->currencies === null) {
-            $currencies = $this->connection->fetchAllKeyValue('SELECT iso_code, LOWER(HEX(id)) FROM currency');
+            $currencies = $this->connection->fetchAllKeyValue('SELECT iso_code, sw_uuid_hex(id) FROM currency');
             $this->currencies = $currencies;
         }
 

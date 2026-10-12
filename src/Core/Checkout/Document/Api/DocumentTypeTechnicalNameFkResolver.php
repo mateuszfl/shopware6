@@ -45,7 +45,7 @@ class DocumentTypeTechnicalNameFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT technical_name, LOWER(HEX(id)) FROM document_type WHERE technical_name IN (:names)',
+            'SELECT technical_name, sw_uuid_hex(id) FROM document_type WHERE technical_name IN (:names)',
             ['names' => $names],
             ['names' => ArrayParameterType::STRING]
         );

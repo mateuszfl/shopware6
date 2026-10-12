@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Customer\Api;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerCollection;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Checkout\Customer\CustomerException;
@@ -63,7 +64,8 @@ class ConvertGuestController
             [
                 'customerId' => Uuid::fromHexToBytes($customerId),
                 'salesChannelId' => Uuid::fromHexToBytes($customer->getSalesChannelId()),
-            ]
+            ],
+            ['customerId' => ParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY]
         ) ?: Random::getAlphanumericString(32);
 
         $salesChannelContext = $this->contextService->get(

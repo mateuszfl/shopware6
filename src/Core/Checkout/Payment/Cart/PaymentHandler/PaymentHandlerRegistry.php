@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Payment\Cart\PaymentHandler;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\App\Payment\Handler\AppPaymentHandler;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -46,7 +47,7 @@ class PaymentHandlerRegistry
                 'payment_method.id = app_payment_method.payment_method_id'
             )
             ->andWhere('payment_method.id = :paymentMethodId')
-            ->setParameter('paymentMethodId', Uuid::fromHexToBytes($paymentMethodId))
+            ->setParameter('paymentMethodId', Uuid::fromHexToBytes($paymentMethodId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchAssociative();
 

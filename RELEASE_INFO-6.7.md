@@ -2,6 +2,19 @@
 
 ## Core
 
+### Checkout persistence and promotion codes
+
+Checkout order persistence now groups database writes, stock changes and individual
+promotion-code redemption in one transaction. Concurrent use of the same individual
+code rejects the losing order. The existing negative-stock policy is unchanged.
+Promotion exclusion repairs serialize reciprocal graph updates; large promotion
+sets can increase write contention. See [the checkout SQL contract](dev-tools/database/CHECKOUT_SQL_CONTRACT.md)
+for the standalone persister boundary and external event-side-effect limitations.
+
+### Shared database function prerequisite for UUID reads
+
+Database UUID reads use `sw_uuid_hex(binary_value)` on MySQL/MariaDB and PostgreSQL. Before deploying this code to an existing database, run `dev-tools/database/install-functions.php` with `DATABASE_FUNCTION_INSTALL_URL` pointing to the primary database and a maintenance account authorized to create functions. Runtime accounts require `EXECUTE`; PostgreSQL accounts also require `USAGE` on the application schema. Connection creation does not install functions. See [database setup](dev-tools/database/README.md#shared-sql-functions) for permissions and replication requirements.
+
 ### Content cleanup and workflow ordering preserve database semantics
 
 Media cleanup recognizes CMS references in category, product and landing page overrides across slot versions and literal custom field names, including media select values. Used media remain protected when cleanup advances through multiple batches and folder restrictions.

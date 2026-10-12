@@ -5,7 +5,6 @@ namespace Shopware\Core\Content\Media\Subscriber;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderDefinition;
 use Shopware\Core\Content\Media\MediaDefinition;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\BeforeEntityAggregationEvent;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntitySearchedEvent;
@@ -162,7 +161,7 @@ class MediaVisibilityRestrictionSubscriber implements EventSubscriberInterface, 
         }
 
         $folderId = $this->connection->fetchOne(
-            'SELECT ' . IndexingSql::hex($this->connection, 'media_folder.id') . '
+            'SELECT sw_uuid_hex(media_folder.id)
                 FROM media_folder
                 INNER JOIN media_default_folder
                     ON media_default_folder.id = media_folder.default_folder_id

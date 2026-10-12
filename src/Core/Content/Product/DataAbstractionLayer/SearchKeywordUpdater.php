@@ -12,7 +12,6 @@ use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\SearchKeyword\ProductSearchKeywordAnalyzerInterface;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
@@ -370,7 +369,7 @@ class SearchKeywordUpdater implements ResetInterface
         }
 
         $query = $this->connection->createQueryBuilder();
-        $query->select('configField.field', 'configField.tokenize', 'configField.ranking', '' . IndexingSql::hex($this->connection, 'config.language_id') . ' as language_id');
+        $query->select('configField.field', 'configField.tokenize', 'configField.ranking', 'sw_uuid_hex(config.language_id) as language_id');
         $query->from('product_search_config', 'config');
         $query->join('config', 'product_search_config_field', 'configField', 'config.id = configField.product_search_config_id');
         $query->andWhere('config.language_id IN (:languageIds)');

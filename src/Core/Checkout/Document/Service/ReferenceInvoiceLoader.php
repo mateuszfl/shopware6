@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Document\Service;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Document\Renderer\InvoiceRenderer;
 use Shopware\Core\Checkout\Document\Renderer\ZugferdEmbeddedRenderer;
 use Shopware\Core\Checkout\Document\Renderer\ZugferdRenderer;
@@ -32,32 +33,37 @@ final readonly class ReferenceInvoiceLoader
         $builder = $this->connection->createQueryBuilder();
 
         $builder->select(
-            'LOWER(HEX(`document`.`id`)) as id',
-            'LOWER(HEX(`document`.`order_id`)) as orderId',
-            'LOWER(HEX(`document`.`order_version_id`)) as orderVersionId',
-            'LOWER(HEX(`order`.`version_id`)) as versionId',
-            '`order`.`deep_link_code` as deepLinkCode',
-            '`document`.`config` as config',
-            '`document`.`document_number` as documentNumber',
-        )->from('`document`', '`document`')
-            ->innerJoin('`document`', '`document_type`', '`document_type`', '`document`.`document_type_id` = `document_type`.`id`')
-            ->innerJoin('`document`', '`order`', '`order`', '`document`.`order_id` = `order`.`id`');
+            'sw_uuid_hex(document.id) as id',
+            'sw_uuid_hex(document.order_id) as order_id',
+            'sw_uuid_hex(document.order_version_id) as order_version_id',
+            'sw_uuid_hex(orders.version_id) as version_id',
+            'orders.deep_link_code as deep_link_code',
+            'document.config as config',
+            'document.document_number as document_number',
+        )->from('document', 'document')
+            ->innerJoin('document', 'document_type', 'document_type', 'document.document_type_id = document_type.id')
+            ->innerJoin('document', $this->connection->quoteSingleIdentifier('order'), 'orders', 'document.order_id = orders.id');
 
-        $builder->where('`document_type`.`technical_name` IN (:technicalNames)')
-            ->andWhere('`document`.`order_id` = :orderId');
+        $builder->where('document_type.technical_name IN (:technicalNames)')
+            ->andWhere('document.order_id = :orderId');
 
         $builder->setParameter('technicalNames', [InvoiceRenderer::TYPE, ZugferdRenderer::TYPE, ZugferdEmbeddedRenderer::TYPE], ArrayParameterType::STRING);
-        $builder->setParameter('orderId', Uuid::fromHexToBytes($orderId));
+        $builder->setParameter('orderId', Uuid::fromHexToBytes($orderId), ParameterType::BINARY);
 
-        $builder->orderBy('`document`.`sent`', 'DESC');
-        $builder->addOrderBy('`document`.`created_at`', 'DESC');
+        $builder->orderBy('document.sent', 'DESC');
+        $builder->addOrderBy('document.created_at', 'DESC');
+        $builder->addOrderBy('document.id', 'DESC');
 
         if ($referenceDocumentId && Uuid::isValid($referenceDocumentId)) {
-            $builder->andWhere('`document`.`id` = :documentId');
-            $builder->setParameter('documentId', Uuid::fromHexToBytes($referenceDocumentId));
+            $builder->andWhere('document.id = :documentId');
+            $builder->setParameter('documentId', Uuid::fromHexToBytes($referenceDocumentId), ParameterType::BINARY);
         }
 
-        $documents = $builder->executeQuery()->fetchAllAssociative();
+        $documents = array_map(static fn (array $row): array => [
+            'id' => $row['id'], 'orderId' => $row['order_id'], 'orderVersionId' => $row['order_version_id'],
+            'versionId' => $row['version_id'], 'deepLinkCode' => $row['deep_link_code'], 'config' => $row['config'],
+            'documentNumber' => $row['document_number'],
+        ], $builder->executeQuery()->fetchAllAssociative());
 
         if ($documents === []) {
             return [];

@@ -8,7 +8,6 @@ use Doctrine\DBAL\ParameterType;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceContainer;
 use Shopware\Core\Content\Product\Events\ProductIndexerEvent;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
@@ -61,7 +60,7 @@ class CheapestPriceUpdater
         $existingAccessorsByParent = [];
         if ($all !== []) {
             $rows = $this->connection->fetchAllAssociative(
-                'SELECT ' . IndexingSql::hex($this->connection, 'parent_id') . ' AS parent_id, id AS id, cheapest_price_accessor AS accessor
+                'SELECT sw_uuid_hex(parent_id) AS parent_id, id AS id, cheapest_price_accessor AS accessor
                  FROM product
                  WHERE parent_id IN (:ids) AND version_id = :version',
                 ['ids' => Uuid::fromHexToBytesList(array_keys($all)), 'version' => $versionId],
@@ -197,10 +196,10 @@ class CheapestPriceUpdater
     {
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            '' . IndexingSql::hex($this->connection, 'COALESCE(product.parent_id, product.id)') . ' as parent_id',
-            '' . IndexingSql::hex($this->connection, 'product.id') . ' as variant_id',
-            '' . IndexingSql::hex($this->connection, 'price.rule_id') . ' as rule_id',
-            '' . IndexingSql::hex($this->connection, 'COALESCE(product.unit_id, parent.unit_id)') . ' as unit_id',
+            'sw_uuid_hex(COALESCE(product.parent_id, product.id)) as parent_id',
+            'sw_uuid_hex(product.id) as variant_id',
+            'sw_uuid_hex(price.rule_id) as rule_id',
+            'sw_uuid_hex(COALESCE(product.unit_id, parent.unit_id)) as unit_id',
             'COALESCE(product.purchase_unit, parent.purchase_unit) as purchase_unit',
             'COALESCE(product.reference_unit, parent.reference_unit) as reference_unit',
             'COALESCE(product.min_purchase, parent.min_purchase) as min_purchase',
@@ -228,13 +227,13 @@ class CheapestPriceUpdater
 
         $query = $this->connection->createQueryBuilder();
         $query->select(
-            '' . IndexingSql::hex($this->connection, 'COALESCE(product.parent_id, product.id)') . ' as parent_id',
-            '' . IndexingSql::hex($this->connection, 'product.id') . ' as variant_id',
+            'sw_uuid_hex(COALESCE(product.parent_id, product.id)) as parent_id',
+            'sw_uuid_hex(product.id) as variant_id',
             'NULL as rule_id',
             '0 AS is_ranged',
             'product.price as price',
             'COALESCE(product.min_purchase, parent.min_purchase) as min_purchase',
-            '' . IndexingSql::hex($this->connection, 'COALESCE(product.unit_id, parent.unit_id)') . ' as unit_id',
+            'sw_uuid_hex(COALESCE(product.unit_id, parent.unit_id)) as unit_id',
             'COALESCE(product.purchase_unit, parent.purchase_unit) as purchase_unit',
             'COALESCE(product.reference_unit, parent.reference_unit) as reference_unit',
             'product.child_count as child_count',
@@ -302,7 +301,7 @@ class CheapestPriceUpdater
         }
 
         $results = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'product_id') . ' as product_id, ' . IndexingSql::hex($this->connection, 'sales_channel_id') . ' as sales_channel_id
+            'SELECT sw_uuid_hex(product_id) as product_id, sw_uuid_hex(sales_channel_id) as sales_channel_id
              FROM product_visibility
              WHERE product_id IN (:ids)
              AND product_version_id = :version',

@@ -165,17 +165,17 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/plain',
-                'seoPathInfo' => 'Main-product/SWDEMO10001',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/plain',
+                'seo_path_info' => 'Main-product/SWDEMO10001',
             ],
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/query',
-                'seoPathInfo' => 'Main-product/SWDEMO10001?test=123',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/query',
+                'seo_path_info' => 'Main-product/SWDEMO10001?test=123',
             ],
         ], $connection);
         $secondResult = FakeResultFactory::createResult([], $connection);
@@ -199,10 +199,10 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/plain',
-                'seoPathInfo' => 'Main-product/SWDEMO10001',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/plain',
+                'seo_path_info' => 'Main-product/SWDEMO10001',
             ],
         ], $connection);
         $secondResult = FakeResultFactory::createResult([], $connection);
@@ -231,10 +231,10 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/flag',
-                'seoPathInfo' => 'Latest-Product/SW10005?test12345',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/flag',
+                'seo_path_info' => 'Latest-Product/SW10005?test12345',
             ],
         ], $connection);
         $secondResult = FakeResultFactory::createResult([], $connection);
@@ -265,10 +265,10 @@ class SeoResolverTest extends TestCase
         $matchResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/flag',
-                'seoPathInfo' => $storedSeoPath,
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/flag',
+                'seo_path_info' => $storedSeoPath,
             ],
         ], $connection);
         $emptyResult = FakeResultFactory::createResult([], $connection);
@@ -343,10 +343,10 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => $foreignId,
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/1234',
-                'seoPathInfo' => 'awesome-product',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/1234',
+                'seo_path_info' => 'awesome-product',
             ],
         ], $connection);
         $secondResult = FakeResultFactory::createResult([], $connection);
@@ -377,17 +377,17 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/plain',
-                'seoPathInfo' => 'Main-product/SWDEMO10001',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/plain',
+                'seo_path_info' => 'Main-product/SWDEMO10001',
             ],
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => true,
-                'pathInfo' => '/detail/variant',
-                'seoPathInfo' => 'Main-product/SWDEMO10001?test=123',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => true,
+                'path_info' => '/detail/variant',
+                'seo_path_info' => 'Main-product/SWDEMO10001?test=123',
             ],
         ], $connection);
         $secondResult = FakeResultFactory::createResult([], $connection);
@@ -417,17 +417,17 @@ class SeoResolverTest extends TestCase
         $firstResult = FakeResultFactory::createResult([
             [
                 'id' => Uuid::randomBytes(),
-                'salesChannelId' => $salesChannelId,
-                'isCanonical' => false,
-                'pathInfo' => '/detail/1234',
-                'seoPathInfo' => 'old-slug',
+                'sales_channel_id' => $salesChannelId,
+                'is_canonical' => false,
+                'path_info' => '/detail/1234',
+                'seo_path_info' => 'old-slug',
             ],
         ], $connection);
         // Second query: fallback canonical lookup finds the canonical sibling for /detail/1234.
         $secondResult = FakeResultFactory::createResult([
             [
-                'pathInfo' => '/detail/1234',
-                'seoPathInfo' => 'awesome-product-v2',
+                'path_info' => '/detail/1234',
+                'seo_path_info' => 'awesome-product-v2',
             ],
         ], $connection);
 
@@ -447,14 +447,14 @@ class SeoResolverTest extends TestCase
         $mock = $this->connection();
         $firstResult = FakeResultFactory::createResult([[
             'id' => Uuid::randomBytes(),
-            'salesChannelId' => $salesChannelId,
-            'isCanonical' => $isCanonical,
-            'pathInfo' => $pathInfo,
+            'sales_channel_id' => $salesChannelId,
+            'is_canonical' => $isCanonical,
+            'path_info' => $pathInfo,
         ]], $mock);
         $canonicalResult = FakeResultFactory::createResult([[
             'id' => Uuid::randomBytes(),
-            'isCanonical' => $isCanonical,
-            'seoPathInfo' => $pathInfo,
+            'is_canonical' => $isCanonical,
+            'seo_path_info' => $pathInfo,
         ]], $mock);
 
         $mock

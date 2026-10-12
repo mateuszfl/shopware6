@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Customer\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Order\OrderDefinition;
 use Shopware\Core\Checkout\Order\OrderStates;
 use Shopware\Core\Defaults;
@@ -80,9 +81,9 @@ class CustomerMetaFieldSubscriber implements EventSubscriberInterface
         }
 
         $customerIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(customer_id)) FROM `order_customer` WHERE order_id IN (:ids) AND order_version_id = :version AND customer_id IS NOT NULL',
+            'SELECT DISTINCT sw_uuid_hex(customer_id) FROM order_customer WHERE order_id IN (:ids) AND order_version_id = :version AND customer_id IS NOT NULL',
             ['ids' => Uuid::fromHexToBytesList($orderIds), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY]
         );
 
         if ($customerIds === []) {
@@ -96,37 +97,39 @@ class CustomerMetaFieldSubscriber implements EventSubscriberInterface
         ];
         $types = [
             'customerIds' => ArrayParameterType::BINARY,
+            'version' => ParameterType::BINARY,
         ];
 
         $whereOrder = '';
         if ($isDelete) {
-            $whereOrder = 'AND `order`.id NOT IN (:exceptOrderIds)';
+            $whereOrder = 'AND orders.id NOT IN (:exceptOrderIds)';
             $parameters['exceptOrderIds'] = Uuid::fromHexToBytesList($orderIds);
             $types['exceptOrderIds'] = ArrayParameterType::BINARY;
         }
 
-        $select = '
-            SELECT LOWER(HEX(`order_customer`.customer_id)) as customer_id,
-                   `order_customer`.customer_id as id,
-                   COUNT(`order`.id) as order_count,
-                   ROUND(SUM(`order`.amount_total / `order`.currency_factor), 2) as order_total_amount,
-                   MAX(`order`.order_date_time) as last_order_date
+        $orderTable = $this->connection->quoteSingleIdentifier('order');
+        $select = "
+            SELECT sw_uuid_hex(order_customer.customer_id) as customer_id,
+                   order_customer.customer_id as id,
+                   COUNT(orders.id) as order_count,
+                   ROUND(SUM(orders.amount_total / orders.currency_factor), 2) as order_total_amount,
+                   MAX(orders.order_date_time) as last_order_date
 
-            FROM `order_customer`
+            FROM order_customer
 
-            INNER JOIN `order`
-                ON `order`.id = `order_customer`.order_id
-                AND `order`.version_id = `order_customer`.order_version_id
-                AND `order`.version_id = :version
-                ' . $whereOrder . '
+            INNER JOIN {$orderTable} orders
+                ON orders.id = order_customer.order_id
+                AND orders.version_id = order_customer.order_version_id
+                AND orders.version_id = :version
+                {$whereOrder}
 
-            INNER JOIN `state_machine_state`
-                ON `state_machine_state`.id = `order`.state_id
-                AND `state_machine_state`.technical_name = :state
+            INNER JOIN state_machine_state
+                ON state_machine_state.id = orders.state_id
+                AND state_machine_state.technical_name = :state
 
-            WHERE `order_customer`.customer_id IN (:customerIds)
-            GROUP BY `order_customer`.customer_id
-        ';
+            WHERE order_customer.customer_id IN (:customerIds)
+            GROUP BY order_customer.customer_id
+        ";
 
         $data = [];
         foreach ($customerIds as $customerId) {
@@ -145,10 +148,12 @@ class CustomerMetaFieldSubscriber implements EventSubscriberInterface
 
         $update = new RetryableQuery(
             $this->connection,
-            $this->connection->prepare('UPDATE `customer` SET order_count = :order_count, order_total_amount = :order_total_amount, last_order_date = :last_order_date WHERE id = :id')
+            $this->connection->prepare('UPDATE customer SET order_count = :order_count, order_total_amount = :order_total_amount, last_order_date = :last_order_date WHERE id = :id'),
+            ['id' => ParameterType::BINARY, 'order_count' => ParameterType::INTEGER]
         );
 
         foreach ($data as $record) {
+            $record['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($record['id']));
             $update->execute($record);
         }
     }

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Customer\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerEvents;
 use Shopware\Core\Checkout\Customer\DataAbstractionLayer\CustomerIndexingMessage;
 use Shopware\Core\Checkout\Customer\Event\CustomerRegisterEvent;
@@ -65,7 +66,7 @@ class CustomerFlowEventsSubscriber implements EventSubscriberInterface
                 }
 
                 if ($context->getSource() instanceof AdminApiSource && \is_string($payload['id'])) {
-                    $this->connection->delete('customer', ['id' => Uuid::fromHexToBytes($payload['id'])]);
+                    $this->connection->delete('customer', ['id' => Uuid::fromHexToBytes($payload['id'])], ['id' => ParameterType::BINARY]);
                 }
 
                 throw $exception;

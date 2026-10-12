@@ -4,6 +4,7 @@ namespace Shopware\Core\Checkout\Document\Renderer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Checkout\Cart\Price\Struct\CartPrice;
@@ -347,7 +348,7 @@ final class CreditNoteRenderer extends AbstractDocumentRenderer
 
         $sql = '
             SELECT
-                oli.id AS id
+                sw_uuid_hex(oli.id) AS id
             FROM
                 document AS d
                 INNER JOIN order_line_item AS oli ON oli.order_id = d.order_id AND oli.order_version_id = d.order_version_id
@@ -374,9 +375,9 @@ final class CreditNoteRenderer extends AbstractDocumentRenderer
             'referencedInvoiceId' => Uuid::fromHexToBytes($referencedInvoiceId),
             'creditType' => LineItem::CREDIT_LINE_ITEM_TYPE,
             'liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
-        ]);
+        ], ['referencedInvoiceId' => ParameterType::BINARY, 'liveVersionId' => ParameterType::BINARY]);
 
-        return array_map(static fn ($id): string => Uuid::fromBytesToHex($id), $binaryIds);
+        return array_map(static fn ($id): string => (string) $id, $binaryIds);
     }
 
     /**
@@ -390,7 +391,7 @@ final class CreditNoteRenderer extends AbstractDocumentRenderer
 
         $sql = '
             SELECT
-                oli.id AS id
+                sw_uuid_hex(oli.id) AS id
             FROM
                 document AS d
                 INNER JOIN document_type AS dt ON dt.id = d.document_type_id
@@ -407,8 +408,8 @@ final class CreditNoteRenderer extends AbstractDocumentRenderer
             'creditType' => LineItem::CREDIT_LINE_ITEM_TYPE,
         ], [
             'creditTechnicalName' => ArrayParameterType::STRING,
-        ]);
+            'referencedInvoiceId' => ParameterType::BINARY]);
 
-        return array_map(static fn ($id): string => Uuid::fromBytesToHex($id), $binaryIds);
+        return array_map(static fn ($id): string => (string) $id, $binaryIds);
     }
 }

@@ -7,7 +7,6 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\Log\Package;
@@ -57,7 +56,7 @@ class CategoryBreadcrumbUpdater
     {
         /** @var list<array{id: string, parent_id: string|null}> $languages */
         $languages = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'id') . ' AS id, ' . IndexingSql::hex($this->connection, 'parent_id') . ' AS parent_id FROM language WHERE active = 1'
+            'SELECT sw_uuid_hex(id) AS id, sw_uuid_hex(parent_id) AS parent_id FROM language WHERE active = 1'
         );
 
         return $languages;
@@ -125,8 +124,8 @@ class CategoryBreadcrumbUpdater
         }
 
         $query->select(
-            '' . IndexingSql::hex($this->connection, 'category.id') . ' AS id',
-            '' . IndexingSql::hex($this->connection, 'category.parent_id') . ' AS parent_id',
+            'sw_uuid_hex(category.id) AS id',
+            'sw_uuid_hex(category.parent_id) AS parent_id',
             'COALESCE(' . implode(', ', $coalesce) . ') AS name'
         );
 

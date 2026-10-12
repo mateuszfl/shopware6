@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Checkout\Document\Renderer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -289,12 +290,12 @@ class ZugferdCreditNoteRendererTest extends TestCase
     ): ZugferdCreditNoteRenderer {
         $invoiceData = [
             'id' => self::INVOICE_ID,
-            'orderId' => self::ORDER_ID,
-            'orderVersionId' => Defaults::LIVE_VERSION,
-            'versionId' => Defaults::LIVE_VERSION,
-            'deepLinkCode' => '',
+            'order_id' => self::ORDER_ID,
+            'order_version_id' => Defaults::LIVE_VERSION,
+            'version_id' => Defaults::LIVE_VERSION,
+            'deep_link_code' => '',
             'config' => '{"documentNumber":"1000"}',
-            'documentNumber' => '1000',
+            'document_number' => '1000',
         ];
 
         $orderRepository = static::createStub(EntityRepository::class);
@@ -310,6 +311,8 @@ class ZugferdCreditNoteRendererTest extends TestCase
             ));
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchAllAssociative')->willReturn([
             ['language_id' => Defaults::LANGUAGE_SYSTEM, 'ids' => self::ORDER_ID],
         ]);
@@ -317,10 +320,10 @@ class ZugferdCreditNoteRendererTest extends TestCase
         $connection->method('fetchFirstColumn')
             ->willReturnCallback(static function (string $sql, array $params) use ($invoicedCreditIds, $creditNoteCreditIds): array {
                 if (\array_key_exists('creditTechnicalName', $params)) {
-                    return array_map(static fn (string $id) => Uuid::fromHexToBytes($id), $creditNoteCreditIds);
+                    return $creditNoteCreditIds;
                 }
 
-                return array_map(static fn (string $id) => Uuid::fromHexToBytes($id), $invoicedCreditIds);
+                return $invoicedCreditIds;
             });
 
         $eventDispatcher = static::createStub(EventDispatcherInterface::class);

@@ -4,6 +4,7 @@ namespace Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contrac
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 
 /**
@@ -37,6 +38,7 @@ final class DatabaseContractFixture
         }
 
         $this->tearDown();
+        (new DatabaseFunctionInstaller())->install($this->primary);
 
         foreach ($this->schemaStatements() as $statement) {
             $this->primary->executeStatement($statement);

@@ -6,7 +6,6 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Sitemap\Struct\UrlResult;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
@@ -31,7 +30,7 @@ abstract class AbstractUrlProvider
      */
     protected function getSeoUrls(array $ids, string $routeName, SalesChannelContext $context, Connection $connection): array
     {
-        $sql = 'SELECT ' . IndexingSql::hex($connection, 'foreign_key') . ' as foreign_key, seo_path_info
+        $sql = 'SELECT sw_uuid_hex(foreign_key) as foreign_key, seo_path_info
                     FROM seo_url WHERE foreign_key IN (:ids)
                      AND seo_url.route_name =:routeName
                      AND seo_url.is_canonical = 1

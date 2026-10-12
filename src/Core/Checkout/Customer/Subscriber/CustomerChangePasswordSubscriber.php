@@ -3,6 +3,7 @@
 namespace Shopware\Core\Checkout\Customer\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\CustomerEvents;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenEvent;
 use Shopware\Core\Framework\Log\Package;
@@ -45,10 +46,11 @@ class CustomerChangePasswordSubscriber implements EventSubscriberInterface
     private function clearLegacyPassword(string $customerId): void
     {
         $this->connection->executeStatement(
-            'UPDATE `customer` SET `legacy_password` = null, `legacy_encoder` = null WHERE id = :id',
+            'UPDATE customer SET legacy_password = null, legacy_encoder = null WHERE id = :id',
             [
                 'id' => Uuid::fromHexToBytes($customerId),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
     }
 }

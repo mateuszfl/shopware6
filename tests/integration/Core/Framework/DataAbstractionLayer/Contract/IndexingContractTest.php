@@ -83,6 +83,7 @@ use Shopware\Core\Content\Rule\RuleDefinition;
 use Shopware\Core\Content\Rule\RuleEntity;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
+use Shopware\Core\Framework\Adapter\Database\DatabaseFunctionInstaller;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
@@ -173,6 +174,7 @@ class IndexingContractTest extends TestCase
             static::assertMatchesRegularExpression('/^(8\.4\.11|11\.8\.9-MariaDB)/', $version);
             $this->engine = str_contains($version, 'MariaDB') ? 'MariaDB 11.8.9' : 'MySQL 8.4.11';
         }
+        (new DatabaseFunctionInstaller())->install($this->connection);
         $binary = $this->postgres ? 'BYTEA' : 'BINARY(16)';
         $blob = $this->postgres ? 'BYTEA' : 'LONGBLOB';
         $json = $this->postgres ? 'JSONB' : 'JSON';

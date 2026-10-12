@@ -7,7 +7,6 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Seo\Hreflang\HreflangCollection;
 use Shopware\Core\Content\Seo\Hreflang\HreflangStruct;
-use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Component\Routing\RouterInterface;
@@ -100,12 +99,12 @@ class HreflangLoader implements HreflangLoaderInterface
      */
     private function fetchSalesChannelDomains(string $salesChannelId): array
     {
-        /** @var list<array{languageId: string, id: string, url: string, locale: string, onlyLocale: bool}> $result */
+        /** @var list<array{language_id: string, id: string, url: string, locale: string, only_locale: bool}> $result */
         $result = $this->connection->fetchAllAssociative(
-            'SELECT ' . IndexingSql::hex($this->connection, 'domain.language_id') . ' AS ' . $this->connection->quoteSingleIdentifier('languageId') . ',
-                          ' . IndexingSql::hex($this->connection, 'domain.id') . ' AS id,
-                          domain.url AS url,
-                          domain.hreflang_use_only_locale AS ' . $this->connection->quoteSingleIdentifier('onlyLocale') . ',
+            'SELECT sw_uuid_hex(domain.language_id) AS language_id,
+                          sw_uuid_hex(domain.id) AS id,
+                          domain.url,
+                          domain.hreflang_use_only_locale AS only_locale,
                           locale.code AS locale
             FROM sales_channel_domain AS domain
             INNER JOIN language ON language.id = domain.language_id
@@ -115,7 +114,7 @@ class HreflangLoader implements HreflangLoaderInterface
             ['salesChannelId' => ParameterType::BINARY]
         );
 
-        return $result;
+        return array_map(static fn (array $row): array => ['languageId' => $row['language_id'], 'id' => $row['id'], 'url' => $row['url'], 'locale' => $row['locale'], 'onlyLocale' => (bool) $row['only_locale']], $result);
     }
 
     /**
@@ -173,9 +172,9 @@ class HreflangLoader implements HreflangLoaderInterface
      */
     private function fetchSeoUrls(string $pathInfo, string $salesChannelId, array $languageIds): array
     {
-        /** @var list<array{seoPathInfo: string, languageId: string}> $result */
+        /** @var list<array{seo_path_info: string, language_id: string}> $result */
         $result = $this->connection->fetchAllAssociative(
-            'SELECT seo_path_info AS ' . $this->connection->quoteSingleIdentifier('seoPathInfo') . ', ' . IndexingSql::hex($this->connection, 'language_id') . ' AS ' . $this->connection->quoteSingleIdentifier('languageId') . '
+            'SELECT seo_path_info, sw_uuid_hex(language_id) AS language_id
             FROM seo_url
             WHERE path_info = :pathInfo AND is_canonical = 1 AND
                   sales_channel_id = :salesChannelId AND language_id IN (:languageIds)',
@@ -183,6 +182,6 @@ class HreflangLoader implements HreflangLoaderInterface
             ['languageIds' => ArrayParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY]
         );
 
-        return $result;
+        return array_map(static fn (array $row): array => ['seoPathInfo' => $row['seo_path_info'], 'languageId' => $row['language_id']], $result);
     }
 }

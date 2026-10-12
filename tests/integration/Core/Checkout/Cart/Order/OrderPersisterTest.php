@@ -2,6 +2,7 @@
 
 namespace Shopware\Tests\Integration\Core\Checkout\Cart\Order;
 
+use Doctrine\DBAL\Connection;
 use Faker\Factory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -103,7 +104,7 @@ class OrderPersisterTest extends TestCase
             )
         );
 
-        $persister = new OrderPersister($repository, $this->orderConverter, $this->serializationCleaner);
+        $persister = new OrderPersister($repository, $this->orderConverter, $this->serializationCleaner, static::getContainer()->get(Connection::class));
 
         $persister->persist($cart, $this->getSalesChannelContext());
     }
