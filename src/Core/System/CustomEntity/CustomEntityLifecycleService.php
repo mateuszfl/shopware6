@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Shopware\Core\System\CustomEntity;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Framework\App\AppEntity;
 use Shopware\Core\Framework\App\Source\SourceResolver;
@@ -62,7 +63,8 @@ class CustomEntityLifecycleService
     {
         $entities = $this->connection->fetchFirstColumn(
             'SELECT fields FROM custom_entity WHERE app_id = :id',
-            ['id' => Uuid::fromHexToBytes($app->getId())]
+            ['id' => Uuid::fromHexToBytes($app->getId())],
+            ['id' => ParameterType::BINARY]
         );
 
         foreach ($entities as $fields) {
@@ -84,7 +86,8 @@ class CustomEntityLifecycleService
     {
         $entities = $this->connection->fetchAllKeyValue(
             'SELECT name, fields FROM custom_entity WHERE app_id = :id',
-            ['id' => Uuid::fromHexToBytes($app->getId())]
+            ['id' => Uuid::fromHexToBytes($app->getId())],
+            ['id' => ParameterType::BINARY]
         );
 
         foreach ($entities as $table => $fields) {

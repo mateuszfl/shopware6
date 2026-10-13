@@ -4,6 +4,7 @@ namespace Shopware\Core\System\UsageData\Services;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
@@ -43,21 +44,21 @@ class ManyToManyAssociationService
             $primaryKeyFields = $mappingDefinition->getPrimaryKeys()->getElements();
 
             $queryBuilder = (new QueryBuilder($this->connection))
-                ->select(EntityDefinitionQueryHelper::escape($referenceColumn), EntityDefinitionQueryHelper::escape($localColumn))
-                ->from(EntityDefinitionQueryHelper::escape($mappingDefinition->getEntityName()))
-                ->where(EntityDefinitionQueryHelper::escape($localColumn) . ' IN (:ids)');
+                ->select(EntityDefinitionQueryHelper::escape($referenceColumn, $this->connection), EntityDefinitionQueryHelper::escape($localColumn, $this->connection))
+                ->from(EntityDefinitionQueryHelper::escape($mappingDefinition->getEntityName(), $this->connection))
+                ->where(EntityDefinitionQueryHelper::escape($localColumn, $this->connection) . ' IN (:ids)');
 
             $entityPrimaryKeyIds = [];
             foreach (array_column($primaryKeys, $primaryKeyName) as $value) {
                 $entityPrimaryKeyIds[] = Uuid::fromHexToBytes($value);
             }
 
-            $queryBuilder->setParameter('ids', $entityPrimaryKeyIds, ArrayParameterType::STRING);
+            $queryBuilder->setParameter('ids', $entityPrimaryKeyIds, ArrayParameterType::BINARY);
             $queryBuilder = $this->addReferenceVersionFieldConstraint($queryBuilder, $primaryKeyFields);
 
             $manyToManyMappingQueryResult = $queryBuilder->executeQuery()->fetchAllAssociative();
             foreach ($manyToManyMappingQueryResult as $mappingData) {
-                $mappingIds[$propertyName][$mappingData[$localColumn]][] = Uuid::fromBytesToHex($mappingData[$referenceColumn]);
+                $mappingIds[$propertyName][Uuid::fromHexToBytes(Uuid::fromBytesToHex($mappingData[$localColumn]))][] = Uuid::fromBytesToHex($mappingData[$referenceColumn]);
             }
         }
 
@@ -74,12 +75,12 @@ class ManyToManyAssociationService
         foreach ($primaryKeys as $primaryKey) {
             if ($primaryKey instanceof ReferenceVersionField) {
                 $hasReferenceVersionFields = true;
-                $queryBuilder->andWhere(EntityDefinitionQueryHelper::escape($primaryKey->getStorageName()) . ' = UNHEX(:versionId)');
+                $queryBuilder->andWhere(EntityDefinitionQueryHelper::escape($primaryKey->getStorageName(), $this->connection) . ' = :versionId');
             }
         }
 
         if ($hasReferenceVersionFields) {
-            $queryBuilder->setParameter('versionId', Defaults::LIVE_VERSION);
+            $queryBuilder->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
         }
 
         return $queryBuilder;

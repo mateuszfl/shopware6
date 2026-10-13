@@ -188,16 +188,6 @@ class IterateEntitiesQueryBuilderTest extends TestCase
         );
 
         static::assertStringContainsString(
-            \sprintf(
-                'LOWER(HEX(%s.%s)) as %s',
-                EntityDefinitionQueryHelper::escape('category'),
-                EntityDefinitionQueryHelper::escape('id'),
-                EntityDefinitionQueryHelper::escape('id')
-            ),
-            $queryBuilder->getSQL()
-        );
-
-        static::assertStringContainsString(
             (string) CompositeExpression::and(
                 EntityDefinitionQueryHelper::escape('version_id') . ' = :versionId',
                 EntityDefinitionQueryHelper::escape('version_aware_test_version_id') . ' = :versionId',

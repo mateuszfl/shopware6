@@ -4,6 +4,7 @@ namespace Shopware\Core\System\CustomEntity\Schema;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Api\ApiDefinition\Generator\CachedEntitySchemaGenerator;
@@ -35,55 +36,61 @@ class CustomEntityPersister
         ?string $extensionEntityType = null,
         ?string $extensionId = null
     ): void {
-        $names = array_column($customEntities, 'name');
+        $this->connection->transactional(function () use ($customEntities, $extensionEntityType, $extensionId): void {
+            $names = array_column($customEntities, 'name');
 
-        $existings = $this->connection->fetchAllAssociativeIndexed(
-            'SELECT `name`, LOWER(HEX(id)) as id, created_at FROM custom_entity WHERE `name` IN (:names)',
-            ['names' => $names],
-            ['names' => ArrayParameterType::STRING]
-        );
-
-        if ($extensionEntityType === PluginEntity::class && $extensionId) {
-            $this->connection->executeStatement(
-                'DELETE FROM custom_entity WHERE plugin_id = :id',
-                ['id' => Uuid::fromHexToBytes($extensionId)]
+            $existings = $this->connection->fetchAllAssociativeIndexed(
+                'SELECT name, sw_uuid_hex(id) as id, created_at FROM custom_entity WHERE name IN (:names)',
+                ['names' => $names],
+                ['names' => ArrayParameterType::STRING]
             );
-        } elseif ($extensionEntityType === AppEntity::class && $extensionId) {
-            $this->connection->executeStatement(
-                'DELETE FROM custom_entity WHERE app_id = :id',
-                ['id' => Uuid::fromHexToBytes($extensionId)]
-            );
-        } else {
-            // custom entity without any app or plugin id --> created by the user and not by any extension
-            $this->connection->executeStatement('DELETE FROM custom_entity WHERE app_id IS NULL AND plugin_id IS NULL');
-        }
 
-        $inserts = new MultiInsertQueryQueue($this->connection, 25, false, true);
-        foreach ($customEntities as $customEntity) {
-            unset($customEntity['cmsAware']);
+            if ($extensionEntityType === PluginEntity::class && $extensionId) {
+                $this->connection->executeStatement(
+                    'DELETE FROM custom_entity WHERE plugin_id = :id',
+                    ['id' => Uuid::fromHexToBytes($extensionId)],
+                    ['id' => ParameterType::BINARY]
+                );
+            } elseif ($extensionEntityType === AppEntity::class && $extensionId) {
+                $this->connection->executeStatement(
+                    'DELETE FROM custom_entity WHERE app_id = :id',
+                    ['id' => Uuid::fromHexToBytes($extensionId)],
+                    ['id' => ParameterType::BINARY]
+                );
+            } else {
+                // custom entity without any app or plugin id --> created by the user and not by any extension
+                $this->connection->executeStatement('DELETE FROM custom_entity WHERE app_id IS NULL AND plugin_id IS NULL');
+            }
 
-            $customEntity['plugin_id'] = $extensionEntityType === PluginEntity::class && $extensionId ? Uuid::fromHexToBytes($extensionId) : null;
-            $customEntity['app_id'] = $extensionEntityType === AppEntity::class && $extensionId ? Uuid::fromHexToBytes($extensionId) : null;
+            $inserts = new MultiInsertQueryQueue($this->connection, 25, false, true);
+            $inserts->setConflictTarget('custom_entity', ['id']);
+            $inserts->setReplacementConflicts('custom_entity', [['id'], ['name']]);
+            foreach ($customEntities as $customEntity) {
+                unset($customEntity['cmsAware']);
 
-            $customEntity['flags'] = json_encode($customEntity['flags'], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION);
-            $customEntity['fields'] = json_encode($customEntity['fields'], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION);
+                $customEntity['plugin_id'] = $extensionEntityType === PluginEntity::class && $extensionId ? Uuid::fromHexToBytes($extensionId) : null;
+                $customEntity['app_id'] = $extensionEntityType === AppEntity::class && $extensionId ? Uuid::fromHexToBytes($extensionId) : null;
 
-            $customEntity['custom_fields_aware'] = ($customEntity['customFieldsAware'] ?? false) ? 1 : 0;
-            $customEntity['label_property'] = $customEntity['labelProperty'] ?? null;
-            unset($customEntity['customFieldsAware']);
-            unset($customEntity['labelProperty']);
+                $customEntity['flags'] = json_encode($customEntity['flags'], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION);
+                $customEntity['fields'] = json_encode($customEntity['fields'], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION);
 
-            $name = $customEntity['name'];
-            $id = isset($existings[$name]) ? $existings[$name]['id'] : Uuid::randomHex();
-            $customEntity['id'] = Uuid::fromHexToBytes($id);
+                $customEntity['custom_fields_aware'] = ($customEntity['customFieldsAware'] ?? false) ? 1 : 0;
+                $customEntity['label_property'] = $customEntity['labelProperty'] ?? null;
+                unset($customEntity['customFieldsAware']);
+                unset($customEntity['labelProperty']);
 
-            $customEntity['created_at'] = isset($existings[$name]) ? $existings[$name]['created_at'] : $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
-            $customEntity['updated_at'] = isset($existings[$name]) ? $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT) : null;
+                $name = $customEntity['name'];
+                $id = isset($existings[$name]) ? $existings[$name]['id'] : Uuid::randomHex();
+                $customEntity['id'] = Uuid::fromHexToBytes($id);
 
-            $inserts->addInsert('custom_entity', $customEntity);
-        }
+                $customEntity['created_at'] = isset($existings[$name]) ? $existings[$name]['created_at'] : $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
+                $customEntity['updated_at'] = isset($existings[$name]) ? $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT) : null;
 
-        $inserts->execute();
+                $inserts->addInsert('custom_entity', $customEntity, ['id' => ParameterType::BINARY, 'app_id' => $customEntity['app_id'] === null ? ParameterType::NULL : ParameterType::BINARY, 'plugin_id' => $customEntity['plugin_id'] === null ? ParameterType::NULL : ParameterType::BINARY]);
+            }
+
+            $inserts->execute();
+        });
 
         $this->cache->deleteItem(CachedEntitySchemaGenerator::CACHE_KEY);
     }

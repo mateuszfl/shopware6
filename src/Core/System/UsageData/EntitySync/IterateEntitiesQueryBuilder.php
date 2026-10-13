@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\UsageData\EntitySync;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
@@ -114,18 +115,18 @@ class IterateEntitiesQueryBuilder
         }
 
         $entityName = $definition->getEntityName();
-        $escapedIdFieldStorageName = EntityDefinitionQueryHelper::escape('id');
+        $escapedIdFieldStorageName = EntityDefinitionQueryHelper::escape('id', $this->connection);
 
         $query = $this->createQueryBuilder();
         $query->setTitle("UsageData EntitySync - iterate entity deletions for '$entityName'");
         $query->select(\sprintf(
-            'LOWER(HEX(%s)) as %s',
+            'sw_uuid_hex(%s) AS %s',
             $escapedIdFieldStorageName,
             $escapedIdFieldStorageName,
         ));
-        $query->from(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion'));
-        $query->where($query->expr()->eq(EntityDefinitionQueryHelper::escape('entity_name'), ':entityName'));
-        $query->andWhere($query->expr()->lte(EntityDefinitionQueryHelper::escape('deleted_at'), ':currentRunDate'));
+        $query->from(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion', $this->connection));
+        $query->where($query->expr()->eq(EntityDefinitionQueryHelper::escape('entity_name', $this->connection), ':entityName'));
+        $query->andWhere($query->expr()->lte(EntityDefinitionQueryHelper::escape('deleted_at', $this->connection), ':currentRunDate'));
         $query->setParameter('entityName', $entityName);
         $query->setParameter('currentRunDate', $currentRunDate->format(Defaults::STORAGE_DATE_TIME_FORMAT));
         $query->setMaxResults($this->batchSize);
@@ -136,7 +137,7 @@ class IterateEntitiesQueryBuilder
     private function getBaseQuery(EntityDefinition $definition): QueryBuilder
     {
         $entityName = $definition->getEntityName();
-        $escapedEntityName = EntityDefinitionQueryHelper::escape($entityName);
+        $escapedEntityName = EntityDefinitionQueryHelper::escape($entityName, $this->connection);
 
         $primaryKeys = $definition->getPrimaryKeys();
         $selections = [];
@@ -154,10 +155,10 @@ class IterateEntitiesQueryBuilder
                 continue;
             }
 
-            $escapedFieldStorageName = EntityDefinitionQueryHelper::escape($primaryKey->getStorageName());
+            $escapedFieldStorageName = EntityDefinitionQueryHelper::escape($primaryKey->getStorageName(), $this->connection);
 
             $selections[] = \sprintf(
-                'LOWER(HEX(%s.%s)) as %s',
+                'sw_uuid_hex(%s.%s) AS %s',
                 $escapedEntityName,
                 $escapedFieldStorageName,
                 $escapedFieldStorageName,
@@ -184,13 +185,13 @@ class IterateEntitiesQueryBuilder
             if ($field instanceof VersionField || $field instanceof ReferenceVersionField) {
                 $hasVersionFields = true;
                 $queryBuilder->andWhere(
-                    \sprintf('%s = :versionId', EntityDefinitionQueryHelper::escape($field->getStorageName())),
+                    \sprintf('%s = :versionId', EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection)),
                 );
             }
         }
 
         if ($hasVersionFields) {
-            $queryBuilder->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+            $queryBuilder->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
         }
 
         return $queryBuilder;

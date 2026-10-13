@@ -4,9 +4,11 @@ namespace Shopware\Core\System\SystemConfig;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Adapter\Cache\CacheTagCollector;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Bundle;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ConfigJsonField;
@@ -163,9 +165,9 @@ class SystemConfigService implements ResetInterface
         $salesChannelId = $salesChannelId ? Uuid::fromHexToBytes($salesChannelId) : null;
 
         $queryBuilder->andWhere('configuration_key LIKE :prefix')
-            ->addOrderBy('sales_channel_id', 'ASC')
+            ->addOrderBy('CASE WHEN sales_channel_id IS NULL THEN 0 ELSE 1 END', 'ASC')
             ->setParameter('prefix', $escapedDomain . '%')
-            ->setParameter('salesChannelId', $salesChannelId);
+            ->setParameter('salesChannelId', $salesChannelId, $salesChannelId === null ? ParameterType::NULL : ParameterType::BINARY);
 
         $configs = $queryBuilder->executeQuery()->fetchAllNumeric();
 
@@ -249,18 +251,26 @@ class SystemConfigService implements ResetInterface
 
         $existingIds = $this->connection
             ->fetchAllKeyValue(
-                'SELECT configuration_key, id FROM system_config WHERE ' . $where . ' and configuration_key IN (:configurationKeys)',
+                'SELECT configuration_key, sw_uuid_hex(id) FROM system_config WHERE ' . $where . ' and configuration_key IN (:configurationKeys)',
                 [
                     'salesChannelId' => $salesChannelId ? Uuid::fromHexToBytes($salesChannelId) : null,
                     'configurationKeys' => array_keys($values),
                 ],
                 [
                     'configurationKeys' => ArrayParameterType::STRING,
+                    'salesChannelId' => ParameterType::BINARY,
                 ]
             );
 
         $toBeDeleted = [];
-        $insertQueue = new MultiInsertQueryQueue($this->connection, 100, false, true);
+        $postgres = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsConflictTarget;
+        $insertQueue = new MultiInsertQueryQueue($this->connection, 100, false, !$postgres);
+        $insertQueue->setConflictTarget('system_config', ['configuration_key', 'sales_channel_id']);
+        if ($postgres) {
+            foreach (['id', 'configuration_value', 'created_at'] as $column) {
+                $insertQueue->addUpdateFieldOnDuplicateKey('system_config', $column);
+            }
+        }
         $events = [];
 
         foreach ($values as $key => $value) {
@@ -290,8 +300,9 @@ class SystemConfigService implements ResetInterface
                         'updated_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     ],
                     [
-                        'id' => $existingIds[$key],
-                    ]
+                        'id' => Uuid::fromHexToBytes($existingIds[$key]),
+                    ],
+                    ['id' => ParameterType::BINARY]
                 );
 
                 $events[] = new SystemConfigChangedEvent($key, $value, $salesChannelId);
@@ -308,6 +319,7 @@ class SystemConfigService implements ResetInterface
                     'sales_channel_id' => $salesChannelId ? Uuid::fromHexToBytes($salesChannelId) : null,
                     'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 ],
+                ['id' => ParameterType::BINARY, 'sales_channel_id' => $salesChannelId === null ? ParameterType::NULL : ParameterType::BINARY]
             );
 
             $events[] = new SystemConfigChangedEvent($key, $value, $salesChannelId);
@@ -322,7 +334,7 @@ class SystemConfigService implements ResetInterface
 
             if ($salesChannelId) {
                 $qb->andWhere('sales_channel_id = :salesChannelId')
-                    ->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+                    ->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
             } else {
                 $qb->andWhere('sales_channel_id IS NULL');
             }
@@ -425,7 +437,7 @@ class SystemConfigService implements ResetInterface
 
         // Get all sales channels that have the config keys
         $salesChannelIds = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT sales_channel_id FROM system_config WHERE configuration_key IN (:keys) AND sales_channel_id IS NOT NULL',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) FROM system_config WHERE configuration_key IN (:keys) AND sales_channel_id IS NOT NULL',
             ['keys' => $configKeys],
             ['keys' => ArrayParameterType::STRING]
         );
@@ -437,7 +449,7 @@ class SystemConfigService implements ResetInterface
 
         // Delete overridden config keys for each sales channel
         foreach ($salesChannelIds as $salesChannelId) {
-            $this->setMultiple($keysForDelete, Uuid::fromBytesToHex($salesChannelId), false);
+            $this->setMultiple($keysForDelete, $salesChannelId, false);
         }
     }
 
@@ -509,7 +521,7 @@ class SystemConfigService implements ResetInterface
         }
 
         /** @var array<string, string> $allKeyValue */
-        $allKeyValue = $this->connection->fetchAllKeyValue('SELECT LOWER(HEX(id)), name FROM app');
+        $allKeyValue = $this->connection->fetchAllKeyValue('SELECT sw_uuid_hex(id), name FROM app');
 
         return $this->appMapping = $allKeyValue;
     }

@@ -25,13 +25,21 @@ class LanguageLoader implements LanguageLoaderInterface
     public function loadLanguages(): array
     {
         $data = $this->connection->createQueryBuilder()
-            ->select('LOWER(HEX(language.id)) AS array_key, LOWER(HEX(language.id)) AS id, locale.code, parentLocale.code AS parentCode, LOWER(HEX(language.parent_id)) parentId')
+            ->select('sw_uuid_hex(language.id) AS array_key, sw_uuid_hex(language.id) AS id, locale.code, parentLocale.code AS parent_code, sw_uuid_hex(language.parent_id) AS parent_id')
             ->from('language')
             ->leftJoin('language', 'locale', 'locale', 'language.translation_code_id = locale.id')
             ->leftJoin('language', 'language', 'parentLanguage', 'language.parent_id = parentLanguage.id')
             ->leftJoin('parentLanguage', 'locale', 'parentLocale', 'parentLanguage.translation_code_id = parentLocale.id')
             ->executeQuery()
             ->fetchAllAssociative();
+
+        $data = array_map(static function (array $row): array {
+            $row['parentCode'] = $row['parent_code'];
+            $row['parentId'] = $row['parent_id'];
+            unset($row['parent_code'], $row['parent_id']);
+
+            return $row;
+        }, $data);
 
         /** @var LanguageData $grouped */
         $grouped = FetchModeHelper::groupUnique($data);

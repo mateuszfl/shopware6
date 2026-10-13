@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\UsageData\EntitySync;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 use Doctrine\DBAL\Query\QueryBuilder as DoctrineQueryBuilder;
 use Doctrine\DBAL\Result;
@@ -25,7 +26,7 @@ class DispatchEntitiesQueryBuilder
 {
     private readonly QueryBuilder $queryBuilder;
 
-    public function __construct(Connection $connection)
+    public function __construct(private readonly Connection $connection)
     {
         $this->queryBuilder = new QueryBuilder($connection);
     }
@@ -38,7 +39,7 @@ class DispatchEntitiesQueryBuilder
     public function forEntity(string $entityName): self
     {
         $this->queryBuilder->setTitle("UsageData EntitySync - dispatch entities for '$entityName'");
-        $this->queryBuilder->from(EntityDefinitionQueryHelper::escape($entityName));
+        $this->queryBuilder->from(EntityDefinitionQueryHelper::escape($entityName, $this->connection));
 
         return $this;
     }
@@ -50,7 +51,7 @@ class DispatchEntitiesQueryBuilder
                 continue;
             }
 
-            $this->queryBuilder->addSelect(EntityDefinitionQueryHelper::escape($field->getStorageName()));
+            $this->queryBuilder->addSelect(EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection));
         }
 
         return $this;
@@ -69,8 +70,8 @@ class DispatchEntitiesQueryBuilder
 
             foreach ($primaryKey as $column => $id) {
                 ++$pkCount;
-                $condition = \sprintf('%s = :pk_%s', EntityDefinitionQueryHelper::escape($column), (string) $pkCount);
-                $this->queryBuilder->setParameter(\sprintf('pk_%s', (string) $pkCount), Uuid::fromHexToBytes($id));
+                $condition = \sprintf('%s = :pk_%s', EntityDefinitionQueryHelper::escape($column, $this->connection), (string) $pkCount);
+                $this->queryBuilder->setParameter(\sprintf('pk_%s', (string) $pkCount), Uuid::fromHexToBytes($id), ParameterType::BINARY);
 
                 $combinedKeyCondition = $combinedKeyCondition === null
                     ? CompositeExpression::and($condition)
@@ -99,13 +100,13 @@ class DispatchEntitiesQueryBuilder
             if ($field instanceof VersionField || $field instanceof ReferenceVersionField) {
                 $hasVersionFields = true;
                 $this->queryBuilder->andWhere(
-                    \sprintf('%s = :versionId', EntityDefinitionQueryHelper::escape($field->getStorageName())),
+                    \sprintf('%s = :versionId', EntityDefinitionQueryHelper::escape($field->getStorageName(), $this->connection)),
                 );
             }
         }
 
         if ($hasVersionFields) {
-            $this->queryBuilder->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+            $this->queryBuilder->setParameter('versionId', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
         }
 
         return $this;
@@ -113,7 +114,7 @@ class DispatchEntitiesQueryBuilder
 
     public function withCollectUntilConstraint(DispatchEntityMessage $message, \DateTimeInterface $collectUntil): self
     {
-        $escapedUpdatedAtColumnName = EntityDefinitionQueryHelper::escape('updated_at');
+        $escapedUpdatedAtColumnName = EntityDefinitionQueryHelper::escape('updated_at', $this->connection);
 
         if ($message->operation === Operation::CREATE) {
             $this->queryBuilder->andWhere(

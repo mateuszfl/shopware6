@@ -45,11 +45,14 @@ class LanguageLoaderTest extends TestCase
                 'parentCode' => 'de-DE',
             ],
         ];
-        $connection = $this->getConnectionMockObject($languages);
+        $connection = $this->getConnectionMockObject(array_map(static fn (array $language): array => [
+            'array_key' => $language['array_key'], 'id' => $language['id'], 'code' => $language['code'],
+            'parent_id' => $language['parentId'], 'parent_code' => $language['parentCode'],
+        ], $languages));
 
         $loader = new LanguageLoader($connection);
 
-        static::assertSame(FetchModeHelper::groupUnique($languages), $loader->loadLanguages());
+        static::assertEquals(FetchModeHelper::groupUnique($languages), $loader->loadLanguages());
     }
 
     /**

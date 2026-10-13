@@ -69,7 +69,7 @@ class StorefrontSnippetLifecycleHandler extends AbstractLifecycleHandler
     private function invalidateTranslatorCache(): void
     {
         /** @var list<string> $snippetSetIds */
-        $snippetSetIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(`id`)) FROM `snippet_set`');
+        $snippetSetIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM snippet_set');
 
         $this->cacheInvalidator->invalidate(array_map(Translator::tag(...), $snippetSetIds), true);
     }

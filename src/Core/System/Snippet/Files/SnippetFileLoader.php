@@ -136,8 +136,8 @@ class SnippetFileLoader implements SnippetFileLoaderInterface
         try {
             /** @var array<string, string> $authors */
             $authors = $this->connection->fetchAllKeyValue('
-                SELECT `base_class` AS `baseClass`, `author`
-                FROM `plugin`
+                SELECT base_class, author
+                FROM plugin
             ');
         } catch (Exception) {
             // to get it working in setup without a database connection

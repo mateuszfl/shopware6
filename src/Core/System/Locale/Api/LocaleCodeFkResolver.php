@@ -42,7 +42,7 @@ class LocaleCodeFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT code, LOWER(HEX(id)) FROM locale WHERE code IN (:codes)',
+            'SELECT code, sw_uuid_hex(id) FROM locale WHERE code IN (:codes)',
             ['codes' => $codes],
             ['codes' => ArrayParameterType::STRING]
         );

@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\SystemConfig\Facade;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Api\Exception\MissingPrivilegeException;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Script\Execution\ScriptAppInformation;
@@ -99,11 +100,11 @@ class SystemConfigFacade
         }
 
         $privileges = $this->connection->fetchOne('
-            SELECT `acl_role`.`privileges` AS `privileges`
-            FROM `acl_role`
-            INNER JOIN `app` ON `app`.`acl_role_id` = `acl_role`.`id`
-            WHERE `app`.`id` = :appId
-        ', ['appId' => Uuid::fromHexToBytes($appId)]);
+            SELECT acl_role.privileges AS privileges
+            FROM acl_role
+            INNER JOIN app ON app.acl_role_id = acl_role.id
+            WHERE app.id = :appId
+        ', ['appId' => Uuid::fromHexToBytes($appId)], ['appId' => ParameterType::BINARY]);
 
         if (!\is_string($privileges)) {
             throw new \RuntimeException(\sprintf('Privileges for app with id "%s" not found.', $appId));

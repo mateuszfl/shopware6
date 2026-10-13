@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\System\SystemConfig;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -45,7 +46,7 @@ class SystemConfigServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->connection = static::createStub(Connection::class);
+        $this->connection = $this->connectionStub();
         $this->configReader = static::createStub(ConfigReader::class);
         $this->configLoader = static::createStub(AbstractSystemConfigLoader::class);
         $this->eventDispatcher = static::createStub(EventDispatcherInterface::class);
@@ -227,5 +228,14 @@ class SystemConfigServiceTest extends TestCase
 
         static::assertInstanceOf(SystemConfigChangedHook::class, $dispatchedHook);
         static::assertFalse($dispatchedHook->silent);
+    }
+
+    private function connectionStub(): Connection&Stub
+    {
+        $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+
+        return $connection;
     }
 }

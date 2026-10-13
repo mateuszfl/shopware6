@@ -336,10 +336,10 @@ class SalesChannelValidator implements EventSubscriberInterface
         /** @var CurrentSalesChannelStates $result */
         $result = $this->connection->fetchAllAssociative(
             \sprintf(
-                'SELECT LOWER(HEX(sales_channel.id)) AS sales_channel_id,
-                LOWER(HEX(sales_channel.type_id)) AS type_id,
-                LOWER(HEX(sales_channel.%s)) AS current_default,
-                LOWER(HEX(mapping.%s)) AS %s
+                'SELECT sw_uuid_hex(sales_channel.id) AS sales_channel_id,
+                sw_uuid_hex(sales_channel.type_id) AS type_id,
+                sw_uuid_hex(sales_channel.%s) AS current_default,
+                sw_uuid_hex(mapping.%s) AS %s
                 FROM sales_channel
                 LEFT JOIN %s mapping
                     ON mapping.sales_channel_id = sales_channel.id

@@ -39,7 +39,7 @@ class CurrencyIsoCodeFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT iso_code, LOWER(HEX(id)) FROM currency WHERE iso_code IN (:codes)',
+            'SELECT iso_code, sw_uuid_hex(id) FROM currency WHERE iso_code IN (:codes)',
             ['codes' => $codes],
             ['codes' => ArrayParameterType::STRING]
         );

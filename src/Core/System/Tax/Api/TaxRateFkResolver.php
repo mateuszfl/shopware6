@@ -40,7 +40,7 @@ class TaxRateFkResolver extends AbstractFkResolver
 
         // tax_rate has no unique constraint — only resolve when exactly one tax matches the rate
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT tax_rate, LOWER(HEX(MIN(id))) FROM tax WHERE tax_rate IN (:rates) GROUP BY tax_rate HAVING COUNT(id) = 1',
+            'SELECT tax_rate, MIN(sw_uuid_hex(id)) FROM tax WHERE tax_rate IN (:rates) GROUP BY tax_rate HAVING COUNT(id) = 1',
             ['rates' => $rates],
             ['rates' => ArrayParameterType::STRING]
         );

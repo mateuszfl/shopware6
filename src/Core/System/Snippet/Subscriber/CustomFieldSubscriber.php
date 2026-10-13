@@ -4,8 +4,10 @@ namespace Shopware\Core\System\Snippet\Subscriber;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityWriteResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityDeletedEvent;
@@ -54,7 +56,7 @@ class CustomFieldSubscriber implements EventSubscriberInterface
             }
 
             if ($snippetSets === null) {
-                $snippetSets = $this->connection->fetchAllAssociative('SELECT id, iso FROM snippet_set');
+                $snippetSets = $this->connection->fetchAllAssociative('SELECT sw_uuid_hex(id) AS id, iso FROM snippet_set');
             }
 
             if ($snippetSets === []) {
@@ -69,10 +71,11 @@ class CustomFieldSubscriber implements EventSubscriberInterface
         }
 
         $queue = new MultiInsertQueryQueue($this->connection, 500, false, false);
+        $queue->setConflictTarget('snippet', ['snippet_set_id', 'translation_key']);
         $queue->addUpdateFieldOnDuplicateKey('snippet', 'value');
 
         foreach ($snippets as $snippet) {
-            $queue->addInsert('snippet', $snippet);
+            $queue->addInsert('snippet', $snippet, ['id' => ParameterType::BINARY, 'snippet_set_id' => ParameterType::BINARY]);
         }
 
         $queue->execute();
@@ -80,9 +83,10 @@ class CustomFieldSubscriber implements EventSubscriberInterface
 
     public function customFieldIsDeleted(EntityDeletedEvent $event): void
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $customFieldId = $dialect->jsonExtract('custom_fields', ['custom_field_id']);
         $this->connection->executeStatement(
-            'DELETE FROM `snippet`
-            WHERE JSON_EXTRACT(`custom_fields`, "$.custom_field_id") IN (:customFieldIds)',
+            'DELETE FROM snippet WHERE ' . $dialect->jsonScalar($customFieldId->inline($this->connection)) . ' IN (:customFieldIds)',
             ['customFieldIds' => $event->getIds()],
             ['customFieldIds' => ArrayParameterType::STRING]
         );
@@ -107,7 +111,7 @@ class CustomFieldSubscriber implements EventSubscriberInterface
 
             $snippets[] = [
                 'id' => Uuid::randomBytes(),
-                'snippet_set_id' => $snippetSet['id'],
+                'snippet_set_id' => Uuid::fromHexToBytes($snippetSet['id']),
                 'translation_key' => 'customFields.' . $name,
                 'value' => $label,
                 'author' => 'System',

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Shopware\Core\System\SalesChannel\Context;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Context\AdminSalesChannelApiSource;
 use Shopware\Core\Framework\Api\Context\SalesChannelApiSource;
 use Shopware\Core\Framework\Context;
@@ -37,15 +39,16 @@ class ContextFactory
      */
     public function getContext(string $salesChannelId, array $options): Context
     {
+        $languages = (new DatabasePlatformResolver($this->connection))->dialect()->hexAggregate(['sales_channel_language', 'language_id'], ',')->named();
         $sql = '
-        # context-factory::base-context
+        /* context-factory::base-context */
 
         SELECT
-          sales_channel.id as sales_channel_id,
-          sales_channel.language_id as sales_channel_default_language_id,
-          sales_channel.currency_id as sales_channel_currency_id,
+          sw_uuid_hex(sales_channel.id) AS sales_channel_id,
+          sw_uuid_hex(sales_channel.language_id) AS sales_channel_default_language_id,
+          sw_uuid_hex(sales_channel.currency_id) AS sales_channel_currency_id,
           currency.factor as sales_channel_currency_factor,
-          GROUP_CONCAT(LOWER(HEX(sales_channel_language.language_id))) as sales_channel_language_ids
+          ' . $languages->sql . ' as sales_channel_language_ids
         FROM sales_channel
             INNER JOIN currency
                 ON sales_channel.currency_id = currency.id
@@ -54,9 +57,7 @@ class ContextFactory
         WHERE sales_channel.id = :id
         GROUP BY sales_channel.id, sales_channel.language_id, sales_channel.currency_id, currency.factor';
 
-        $data = $this->connection->fetchAssociative($sql, [
-            'id' => Uuid::fromHexToBytes($salesChannelId),
-        ]);
+        $data = $this->connection->fetchAssociative($sql, ['id' => Uuid::fromHexToBytes($salesChannelId)] + $languages->parameters, ['id' => ParameterType::BINARY] + $languages->types);
         if ($data === false) {
             throw SalesChannelException::noContextData($salesChannelId);
         }
@@ -72,7 +73,7 @@ class ContextFactory
         $languageIds = array_keys(array_flip($languageIds));
 
         // check which language should be used in the current request (request header set, or context already contains a language - stored in `sales_channel_api_context`)
-        $defaultLanguageId = Uuid::fromBytesToHex($data['sales_channel_default_language_id']);
+        $defaultLanguageId = $data['sales_channel_default_language_id'];
 
         $languageChain = $this->buildLanguageChain($options, $defaultLanguageId, $languageIds);
 
@@ -82,7 +83,7 @@ class ContextFactory
             new Context(
                 $origin,
                 [],
-                Uuid::fromBytesToHex($data['sales_channel_currency_id']),
+                $data['sales_channel_currency_id'],
                 $languageChain,
                 $versionId,
                 (float) $data['sales_channel_currency_factor'],
@@ -121,10 +122,10 @@ class ContextFactory
     private function getParentLanguageId(string $languageId): ?string
     {
         $data = $this->connection->createQueryBuilder()
-            ->select('LOWER(HEX(language.parent_id))')
+            ->select('sw_uuid_hex(language.parent_id)')
             ->from('language')
             ->where('language.id = :id')
-            ->setParameter('id', Uuid::fromHexToBytes($languageId))
+            ->setParameter('id', Uuid::fromHexToBytes($languageId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchOne();
 

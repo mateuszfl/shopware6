@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\CustomField;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\Log\Package;
@@ -85,13 +86,15 @@ class CustomFieldSetPersister
             $existingRelations = Uuid::fromBytesToHexList(
                 $this->connection->fetchAllKeyValue(
                     'SELECT entity_name, id FROM custom_field_set_relation WHERE set_id = :setId',
-                    ['setId' => Uuid::fromHexToBytes($customFieldSetId)]
+                    ['setId' => Uuid::fromHexToBytes($customFieldSetId)],
+                    ['setId' => ParameterType::BINARY]
                 )
             );
             $existingFields = Uuid::fromBytesToHexList(
                 $this->connection->fetchAllKeyValue(
                     'SELECT name, id FROM custom_field WHERE set_id = :setId',
-                    ['setId' => Uuid::fromHexToBytes($customFieldSetId)]
+                    ['setId' => Uuid::fromHexToBytes($customFieldSetId)],
+                    ['setId' => ParameterType::BINARY]
                 )
             );
             $entityData = $customFieldSet->toEntityArray($appId, $existingRelations, $existingFields, $customFieldSetId);
@@ -125,15 +128,16 @@ class CustomFieldSetPersister
             // App behavior: look up by app_id
             /** @var array<string, string> $allCustomFields */
             $allCustomFields = $this->connection->fetchAllKeyValue(
-                'SELECT id, name FROM custom_field_set WHERE app_id = :appId',
-                ['appId' => Uuid::fromHexToBytes($appId)]
+                'SELECT sw_uuid_hex(id), name FROM custom_field_set WHERE app_id = :appId',
+                ['appId' => Uuid::fromHexToBytes($appId)],
+                ['appId' => ParameterType::BINARY]
             );
         } elseif ($extensionName !== null) {
             // Plugin behavior: look up all sets owned by the extension, so that sets which
             // were removed from the XML are loaded too and can be deleted.
             /** @var array<string, string> $allCustomFields */
             $allCustomFields = $this->connection->fetchAllKeyValue(
-                'SELECT id, name FROM custom_field_set WHERE extension_name = :extensionName',
+                'SELECT sw_uuid_hex(id), name FROM custom_field_set WHERE extension_name = :extensionName',
                 ['extensionName' => $extensionName]
             );
         } else {
@@ -142,7 +146,7 @@ class CustomFieldSetPersister
 
         $groupedByName = [];
         foreach ($allCustomFields as $id => $name) {
-            $groupedByName[$name][] = Uuid::fromBytesToHex($id);
+            $groupedByName[$name][] = $id;
         }
 
         $existingCustomFieldSets = [];

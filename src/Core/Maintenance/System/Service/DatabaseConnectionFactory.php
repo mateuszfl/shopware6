@@ -5,6 +5,7 @@ namespace Shopware\Core\Maintenance\System\Service;
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Shopware\Core\Framework\Adapter\Database\PostgreSQLSessionMiddleware;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Maintenance\MaintenanceException;
 use Shopware\Core\Maintenance\System\Struct\DatabaseConnectionInformation;
@@ -25,7 +26,7 @@ class DatabaseConnectionFactory
 
     public static function createConnection(DatabaseConnectionInformation $connectionInformation, bool $withoutDatabase = false): Connection
     {
-        $connection = DriverManager::getConnection($connectionInformation->toDBALParameters($withoutDatabase), new Configuration());
+        $connection = DriverManager::getConnection($connectionInformation->toDBALParameters($withoutDatabase), (new Configuration())->setMiddlewares([new PostgreSQLSessionMiddleware()]));
 
         self::checkVersion($connection);
 

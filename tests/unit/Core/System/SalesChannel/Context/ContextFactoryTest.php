@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\System\SalesChannel\Context;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Defaults;
@@ -23,10 +24,12 @@ class ContextFactoryTest extends TestCase
     public function testGetContext(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAssociative')->willReturn([
-            'sales_channel_default_language_id' => Uuid::randomBytes(),
+            'sales_channel_default_language_id' => Uuid::randomHex(),
             'sales_channel_currency_factor' => 1.0,
-            'sales_channel_currency_id' => Uuid::randomBytes(),
+            'sales_channel_currency_id' => Uuid::randomHex(),
             'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
         ]);
 

@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -30,6 +31,23 @@ class IncrementSqlStorage extends AbstractIncrementStorage
     public function reserve(array $config): int
     {
         $start = $config['start'] ?? 1;
+        if ((new DatabasePlatformResolver($this->connection))->capabilities()->supportsReturning) {
+            return (int) $this->connection->fetchOne(
+                'INSERT INTO number_range_state (id, last_value, number_range_id, created_at)
+                 VALUES (:stateId, :value, :id, :createdAt)
+                 ON CONFLICT (number_range_id) DO UPDATE
+                 SET last_value = GREATEST(number_range_state.last_value + 1, EXCLUDED.last_value)
+                 RETURNING last_value',
+                [
+                    'stateId' => Uuid::randomBytes(),
+                    'value' => $start,
+                    'id' => Uuid::fromHexToBytes($config['id']),
+                    'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+                ],
+                ['stateId' => ParameterType::BINARY, 'id' => ParameterType::BINARY, 'value' => ParameterType::INTEGER]
+            );
+        }
+
         $varname = Uuid::randomHex();
         $stateId = Uuid::randomBytes();
         $this->connection->executeStatement(
@@ -41,7 +59,8 @@ class IncrementSqlStorage extends AbstractIncrementStorage
                 'id' => Uuid::fromHexToBytes($config['id']),
                 'stateId' => $stateId,
                 'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
+            ],
+            ['stateId' => ParameterType::BINARY, 'id' => ParameterType::BINARY, 'value' => ParameterType::INTEGER]
         );
 
         $result = $this->connection->executeQuery('SELECT @nr' . $varname);
@@ -58,10 +77,11 @@ class IncrementSqlStorage extends AbstractIncrementStorage
     public function preview(array $config): int
     {
         $result = $this->connection->executeQuery(
-            'SELECT `last_value` FROM `number_range_state` WHERE number_range_id = :id',
+            'SELECT ' . $this->connection->quoteSingleIdentifier('last_value') . ' FROM number_range_state WHERE number_range_id = :id',
             [
                 'id' => Uuid::fromHexToBytes($config['id']),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
         $lastNumber = $result->fetchOne();
 
@@ -80,8 +100,8 @@ class IncrementSqlStorage extends AbstractIncrementStorage
     {
         /** @var array<string, string> $states */
         $states = $this->connection->fetchAllKeyValue('
-            SELECT LOWER(HEX(`number_range_id`)), `last_value`
-            FROM `number_range_state`
+            SELECT sw_uuid_hex(number_range_id), ' . $this->connection->quoteSingleIdentifier('last_value') . '
+            FROM number_range_state
         ');
 
         return array_map(static fn ($state) => (int) $state, $states);
@@ -89,36 +109,35 @@ class IncrementSqlStorage extends AbstractIncrementStorage
 
     public function set(string $configurationId, int $value): void
     {
-        $stateId = Uuid::randomBytes();
-        $this->connection->executeStatement(
-            'INSERT `number_range_state` (`id`, `last_value`, `number_range_id`, `created_at`) VALUES (:stateId, :value, :id, :createdAt)
-                ON DUPLICATE KEY UPDATE
-                `last_value` = :value',
-            [
-                'value' => $value,
-                'id' => Uuid::fromHexToBytes($configurationId),
-                'stateId' => $stateId,
-                'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
-        );
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $query = $dialect->upsert('number_range_state', [
+            'id' => Uuid::randomBytes(),
+            'last_value' => $value,
+            'number_range_id' => Uuid::fromHexToBytes($configurationId),
+            'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+        ], ['number_range_id'], ['last_value'], [
+            'id' => ParameterType::BINARY,
+            'number_range_id' => ParameterType::BINARY,
+            'last_value' => ParameterType::INTEGER,
+        ]);
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
     }
 
     public function increaseToAtLeast(string $configurationId, int $value): void
     {
-        $stateId = Uuid::randomBytes();
+        $lastValue = $this->connection->quoteSingleIdentifier('last_value');
+        $conflict = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsConflictTarget
+            ? 'ON CONFLICT (number_range_id) DO UPDATE SET last_value = GREATEST(number_range_state.last_value, EXCLUDED.last_value)'
+            : 'ON DUPLICATE KEY UPDATE ' . $lastValue . ' = GREATEST(' . $lastValue . ', :value)';
         $this->connection->executeStatement(
-            'INSERT `number_range_state` (`id`, `last_value`, `number_range_id`, `created_at`) VALUES (:stateId, :value, :id, :createdAt)
-                ON DUPLICATE KEY UPDATE
-                `last_value` = GREATEST(`last_value`, :value)',
+            'INSERT INTO number_range_state (id, ' . $lastValue . ', number_range_id, created_at) VALUES (:stateId, :value, :id, :createdAt) ' . $conflict,
             [
                 'value' => $value,
                 'id' => Uuid::fromHexToBytes($configurationId),
-                'stateId' => $stateId,
+                'stateId' => Uuid::randomBytes(),
                 'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
             ],
-            [
-                'value' => ParameterType::INTEGER,
-            ],
+            ['value' => ParameterType::INTEGER, 'id' => ParameterType::BINARY, 'stateId' => ParameterType::BINARY],
         );
     }
 

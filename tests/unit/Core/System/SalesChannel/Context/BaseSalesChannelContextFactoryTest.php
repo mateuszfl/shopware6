@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\System\SalesChannel\Context;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -90,6 +91,8 @@ class BaseSalesChannelContextFactoryTest extends TestCase
         $languageRepository = new StaticEntityRepository([new EntityCollection($entitySearchResult[LanguageDefinition::ENTITY_NAME] ?? [])]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAssociative')->willReturn($fetchDataResult);
 
         if ($fetchDataResult === false) {
@@ -207,7 +210,7 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::LANGUAGE_ID => $invalidSalesChannelId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -220,7 +223,7 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::LANGUAGE_ID => 'not-an-uuid',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => '3ebb5fe2e29a4d70aa5854ce7ce3e20b,' . Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -233,7 +236,7 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::LANGUAGE_ID => '3ebb5fe2e29a4d70aa5854ce7ce3e20b',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => '3ebb5fe2e29a4d70aa5854ce7ce3e20b,' . Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -246,9 +249,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::LANGUAGE_ID => '3ebb5fe2e29a4d70aa5854ce7ce3e20b',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => '3ebb5fe2e29a4d70aa5854ce7ce3e20b,' . Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => Uuid::randomHex(),
@@ -262,9 +265,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::CURRENCY_ID => 'not-an-uuid',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -282,9 +285,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::CURRENCY_ID => '3ebb5fe2e29a4d70aa5854ce7ce3e20b',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -305,9 +308,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::LANGUAGE_ID => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -326,9 +329,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -353,9 +356,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_STATE_ID => 'not-an-uuid',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -377,9 +380,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_STATE_ID => $countryStateId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -401,9 +404,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_STATE_ID => $countryStateId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -428,9 +431,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => 'not-an-uuid',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -452,9 +455,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -476,9 +479,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -506,9 +509,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -539,9 +542,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM . ',' . $anotherLanguageId,
             ],
             'fetchParentLanguageResult' => Defaults::LANGUAGE_SYSTEM,
@@ -575,9 +578,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::COUNTRY_ID => $countryId,
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -615,9 +618,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
                 SalesChannelContextService::DOMAIN_ID => 'domain-id',
             ],
             'fetchDataResult' => [
-                'sales_channel_default_language_id' => Uuid::randomBytes(),
+                'sales_channel_default_language_id' => Uuid::randomHex(),
                 'sales_channel_currency_factor' => 1,
-                'sales_channel_currency_id' => Uuid::randomBytes(),
+                'sales_channel_currency_id' => Uuid::randomHex(),
                 'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
             ],
             'fetchParentLanguageResult' => false,
@@ -648,9 +651,9 @@ class BaseSalesChannelContextFactoryTest extends TestCase
         ];
 
         $successfulFetchDataResult = [
-            'sales_channel_default_language_id' => Uuid::randomBytes(),
+            'sales_channel_default_language_id' => Uuid::randomHex(),
             'sales_channel_currency_factor' => 1,
-            'sales_channel_currency_id' => Uuid::randomBytes(),
+            'sales_channel_currency_id' => Uuid::randomHex(),
             'sales_channel_language_ids' => Defaults::LANGUAGE_SYSTEM,
         ];
         $successfulEntitySearchResult = [

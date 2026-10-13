@@ -39,7 +39,7 @@ class SalutationKeyFkResolver extends AbstractFkResolver
         }
 
         $hash = $this->connection->fetchAllKeyValue(
-            'SELECT salutation_key, LOWER(HEX(id)) FROM salutation WHERE salutation_key IN (:keys)',
+            'SELECT salutation_key, sw_uuid_hex(id) FROM salutation WHERE salutation_key IN (:keys)',
             ['keys' => $keys],
             ['keys' => ArrayParameterType::STRING]
         );

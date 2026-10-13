@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\SystemConfig;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ConfigJsonField;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin;
@@ -39,10 +40,10 @@ class SystemConfigLoader extends AbstractSystemConfigLoader
                 ->andWhere('sales_channel_id IS NULL');
         } else {
             $query->andWhere('sales_channel_id = :salesChannelId OR system_config.sales_channel_id IS NULL');
-            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId));
+            $query->setParameter('salesChannelId', Uuid::fromHexToBytes($salesChannelId), ParameterType::BINARY);
         }
 
-        $query->addOrderBy('sales_channel_id', 'ASC');
+        $query->addOrderBy('CASE WHEN sales_channel_id IS NULL THEN 0 ELSE 1 END', 'ASC');
 
         $result = $query->executeQuery();
 

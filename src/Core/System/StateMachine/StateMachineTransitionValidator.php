@@ -3,6 +3,7 @@
 namespace Shopware\Core\System\StateMachine;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\InsertCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Command\UpdateCommand;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\Validation\PreWriteValidationEvent;
@@ -111,12 +112,19 @@ class StateMachineTransitionValidator implements EventSubscriberInterface
 
         if ($isUpdate && ($actionName === null || $stateMachineId === null || $fromStateId === null)) {
             $existing = $this->connection->fetchAssociative(
-                'SELECT `action_name`, `state_machine_id`, `from_state_id` FROM `state_machine_transition` WHERE `id` = :id',
-                ['id' => $id]
+                'SELECT action_name, state_machine_id, from_state_id FROM state_machine_transition WHERE id = :id',
+                ['id' => $id],
+                ['id' => ParameterType::BINARY]
             );
 
             if ($existing === false) {
                 return null;
+            }
+
+            foreach (['state_machine_id', 'from_state_id'] as $column) {
+                if (\is_resource($existing[$column])) {
+                    $existing[$column] = stream_get_contents($existing[$column]);
+                }
             }
 
             $actionName ??= $existing['action_name'];
@@ -141,17 +149,18 @@ class StateMachineTransitionValidator implements EventSubscriberInterface
     private function conflictsWithExistingTransition(array $transition): bool
     {
         return (bool) $this->connection->fetchOne(
-            'SELECT 1 FROM `state_machine_transition`
-             WHERE `state_machine_id` = :stateMachineId
-                 AND `from_state_id` = :fromStateId
-                 AND `action_name` = :actionName
-                 AND `id` != :id',
+            'SELECT 1 FROM state_machine_transition
+             WHERE state_machine_id = :stateMachineId
+                 AND from_state_id = :fromStateId
+                 AND action_name = :actionName
+                 AND id != :id',
             [
                 'stateMachineId' => $transition['state_machine_id'],
                 'fromStateId' => $transition['from_state_id'],
                 'actionName' => $transition['action_name'],
                 'id' => $transition['id'],
-            ]
+            ],
+            ['stateMachineId' => ParameterType::BINARY, 'fromStateId' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
     }
 

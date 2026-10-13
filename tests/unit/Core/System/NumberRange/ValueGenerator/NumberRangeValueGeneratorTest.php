@@ -3,7 +3,6 @@
 namespace Shopware\Tests\Unit\Core\System\NumberRange\ValueGenerator;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Order\OrderDefinition;
@@ -17,11 +16,10 @@ use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\NumberRange\NumberRangeEvents;
 use Shopware\Core\System\NumberRange\NumberRangeException;
 use Shopware\Core\System\NumberRange\ValueGenerator\NumberRangeValueGenerator;
-use Shopware\Core\System\NumberRange\ValueGenerator\Pattern\IncrementStorage\IncrementSqlStorage;
+use Shopware\Core\System\NumberRange\ValueGenerator\Pattern\IncrementStorage\AbstractIncrementStorage;
 use Shopware\Core\System\NumberRange\ValueGenerator\Pattern\ValueGeneratorPatternDate;
 use Shopware\Core\System\NumberRange\ValueGenerator\Pattern\ValueGeneratorPatternIncrement;
 use Shopware\Core\System\NumberRange\ValueGenerator\Pattern\ValueGeneratorPatternRegistry;
-use Symfony\Component\Clock\NativeClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
@@ -44,19 +42,13 @@ class NumberRangeValueGeneratorTest extends TestCase
                 'start' => 0,
             ]);
 
-        $result = $this->createMock(Result::class);
-        $result->expects($this->once())
-            ->method('fetchOne')
-            ->willReturn('1');
-
-        $connection->expects($this->once())
-            ->method('executeQuery')
-            ->willReturn($result);
+        $storage = static::createStub(AbstractIncrementStorage::class);
+        $storage->method('reserve')->willReturn(1);
 
         $numberRangeValueGenerator = new NumberRangeValueGenerator(
             new ValueGeneratorPatternRegistry([
                 new ValueGeneratorPatternIncrement(
-                    new IncrementSqlStorage($connection, new NativeClock()),
+                    $storage,
                 ),
             ]),
             $dispatcher,

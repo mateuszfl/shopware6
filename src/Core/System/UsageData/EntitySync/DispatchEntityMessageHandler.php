@@ -123,10 +123,10 @@ final readonly class DispatchEntityMessageHandler
 
         $qb = new QueryBuilder($this->connection);
         $qb->setTitle("UsageData EntitySync - dispatch entity deletions for '$entityName'");
-        $qb->select(EntityDefinitionQueryHelper::escape('entity_ids'))
-            ->from(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion'))
-            ->where($qb->expr()->in(EntityDefinitionQueryHelper::escape('id'), ':ids'))
-            ->setParameter('ids', $rowIds, ArrayParameterType::STRING);
+        $qb->select(EntityDefinitionQueryHelper::escape('entity_ids', $this->connection))
+            ->from(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion', $this->connection))
+            ->where($qb->expr()->in(EntityDefinitionQueryHelper::escape('id', $this->connection), ':ids'))
+            ->setParameter('ids', $rowIds, ArrayParameterType::BINARY);
 
         $queryResult = $qb->executeQuery()->fetchAllAssociative();
 
@@ -145,9 +145,9 @@ final readonly class DispatchEntityMessageHandler
 
         $qb = new QueryBuilder($this->connection);
         $qb->setTitle("UsageData EntitySync - remove entity deletions for '$entityName'");
-        $qb->delete(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion'))
-            ->where($qb->expr()->in(EntityDefinitionQueryHelper::escape('id'), ':ids'))
-            ->setParameter('ids', $rowIds, ArrayParameterType::STRING);
+        $qb->delete(EntityDefinitionQueryHelper::escape('usage_data_entity_deletion', $this->connection))
+            ->where($qb->expr()->in(EntityDefinitionQueryHelper::escape('id', $this->connection), ':ids'))
+            ->setParameter('ids', $rowIds, ArrayParameterType::BINARY);
 
         $qb->executeStatement();
     }
@@ -195,6 +195,9 @@ final readonly class DispatchEntityMessageHandler
 
         $serializedEntities = [];
         foreach ($entities as $entity) {
+            if (\is_resource($entity[$primaryKeyName])) {
+                $entity[$primaryKeyName] = stream_get_contents($entity[$primaryKeyName]);
+            }
             $entityId = $entity[$primaryKeyName];
             $serializedEntity = self::serialize($fields, $entity);
 

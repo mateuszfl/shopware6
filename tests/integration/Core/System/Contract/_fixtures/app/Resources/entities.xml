@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/System/CustomEntity/Xml/entity-1.0.xsd">
+    <entity name="ce_system">
+        <fields>
+            <string name="title" required="true" store-api-aware="true" />
+            <json name="payload" store-api-aware="false" />
+            <many-to-one name="currency" reference="currency" on-delete="restrict" store-api-aware="false" />
+        </fields>
+    </entity>
+</entities>

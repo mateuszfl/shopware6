@@ -70,15 +70,15 @@ class SalesChannelContextPersisterTest extends TestCase
                 'updated_at' => $updatedAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 'payload' => json_encode(['type' => 'guest'], \JSON_THROW_ON_ERROR),
                 'token' => $token,
-                'sales_channel_id' => Uuid::fromHexToBytes(TestDefaults::SALES_CHANNEL),
+                'sales_channel_id' => TestDefaults::SALES_CHANNEL,
                 'customer_id' => null,
             ],
             [
                 'updated_at' => $updatedAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 'payload' => json_encode(['type' => 'customer'], \JSON_THROW_ON_ERROR),
                 'token' => $customerToken,
-                'sales_channel_id' => Uuid::fromHexToBytes(TestDefaults::SALES_CHANNEL),
-                'customer_id' => Uuid::fromHexToBytes($customerId),
+                'sales_channel_id' => TestDefaults::SALES_CHANNEL,
+                'customer_id' => $customerId,
             ],
         ]);
 

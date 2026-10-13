@@ -29,15 +29,15 @@ class SalesChannelLanguageLoaderTest extends TestCase
         $languages = [
             [
                 'languageId' => '018dcf1d5c3d701f96a2894079f6e79f',
-                'salesChannelId' => '018dcf1d5c3d701f96a2894079f6e79g',
+                'sales_channel_id' => '018dcf1d5c3d701f96a2894079f6e79g',
             ],
             [
                 'languageId' => '018de49f23ea7db5b3afb5181b5a12a1',
-                'salesChannelId' => '018de49f23ea7db5b3afb5181b5a12a3',
+                'sales_channel_id' => '018de49f23ea7db5b3afb5181b5a12a3',
             ],
             [
                 'languageId' => '018de49f23ea7db5b3afb5181b5a12a1',
-                'salesChannelId' => '018de49f23ea7db5b3afb5181b5a12a2',
+                'sales_channel_id' => '018de49f23ea7db5b3afb5181b5a12a2',
             ],
         ];
         $connection = $this->getConnectionMockObject($languages);

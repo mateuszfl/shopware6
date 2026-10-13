@@ -160,8 +160,8 @@ class LanguageValidator implements EventSubscriberInterface
             'SELECT lang.id
              FROM language lang
              LEFT JOIN locale l ON lang.translation_code_id = l.id
-             WHERE l.id IS NULL # no translation code
-             AND lang.parent_id IS NULL # root
+             WHERE l.id IS NULL /* no translation code */
+             AND lang.parent_id IS NULL /* root */
              AND lang.id IN (:ids)',
             ['ids' => $affectedIds],
             ['ids' => ArrayParameterType::BINARY]

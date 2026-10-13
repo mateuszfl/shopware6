@@ -358,9 +358,9 @@ class StructEncoder implements ResetInterface
     {
         /** @var list<array<string, string>> */
         $blockedCustomFields = $this->connection->fetchAllAssociative(
-            '# struct-encoder::fetch-blocked-custom-fields
+            '/* struct-encoder::fetch-blocked-custom-fields */
             SELECT
-                COALESCE(cfsr.entity_name, "global") as entity_name,
+                COALESCE(cfsr.entity_name, \'global\') as entity_name,
                 cf.name
             FROM custom_field cf
             LEFT JOIN custom_field_set_relation cfsr ON cfsr.set_id = cf.set_id

@@ -48,7 +48,7 @@ class InitialStateIdLoader implements ResetInterface
     private function load(): array
     {
         return $this->cache->get(self::CACHE_KEY, fn () => $this->connection->fetchAllKeyValue(
-            'SELECT technical_name, LOWER(HEX(`initial_state_id`)) as initial_state_id FROM state_machine'
+            'SELECT technical_name, sw_uuid_hex(initial_state_id) as initial_state_id FROM state_machine'
         ));
     }
 }

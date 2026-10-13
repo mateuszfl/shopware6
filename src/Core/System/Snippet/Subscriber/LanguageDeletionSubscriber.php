@@ -66,10 +66,10 @@ class LanguageDeletionSubscriber implements EventSubscriberInterface
     {
         $codes = $this->connection->fetchFirstColumn(
             <<<'SQL'
-            SELECT `locale`.`code`
-            FROM `language`
-            INNER JOIN `locale` ON `locale`.`id` = `language`.`locale_id`
-            WHERE `language`.`id` IN (:ids)
+            SELECT locale.code
+            FROM language
+            INNER JOIN locale ON locale.id = language.locale_id
+            WHERE language.id IN (:ids)
             SQL,
             ['ids' => Uuid::fromHexToBytesList($languageIds)],
             ['ids' => ArrayParameterType::BINARY],

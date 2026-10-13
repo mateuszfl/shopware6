@@ -4,6 +4,7 @@ namespace Shopware\Core\System\Snippet;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\Flysystem\FilesystemOperator;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Framework\Context;
@@ -227,15 +228,16 @@ class SnippetService
     public function findSnippetSetId(string $salesChannelId, string $languageId, string $locale): string
     {
         $snippetSetId = $this->connection->fetchOne(
-            'SELECT LOWER(HEX(`snippet_set`.`id`))
-            FROM `sales_channel_domain`
-            INNER JOIN `snippet_set` ON `sales_channel_domain`.`snippet_set_id` = `snippet_set`.`id`
-            WHERE `sales_channel_domain`.`sales_channel_id` = :salesChannelId AND `sales_channel_domain`.`language_id` = :languageId
+            'SELECT sw_uuid_hex(snippet_set.id)
+            FROM sales_channel_domain
+            INNER JOIN snippet_set ON sales_channel_domain.snippet_set_id = snippet_set.id
+            WHERE sales_channel_domain.sales_channel_id = :salesChannelId AND sales_channel_domain.language_id = :languageId
             LIMIT 1',
             [
                 'salesChannelId' => Uuid::fromHexToBytes($salesChannelId),
                 'languageId' => Uuid::fromHexToBytes($languageId),
-            ]
+            ],
+            ['salesChannelId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]
         );
 
         if ($snippetSetId) {
@@ -243,7 +245,7 @@ class SnippetService
         }
 
         $sets = $this->connection->fetchAllKeyValue(
-            'SELECT iso, LOWER(HEX(id)) FROM snippet_set WHERE iso IN (:locales) LIMIT 2',
+            'SELECT iso, sw_uuid_hex(id) FROM snippet_set WHERE iso IN (:locales) LIMIT 2',
             ['locales' => array_unique([$locale, 'en-GB'])],
             ['locales' => ArrayParameterType::STRING]
         );
@@ -282,7 +284,7 @@ class SnippetService
         /** @var array<string, string> $snippets */
         $snippets = $this->connection->fetchAllKeyValue('SELECT translation_key, value FROM snippet WHERE snippet_set_id = :snippetSetId', [
             'snippetSetId' => Uuid::fromHexToBytes($snippetSetId),
-        ]);
+        ], ['snippetSetId' => ParameterType::BINARY]);
 
         return $snippets;
     }
@@ -381,7 +383,7 @@ class SnippetService
     {
         $locale = $this->connection->fetchOne('SELECT iso FROM snippet_set WHERE id = :snippetSetId', [
             'snippetSetId' => Uuid::fromHexToBytes($snippetSetId),
-        ]);
+        ], ['snippetSetId' => ParameterType::BINARY]);
 
         if ($locale === false) {
             throw SnippetException::snippetSetNotFound($snippetSetId);

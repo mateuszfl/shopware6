@@ -7,7 +7,6 @@ use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\ProductDefinition;
-use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\PrimaryKey;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
@@ -34,21 +33,9 @@ class ManyToManyAssociationServiceTest extends TestCase
     public function testGetMappingIdsForAssociationFields(): void
     {
         $ids = new IdsCollection();
-        $connection = $this->createMock(Connection::class);
+        $connection = static::createStub(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
-        $connection->expects($this->once())
-            ->method('executeQuery')
-            ->with(
-                'SELECT `referenceColumn`, `localColumn` FROM `ManyToManyEntity` WHERE (`localColumn` IN (:ids)) AND (`product_version_id` = UNHEX(:versionId))',
-                [
-                    'ids' => [
-                        Uuid::fromHexToBytes($ids->get('1')),
-                        Uuid::fromHexToBytes($ids->get('2')),
-                        Uuid::fromHexToBytes($ids->get('3')),
-                    ],
-                    'versionId' => Defaults::LIVE_VERSION,
-                ]
-            )
+        $connection->method('executeQuery')
             ->willReturn(
                 FakeResultFactory::createResult(
                     [

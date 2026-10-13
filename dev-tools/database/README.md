@@ -67,7 +67,9 @@ Core helpers, batch removals and version isolation are verified by
 [CONTENT_SQL_CONTRACT.md](CONTENT_SQL_CONTRACT.md).
 
 The checkout persistence, concurrency and transaction boundaries are documented in
-[CHECKOUT_SQL_CONTRACT.md](CHECKOUT_SQL_CONTRACT.md).
+[CHECKOUT_SQL_CONTRACT.md](CHECKOUT_SQL_CONTRACT.md). System persistence, number
+allocation and custom entity lifecycle are documented in
+[SYSTEM_SQL_CONTRACT.md](SYSTEM_SQL_CONTRACT.md).
 
 ## Verification
 

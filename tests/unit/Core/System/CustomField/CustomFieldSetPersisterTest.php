@@ -107,7 +107,7 @@ class CustomFieldSetPersisterTest extends TestCase
         $existingSetId = Uuid::randomHex();
 
         $this->connection->method('fetchAllKeyValue')->willReturn([
-            Uuid::fromHexToBytes($existingSetId) => 'obsolete_set',
+            $existingSetId => 'obsolete_set',
         ]);
 
         $this->persister->sync(CustomFields::fromArray([]), $appId, 'TestApp', Context::createDefaultContext());
@@ -129,7 +129,7 @@ class CustomFieldSetPersisterTest extends TestCase
                 static::assertStringContainsString('WHERE extension_name = :extensionName', $sql);
                 static::assertSame(['extensionName' => 'TestPlugin'], $params);
 
-                return [Uuid::fromHexToBytes($existingSetId) => 'obsolete_set'];
+                return [$existingSetId => 'obsolete_set'];
             });
 
         $persister = new CustomFieldSetPersister(
@@ -161,7 +161,7 @@ class CustomFieldSetPersisterTest extends TestCase
                 if (str_contains($sql, 'FROM custom_field_set ')) {
                     // existing set lookup by extension_name (plugin behavior),
                     // keyed by binary id, value is the name
-                    return [Uuid::fromHexToBytes($setId) => 'test_set'];
+                    return [$setId => 'test_set'];
                 }
 
                 if (str_contains($sql, 'FROM custom_field_set_relation')) {
@@ -202,8 +202,8 @@ class CustomFieldSetPersisterTest extends TestCase
 
         // two sets share the same name -> both must be deleted and recreated
         $this->connection->method('fetchAllKeyValue')->willReturn([
-            Uuid::fromHexToBytes($duplicateA) => 'test_set',
-            Uuid::fromHexToBytes($duplicateB) => 'test_set',
+            $duplicateA => 'test_set',
+            $duplicateB => 'test_set',
         ]);
 
         $this->persister->sync($this->loadFixtureSingleSet(), $appId, 'TestApp', Context::createDefaultContext());
@@ -233,8 +233,8 @@ class CustomFieldSetPersisterTest extends TestCase
                     static::assertStringContainsString('WHERE extension_name = :extensionName', $sql);
 
                     return [
-                        Uuid::fromHexToBytes($keptSetId) => 'test_set',
-                        Uuid::fromHexToBytes($removedSetId) => 'test_global_set',
+                        $keptSetId => 'test_set',
+                        $removedSetId => 'test_global_set',
                     ];
                 }
 

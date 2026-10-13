@@ -4,6 +4,7 @@ namespace Shopware\Core\System\SalesChannel\Context;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\CartBehavior;
 use Shopware\Core\Checkout\Cart\CartRuleLoader;
 use Shopware\Core\Checkout\Cart\Order\OrderConverter;
@@ -135,13 +136,13 @@ class SalesChannelContextRestorer
     {
         $customer = $this->connection->createQueryBuilder()
             ->select(
-                'LOWER(HEX(language_id))',
-                'LOWER(HEX(customer_group_id))',
-                'LOWER(HEX(sales_channel_id))',
+                'sw_uuid_hex(language_id)',
+                'sw_uuid_hex(customer_group_id)',
+                'sw_uuid_hex(sales_channel_id)',
             )
             ->from('customer')
             ->where('id = :id')
-            ->setParameter('id', Uuid::fromHexToBytes($customerId))
+            ->setParameter('id', Uuid::fromHexToBytes($customerId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchAssociative();
 

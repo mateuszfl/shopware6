@@ -3,8 +3,10 @@
 namespace Shopware\Core\System\Consent;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\Consent\DTO\ConsentStateRecord;
@@ -60,19 +62,23 @@ class ConsentRepository
 
         $now = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
 
-        $actor = $this->connection->executeQuery('SELECT username from user WHERE id = :id', [
+        $actor = $this->connection->executeQuery('SELECT username FROM ' . $this->connection->quoteSingleIdentifier('user') . ' WHERE id = :id', [
             'id' => Uuid::fromHexToBytes($actorId),
-        ])->fetchOne();
+        ], ['id' => ParameterType::BINARY])->fetchOne();
 
         if ($actor === false) {
             throw ConsentException::cannotResolveActor($actorId);
         }
 
+        $conflict = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsConflictTarget
+            ? 'ON CONFLICT (name, identifier) DO UPDATE SET '
+            : 'ON DUPLICATE KEY UPDATE ';
+
         $this->connection->executeStatement('
         INSERT INTO consent_state (id, name, identifier, state, actor, revision, updated_at)
         VALUES (:id, :consentName, :identifier, :insertState, :actor, :revision, :updatedAt)
-        ON DUPLICATE KEY UPDATE
-            state = CASE WHEN state = "declined" AND :state = "revoked" THEN "declined" ELSE :state END,
+        ' . $conflict . '
+            state = CASE WHEN consent_state.state = \'declined\' AND :state = \'revoked\' THEN \'declined\' ELSE :state END,
             actor = :actor,
             revision = :revision,
             updated_at = :updatedAt
@@ -85,6 +91,6 @@ class ConsentRepository
             'actor' => $actor,
             'revision' => $revision,
             'updatedAt' => $now,
-        ], ['id' => 'binary']);
+        ], ['id' => ParameterType::BINARY]);
     }
 }

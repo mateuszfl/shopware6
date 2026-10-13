@@ -34,12 +34,12 @@ class SalesChannelLanguageLoader implements ResetInterface
             return $this->languages;
         }
 
-        $result = $this->connection->fetchAllAssociative('SELECT LOWER(HEX(`language_id`)), LOWER(HEX(`sales_channel_id`)) as salesChannelId FROM sales_channel_language');
+        $result = $this->connection->fetchAllAssociative('SELECT sw_uuid_hex(language_id), sw_uuid_hex(sales_channel_id) AS sales_channel_id FROM sales_channel_language');
 
         $grouped = FetchModeHelper::group($result);
 
         foreach ($grouped as $languageId => $value) {
-            $grouped[$languageId] = array_column($value, 'salesChannelId');
+            $grouped[$languageId] = array_column($value, 'sales_channel_id');
         }
 
         /** @var array<string, list<string>> $grouped */

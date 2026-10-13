@@ -42,6 +42,9 @@
             <file>tests/integration/Core/Checkout/Contract/PromotionCodeGatewayTest.php</file>
             <file>tests/integration/Core/Checkout/Contract/PaymentSqlContractTest.php</file>
         </testsuite>
+        <testsuite name="database-system">
+            <directory>tests/integration/Core/System/Contract</directory>
+        </testsuite>
         <testsuite name="database-functions">
             <file>tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php</file>
         </testsuite>
