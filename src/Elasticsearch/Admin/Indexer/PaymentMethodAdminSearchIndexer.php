@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Checkout\Payment\Aggregate\PaymentMethodTranslation\PaymentMethodTranslationDefinition;
 use Shopware\Core\Checkout\Payment\PaymentMethodCollection;
 use Shopware\Core\Checkout\Payment\PaymentMethodDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -83,15 +84,19 @@ final class PaymentMethodAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            '
-            SELECT LOWER(HEX(payment_method.id)) as id,
-                   GROUP_CONCAT(DISTINCT payment_method_translation.name SEPARATOR " ") as name
+            str_replace(
+                '#nameAggregate#',
+                IndexingSql::distinctAggregate($this->connection, 'payment_method_translation.name', ' '),
+                '
+            SELECT sw_uuid_hex(payment_method.id) as id,
+                   #nameAggregate# as name
             FROM payment_method
                 INNER JOIN payment_method_translation
                     ON payment_method.id = payment_method_translation.payment_method_id
             WHERE payment_method.id IN (:ids)
             GROUP BY payment_method.id
-        ',
+        '
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -102,6 +107,7 @@ final class PaymentMethodAdminSearchIndexer extends AbstractAdminIndexer
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter($row));
             $completion = $this->buildCompletion([\is_string($row['name'] ?? null) ? $row['name'] : null]);

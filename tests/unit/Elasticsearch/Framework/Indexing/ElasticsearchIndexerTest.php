@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Elasticsearch\Framework\Indexing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use OpenSearch\Client;
 use OpenSearch\Namespaces\IndicesNamespace;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -57,6 +58,8 @@ class ElasticsearchIndexerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->helper = static::createStub(ElasticsearchHelper::class);
         $this->registry = new ElasticsearchRegistry([$this->createDefinition('product')]);
         $this->indexCreator = static::createStub(IndexCreator::class);
@@ -117,10 +120,12 @@ class ElasticsearchIndexerTest extends TestCase
     public function testIterateTillLastMsgCreatesIndicesAndIndexTaskInDB(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('insert')
-            ->with('elasticsearch_index_task');
+            ->with('`elasticsearch_index_task`');
 
         $indexCreator = $this->createMock(IndexCreator::class);
         $indexCreator
@@ -228,6 +233,8 @@ class ElasticsearchIndexerTest extends TestCase
         $helper = static::createStub(ElasticsearchHelper::class);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->never())->method('executeStatement');
 
         $indexer = $this->getIndexer(connection: $connection, helper: $helper);
@@ -378,10 +385,12 @@ class ElasticsearchIndexerTest extends TestCase
         });
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('insert')
-            ->with('elasticsearch_index_task');
+            ->with('`elasticsearch_index_task`');
 
         $this->indexCreator
             ->method('aliasExists')
@@ -403,10 +412,12 @@ class ElasticsearchIndexerTest extends TestCase
         ]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->exactly(2))
             ->method('insert')
-            ->with('elasticsearch_index_task');
+            ->with('`elasticsearch_index_task`');
 
         $this->indexCreator
             ->method('aliasExists')
@@ -424,10 +435,12 @@ class ElasticsearchIndexerTest extends TestCase
         $logger = static::createStub(LoggerInterface::class);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('insert')
-            ->with('elasticsearch_index_task');
+            ->with('`elasticsearch_index_task`');
 
         $this->indexCreator
             ->method('aliasExists')

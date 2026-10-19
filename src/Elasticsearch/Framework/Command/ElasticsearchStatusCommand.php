@@ -3,6 +3,7 @@
 namespace Shopware\Elasticsearch\Framework\Command;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use OpenSearch\Client;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Command\ConsoleProgressTrait;
@@ -56,8 +57,8 @@ class ElasticsearchStatusCommand extends Command
         $table->addRow(['Cluster Status', $health['status']]);
         $table->addRow(['Available Nodes', $health['number_of_nodes']]);
 
-        $indexTask = $this->connection->fetchAssociative('SELECT * FROM elasticsearch_index_task WHERE entity = "product" LIMIT 1');
-        $totalProducts = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM product WHERE version_id = :liveVersionId AND child_count = 0 OR parent_id IS NOT NULL', ['liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)]);
+        $indexTask = $this->connection->fetchAssociative('SELECT * FROM elasticsearch_index_task WHERE entity = :entity LIMIT 1', ['entity' => 'product']);
+        $totalProducts = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM product WHERE version_id = :liveVersionId AND child_count = 0 OR parent_id IS NOT NULL', ['liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)], ['liveVersionId' => ParameterType::BINARY]);
 
         // No entry in key
         if ($indexTask === false) {

@@ -70,7 +70,11 @@ class ElasticsearchResetCommand extends Command
             }
         }
 
-        $this->connection->executeStatement('DELETE FROM `messenger_messages` WHERE `headers` LIKE "%ElasticsearchIndexingMessage%"');
+        $platform = $this->connection->getDatabasePlatform();
+        $this->connection->executeStatement(
+            'DELETE FROM ' . $platform->quoteSingleIdentifier('messenger_messages') . ' WHERE ' . $platform->quoteSingleIdentifier('headers') . ' LIKE :headers',
+            ['headers' => '%ElasticsearchIndexingMessage%']
+        );
 
         $io->success('Elasticsearch indices deleted and queue cleared');
 

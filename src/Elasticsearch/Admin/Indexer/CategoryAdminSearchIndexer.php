@@ -8,6 +8,7 @@ use Shopware\Core\Content\Category\Aggregate\CategoryTag\CategoryTagDefinition;
 use Shopware\Core\Content\Category\Aggregate\CategoryTranslation\CategoryTranslationDefinition;
 use Shopware\Core\Content\Category\CategoryCollection;
 use Shopware\Core\Content\Category\CategoryDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -141,20 +142,28 @@ final class CategoryAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(category.id)) as id,
-                   LOWER(HEX(category.parent_id)) as parentId,
-                   GROUP_CONCAT(DISTINCT category_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(category_translation.language_id)),
-                       'name', category_translation.name
-                   )) as translatedNames,
-                   GROUP_CONCAT(DISTINCT tag.name SEPARATOR " ") as tags,
-                   GROUP_CONCAT(LOWER(HEX(tag.id)) SEPARATOR " ") as tagIds,
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#', '#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'category_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(category_translation.language_id)',
+                        'name' => 'category_translation.name',
+                    ]),
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(category.id) as id,
+                   sw_uuid_hex(category.parent_id) as parent_id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
+                   #tagsAggregate# as tags,
+                   #tagIdsAggregate# as tag_ids,
                    category.active AS active,
                    category.visible AS visible,
                    category.type AS type,
-                   category.created_at as createdAt
+                   category.created_at as created_at
             FROM category
                 INNER JOIN category_translation
                     ON category_translation.category_id = category.id
@@ -164,7 +173,8 @@ final class CategoryAdminSearchIndexer extends AbstractAdminIndexer
                     ON category_tag.tag_id = tag.id
             WHERE category.id IN (:ids)
             GROUP BY category.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -175,6 +185,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $row['tags'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

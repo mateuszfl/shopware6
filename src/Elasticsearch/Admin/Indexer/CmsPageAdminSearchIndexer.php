@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Cms\Aggregate\CmsPageTranslation\CmsPageTranslationDefinition;
 use Shopware\Core\Content\Cms\CmsPageCollection;
 use Shopware\Core\Content\Cms\CmsPageDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -124,21 +125,28 @@ final class CmsPageAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(cms_page.id)) as id,
-                   GROUP_CONCAT(DISTINCT cms_page_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(cms_page_translation.language_id)),
-                       'name', cms_page_translation.name
-                   )) as translatedNames,
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'cms_page_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(cms_page_translation.language_id)',
+                        'name' => 'cms_page_translation.name',
+                    ]),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(cms_page.id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
                    cms_page.type AS type,
-                   cms_page.created_at as createdAt
+                   cms_page.created_at as created_at
             FROM cms_page
                 INNER JOIN cms_page_translation
                     ON cms_page_translation.cms_page_id = cms_page.id
             WHERE cms_page.id IN (:ids)
             GROUP BY cms_page.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -149,6 +157,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

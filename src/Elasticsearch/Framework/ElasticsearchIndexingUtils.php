@@ -5,6 +5,7 @@ namespace Shopware\Elasticsearch\Framework;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Elasticsearch\Event\ElasticsearchCustomFieldsMappingEvent;
@@ -63,8 +64,8 @@ FROM custom_field_set_relation
     INNER JOIN custom_field ON(custom_field.set_id = custom_field_set_relation.set_id)
     INNER JOIN custom_field_set ON(custom_field_set.id = custom_field.set_id)
 WHERE custom_field_set_relation.entity_name = :entity
-    AND custom_field.active = 1
-    AND (custom_field.name IN (:fields) OR custom_field_set.app_id IS NOT NULL OR custom_field.include_in_search = 1)',
+    AND custom_field.active = TRUE
+    AND (custom_field.name IN (:fields) OR custom_field_set.app_id IS NOT NULL OR custom_field.include_in_search = TRUE)',
             ['entity' => $entity, 'fields' => $usedFieldNames],
             ['fields' => ArrayParameterType::STRING]
         ) + $customFieldsMapping;
@@ -114,8 +115,9 @@ WHERE custom_field_set_relation.entity_name = :entity
      */
     private function fetchCustomFieldNamesUsedInProductSorting(): array
     {
+        $fields = $this->jsonTextExpression('fields');
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT fields FROM product_sorting WHERE fields LIKE :pattern',
+            'SELECT fields FROM product_sorting WHERE ' . $fields . ' LIKE :pattern',
             ['pattern' => '%customFields.%']
         );
 
@@ -127,12 +129,20 @@ WHERE custom_field_set_relation.entity_name = :entity
      */
     private function fetchCustomFieldNamesUsedInProductStream(): array
     {
+        $apiFilter = $this->jsonTextExpression('api_filter');
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT api_filter FROM product_stream WHERE api_filter LIKE :pattern',
+            'SELECT api_filter FROM product_stream WHERE ' . $apiFilter . ' LIKE :pattern',
             ['pattern' => '%customFields.%']
         );
 
         return $this->extractCustomFieldNames($rows);
+    }
+
+    private function jsonTextExpression(string $column): string
+    {
+        return (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+            ? 'CAST(' . $column . ' AS text)'
+            : 'CAST(' . $column . ' AS CHAR)';
     }
 
     /**

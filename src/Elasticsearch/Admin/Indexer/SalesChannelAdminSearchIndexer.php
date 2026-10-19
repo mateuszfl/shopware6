@@ -4,6 +4,7 @@ namespace Shopware\Elasticsearch\Admin\Indexer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -83,15 +84,19 @@ final class SalesChannelAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            '
-            SELECT LOWER(HEX(sales_channel.id)) as id,
-                   GROUP_CONCAT(DISTINCT sales_channel_translation.name SEPARATOR " ") as name
+            str_replace(
+                '#nameAggregate#',
+                IndexingSql::distinctAggregate($this->connection, 'sales_channel_translation.name', ' '),
+                '
+            SELECT sw_uuid_hex(sales_channel.id) as id,
+                   #nameAggregate# as name
             FROM sales_channel
                 INNER JOIN sales_channel_translation
                     ON sales_channel.id = sales_channel_translation.sales_channel_id
             WHERE sales_channel.id IN (:ids)
             GROUP BY sales_channel.id
-        ',
+        '
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -102,6 +107,7 @@ final class SalesChannelAdminSearchIndexer extends AbstractAdminIndexer
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter($row));
             $mapped[$id] = [

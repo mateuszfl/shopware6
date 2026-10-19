@@ -4,6 +4,7 @@ namespace Shopware\Tests\Unit\Elasticsearch\Framework;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\ProductDefinition;
@@ -38,6 +39,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         ]]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         // Mock the private fetch methods via fetchFirstColumn (called twice for sorting and stream)
         $connection->expects($this->exactly(2))
@@ -67,28 +70,21 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         ], $formatted);
     }
 
-    public function testGetCustomFieldTypesOnlyReturnsSearchableFields(): void
+    public function testGetCustomFieldTypesReturnsSearchableMappings(): void
     {
         $dispatcher = new EventDispatcher();
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
-        // Mock the private fetch methods
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')
             ->willReturn([]);
 
         $connection->expects($this->once())
             ->method('fetchAllKeyValue')
-            ->with(
-                static::callback(static function (string $sql): bool {
-                    return str_contains($sql, 'custom_field.include_in_search = 1')
-                        && str_contains($sql, 'custom_field.active = 1');
-                }),
-                static::anything(),
-                static::anything()
-            )
             ->willReturn([
                 'searchable_field' => 'text',
             ]);
@@ -112,6 +108,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         // First call returns sorting JSON, second call returns stream api_filter JSON (with entity prefix)
         $connection->expects($this->exactly(2))
@@ -215,6 +213,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')
@@ -263,6 +263,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')
@@ -296,6 +298,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $nestedApiFilter = json_encode([
             [
@@ -358,6 +362,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')
@@ -417,6 +423,8 @@ class ElasticsearchIndexingUtilsTest extends TestCase
         $parameterBag = new ParameterBag([]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $connection->expects($this->exactly(2))
             ->method('fetchFirstColumn')

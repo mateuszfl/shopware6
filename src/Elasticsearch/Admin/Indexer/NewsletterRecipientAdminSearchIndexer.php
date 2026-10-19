@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipient\NewsletterRecipientCollection;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipient\NewsletterRecipientDefinition;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipientTag\NewsletterRecipientTagDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -142,21 +143,27 @@ final class NewsletterRecipientAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(newsletter_recipient.id)) as id,
-                   GROUP_CONCAT(DISTINCT tag.name SEPARATOR " ") as tags,
-                   GROUP_CONCAT(LOWER(HEX(tag.id)) SEPARATOR " ") as tagIds,
+            str_replace(
+                ['#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(newsletter_recipient.id) as id,
+                   #tagsAggregate# as tags,
+                   #tagIdsAggregate# as tag_ids,
                    newsletter_recipient.email,
                    newsletter_recipient.first_name,
                    newsletter_recipient.last_name,
                    newsletter_recipient.status,
                    newsletter_recipient.city,
-                   newsletter_recipient.zip_code AS zipCode,
+                   newsletter_recipient.zip_code AS zip_code,
                    newsletter_recipient.street,
-                   LOWER(HEX(newsletter_recipient.sales_channel_id)) AS salesChannelId,
-                   LOWER(HEX(newsletter_recipient.language_id)) AS languageId,
-                   newsletter_recipient.created_at as createdAt,
-                   newsletter_recipient.updated_at as updatedAt
+                   sw_uuid_hex(newsletter_recipient.sales_channel_id) AS sales_channel_id,
+                   sw_uuid_hex(newsletter_recipient.language_id) AS language_id,
+                   newsletter_recipient.created_at as created_at,
+                   newsletter_recipient.updated_at as updated_at
             FROM newsletter_recipient
                 LEFT JOIN newsletter_recipient_tag
                     ON newsletter_recipient.id = newsletter_recipient_tag.newsletter_recipient_id
@@ -164,7 +171,8 @@ final class NewsletterRecipientAdminSearchIndexer extends AbstractAdminIndexer
                     ON newsletter_recipient_tag.tag_id = tag.id
             WHERE newsletter_recipient.id IN (:ids)
             GROUP BY newsletter_recipient.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -175,6 +183,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([
                 $row['email'] ?? '',

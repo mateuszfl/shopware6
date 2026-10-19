@@ -33,13 +33,13 @@ class CustomFieldSetGateway
         /** @var list<array{id: string, name: string, type: string}> $result */
         $result = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT LOWER(HEX(set_id)) as set_id, LOWER(HEX(id)) AS id, name, type
+                SELECT sw_uuid_hex(set_id) as set_id, sw_uuid_hex(id) AS id, name, type
                 FROM custom_field
                 WHERE set_id IN (:setIds)
-                    AND include_in_search = 1
+                    AND include_in_search = TRUE
             SQL,
             ['setIds' => Uuid::fromHexToBytesList($setIds)],
-            ['setIds' => ArrayParameterType::STRING]
+            ['setIds' => ArrayParameterType::BINARY]
         );
 
         /** @var array<string, list<array{id: string, name: string, type: string}>> $customFields */
@@ -60,9 +60,9 @@ class CustomFieldSetGateway
         }
 
         return $this->connection->fetchFirstColumn(
-            'SELECT LOWER(HEX(id)) FROM custom_field_set WHERE id IN (:ids) AND app_id IS NOT NULL',
+            'SELECT sw_uuid_hex(id) FROM custom_field_set WHERE id IN (:ids) AND app_id IS NOT NULL',
             ['ids' => Uuid::fromHexToBytesList($setIds)],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
     }
 
@@ -75,9 +75,9 @@ class CustomFieldSetGateway
     {
         /** @var array<string, string> $result */
         $result = $this->connection->fetchAllKeyValue(
-            'SELECT LOWER(HEX(id)), LOWER(HEX(set_id)) FROM custom_field WHERE id IN (:ids)',
+            'SELECT sw_uuid_hex(id), sw_uuid_hex(set_id) FROM custom_field WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($customFieldIds)],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
 
         return $result;
@@ -93,13 +93,13 @@ class CustomFieldSetGateway
         /** @var list<array{set_id: string, entity_name: string}> $fieldSets */
         $fieldSets = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT LOWER(HEX(custom_field_set.id)) AS set_id, entity_name
+                SELECT sw_uuid_hex(custom_field_set.id) AS set_id, entity_name
                 FROM custom_field_set
                 LEFT JOIN custom_field_set_relation ON custom_field_set.id = custom_field_set_relation.set_id
                 WHERE custom_field_set.id IN (:ids)
             SQL,
             ['ids' => Uuid::fromHexToBytesList($fieldSetIds)],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
 
         return FetchModeHelper::group($fieldSets, static fn (array $row): string => (string) $row['entity_name']);
@@ -110,8 +110,9 @@ class CustomFieldSetGateway
      */
     public function fetchLanguageIds(): array
     {
+        $platform = $this->connection->getDatabasePlatform();
         /** @var list<string> $languageIds */
-        $languageIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(`id`)) FROM language');
+        $languageIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(' . $platform->quoteSingleIdentifier('id') . ') FROM ' . $platform->quoteSingleIdentifier('language'));
 
         return $languageIds;
     }

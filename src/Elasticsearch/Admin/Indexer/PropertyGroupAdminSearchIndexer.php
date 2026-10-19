@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Property\Aggregate\PropertyGroupTranslation\PropertyGroupTranslationDefinition;
 use Shopware\Core\Content\Property\PropertyGroupCollection;
 use Shopware\Core\Content\Property\PropertyGroupDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -123,21 +124,28 @@ final class PropertyGroupAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(property_group.id)) as id,
-                   GROUP_CONCAT(DISTINCT property_group_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(property_group_translation.language_id)),
-                       'name', property_group_translation.name
-                   )) as translatedNames,
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'property_group_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(property_group_translation.language_id)',
+                        'name' => 'property_group_translation.name',
+                    ]),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(property_group.id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
                    property_group.filterable AS filterable,
-                   property_group.created_at as createdAt
+                   property_group.created_at as created_at
             FROM property_group
                 INNER JOIN property_group_translation
                     ON property_group.id = property_group_translation.property_group_id
             WHERE property_group.id IN (:ids)
             GROUP BY property_group.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -148,6 +156,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

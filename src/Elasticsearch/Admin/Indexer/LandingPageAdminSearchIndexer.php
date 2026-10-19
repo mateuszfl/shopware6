@@ -8,6 +8,7 @@ use Shopware\Core\Content\LandingPage\Aggregate\LandingPageTag\LandingPageTagDef
 use Shopware\Core\Content\LandingPage\Aggregate\LandingPageTranslation\LandingPageTranslationDefinition;
 use Shopware\Core\Content\LandingPage\LandingPageCollection;
 use Shopware\Core\Content\LandingPage\LandingPageDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -125,17 +126,25 @@ final class LandingPageAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(landing_page.id)) as id,
-                   GROUP_CONCAT(DISTINCT landing_page_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(landing_page_translation.language_id)),
-                       'name', landing_page_translation.name
-                   )) as translatedNames,
-                   GROUP_CONCAT(DISTINCT tag.name SEPARATOR " ") as tags,
-                   GROUP_CONCAT(LOWER(HEX(tag.id)) SEPARATOR " ") as tagIds,
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#', '#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'landing_page_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(landing_page_translation.language_id)',
+                        'name' => 'landing_page_translation.name',
+                    ]),
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(landing_page.id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
+                   #tagsAggregate# as tags,
+                   #tagIdsAggregate# as tag_ids,
                    landing_page.active AS active,
-                   landing_page.created_at as createdAt
+                   landing_page.created_at as created_at
             FROM landing_page
                 INNER JOIN landing_page_translation
                     ON landing_page.id = landing_page_translation.landing_page_id
@@ -145,7 +154,8 @@ final class LandingPageAdminSearchIndexer extends AbstractAdminIndexer
                     ON landing_page_tag.tag_id = tag.id
             WHERE landing_page.id IN (:ids)
             GROUP BY landing_page.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -156,6 +166,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $row['tags'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

@@ -4,6 +4,7 @@ namespace Shopware\Elasticsearch\Admin\Indexer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Document\DocumentDefinition;
 use Shopware\Core\Checkout\Order\Aggregate\OrderAddress\OrderAddressDefinition;
 use Shopware\Core\Checkout\Order\Aggregate\OrderDelivery\OrderDeliveryDefinition;
@@ -12,6 +13,8 @@ use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionDefi
 use Shopware\Core\Checkout\Order\OrderCollection;
 use Shopware\Core\Checkout\Order\OrderDefinition;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -235,10 +238,37 @@ final class OrderAdminSearchIndexer extends AbstractAdminIndexer
      */
     public function fetch(array $ids): array
     {
-        $baseSql = <<<'SQL'
-            SELECT LOWER(HEX(`order`.id)) as id,
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $orderTable = $dialect->quoteIdentifier('order');
+        $promotionCode = $dialect->capabilities()->supportsJsonb
+            ? 'CASE WHEN order_line_item.promotion_id IS NOT NULL THEN order_line_item.payload::jsonb ->> \'code\' END'
+            : 'CASE WHEN order_line_item.promotion_id IS NOT NULL THEN JSON_UNQUOTE(JSON_EXTRACT(order_line_item.payload, \'$.code\')) END';
+
+        $baseSql = str_replace(
+            ['#orderTable#', '#tagsAggregate#', '#tagIdsAggregate#', '#countryAggregate#', '#cityAggregate#', '#streetAggregate#', '#zipcodeAggregate#', '#phoneAggregate#', '#addressLine1Aggregate#', '#addressLine2Aggregate#', '#documentNumberAggregate#', '#documentIdsAggregate#', '#lineItemsAggregate#'],
+            [
+                $orderTable,
+                IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                IndexingSql::distinctAggregate($this->connection, 'country_translation.name', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.city', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.street', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.zipcode', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.phone_number', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.additional_address_line1', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'order_address.additional_address_line2', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'document.document_number', ' '),
+                IndexingSql::distinctAggregate($this->connection, 'sw_uuid_hex(document.id)', ' '),
+                IndexingSql::jsonObjectAggregate($this->connection, [
+                    'id' => 'sw_uuid_hex(order_line_item.id)',
+                    'productId' => 'sw_uuid_hex(order_line_item.product_id)',
+                    'code' => $promotionCode,
+                ], distinct: true),
+            ],
+            <<<'SQL'
+            SELECT sw_uuid_hex(#orderTable#.id) as id,
                    tag_agg.tags as tags,
-                   tag_agg.tagIds as tagIds,
+                   tag_agg.tag_ids as tag_ids,
                    address_agg.country as country,
                    address_agg.city as city,
                    address_agg.street as street,
@@ -246,44 +276,44 @@ final class OrderAdminSearchIndexer extends AbstractAdminIndexer
                    address_agg.phone_number as phone_number,
                    address_agg.additional_address_line1 as additional_address_line1,
                    address_agg.additional_address_line2 as additional_address_line2,
-                   document_agg.documentNumber as documentNumber,
+                   document_agg.document_number as document_number,
                    order_customer.first_name,
                    order_customer.last_name,
                    order_customer.email,
                    order_customer.company,
                    order_customer.customer_number,
-                   `order`.order_number,
-                   `order`.amount_total,
-                   `order`.order_date_time,
-                   LOWER(HEX(`order`.state_id)) AS stateId,
-                   LOWER(HEX(`order`.sales_channel_id)) AS salesChannelId,
-                   `order`.affiliate_code AS affiliateCode,
-                   `order`.campaign_code AS campaignCode,
-                   `order`.created_at as createdAt,
+                   #orderTable#.order_number,
+                   #orderTable#.amount_total,
+                   #orderTable#.order_date_time,
+                   sw_uuid_hex(#orderTable#.state_id) AS state_id,
+                   sw_uuid_hex(#orderTable#.sales_channel_id) AS sales_channel_id,
+                   #orderTable#.affiliate_code AS affiliate_code,
+                   #orderTable#.campaign_code AS campaign_code,
+                   #orderTable#.created_at as created_at,
                    primary_delivery.tracking_codes,
-                   document_agg.documentIds as documentIds,
-                   LOWER(HEX(billing_address.id)) as billingAddressId,
-                   LOWER(HEX(billing_address.country_id)) as billingAddressCountryId,
-                   LOWER(HEX(order_customer.id)) as orderCustomerId,
-                   LOWER(HEX(order_customer.customer_id)) as customerId,
-                   LOWER(HEX(customer.customer_group_id)) as customerGroupId,
-                   customer.customer_number as liveCustomerNumber,
-                   line_item_agg.lineItems as lineItems,
-                   LOWER(HEX(primary_transaction.id)) as primaryTransactionId,
-                   LOWER(HEX(primary_transaction.state_id)) as primaryTransactionStateId,
-                   LOWER(HEX(primary_transaction.payment_method_id)) as primaryTransactionPaymentMethodId,
-                   LOWER(HEX(primary_delivery.id)) as primaryDeliveryId,
-                   LOWER(HEX(primary_delivery.state_id)) as primaryDeliveryStateId,
-                   LOWER(HEX(primary_delivery.shipping_method_id)) as primaryDeliveryShippingMethodId,
-                   LOWER(HEX(primary_delivery_address.country_id)) as primaryDeliveryCountryId
-            FROM `order`
+                   document_agg.document_ids as document_ids,
+                   sw_uuid_hex(billing_address.id) as billing_address_id,
+                   sw_uuid_hex(billing_address.country_id) as billing_address_country_id,
+                   sw_uuid_hex(order_customer.id) as order_customer_id,
+                   sw_uuid_hex(order_customer.customer_id) as customer_id,
+                   sw_uuid_hex(customer.customer_group_id) as customer_group_id,
+                   customer.customer_number as live_customer_number,
+                   line_item_agg.line_items as line_items,
+                   sw_uuid_hex(primary_transaction.id) as primary_transaction_id,
+                   sw_uuid_hex(primary_transaction.state_id) as primary_transaction_state_id,
+                   sw_uuid_hex(primary_transaction.payment_method_id) as primary_transaction_payment_method_id,
+                   sw_uuid_hex(primary_delivery.id) as primary_delivery_id,
+                   sw_uuid_hex(primary_delivery.state_id) as primary_delivery_state_id,
+                   sw_uuid_hex(primary_delivery.shipping_method_id) as primary_delivery_shipping_method_id,
+                   sw_uuid_hex(primary_delivery_address.country_id) as primary_delivery_country_id
+            FROM #orderTable#
                 LEFT JOIN order_customer
-                    ON `order`.id = order_customer.order_id AND `order`.version_id = order_customer.order_version_id
+                    ON #orderTable#.id = order_customer.order_id AND #orderTable#.version_id = order_customer.order_version_id
                 LEFT JOIN (
                     SELECT order_tag.order_id,
                            order_tag.order_version_id,
-                           GROUP_CONCAT(DISTINCT tag.name SEPARATOR ' ') as tags,
-                           GROUP_CONCAT(LOWER(HEX(tag.id)) SEPARATOR ' ') as tagIds
+                           #tagsAggregate# as tags,
+                           #tagIdsAggregate# as tag_ids
                     FROM order_tag
                     LEFT JOIN tag
                         ON order_tag.tag_id = tag.id
@@ -291,17 +321,17 @@ final class OrderAdminSearchIndexer extends AbstractAdminIndexer
                     AND order_tag.order_version_id = :versionId
                     GROUP BY order_tag.order_id, order_tag.order_version_id
                 ) as tag_agg
-                    ON `order`.id = tag_agg.order_id AND `order`.version_id = tag_agg.order_version_id
+                    ON #orderTable#.id = tag_agg.order_id AND #orderTable#.version_id = tag_agg.order_version_id
                 LEFT JOIN (
                     SELECT order_address.order_id,
                            order_address.order_version_id,
-                           GROUP_CONCAT(DISTINCT country_translation.name SEPARATOR ' ') as country,
-                           GROUP_CONCAT(DISTINCT order_address.city SEPARATOR ' ') as city,
-                           GROUP_CONCAT(DISTINCT order_address.street SEPARATOR ' ') as street,
-                           GROUP_CONCAT(DISTINCT order_address.zipcode SEPARATOR ' ') as zipcode,
-                           GROUP_CONCAT(DISTINCT order_address.phone_number SEPARATOR ' ') as phone_number,
-                           GROUP_CONCAT(DISTINCT order_address.additional_address_line1 SEPARATOR ' ') as additional_address_line1,
-                           GROUP_CONCAT(DISTINCT order_address.additional_address_line2 SEPARATOR ' ') as additional_address_line2
+                           #countryAggregate# as country,
+                           #cityAggregate# as city,
+                           #streetAggregate# as street,
+                           #zipcodeAggregate# as zipcode,
+                           #phoneAggregate# as phone_number,
+                           #addressLine1Aggregate# as additional_address_line1,
+                           #addressLine2Aggregate# as additional_address_line2
                     FROM order_address
                     LEFT JOIN country
                         ON order_address.country_id = country.id
@@ -311,49 +341,40 @@ final class OrderAdminSearchIndexer extends AbstractAdminIndexer
                     AND order_address.order_version_id = :versionId
                     GROUP BY order_address.order_id, order_address.order_version_id
                 ) as address_agg
-                    ON `order`.id = address_agg.order_id AND `order`.version_id = address_agg.order_version_id
+                    ON #orderTable#.id = address_agg.order_id AND #orderTable#.version_id = address_agg.order_version_id
                 LEFT JOIN (
                     SELECT document.order_id,
-                           GROUP_CONCAT(DISTINCT document.document_number SEPARATOR ' ') as documentNumber,
-                           GROUP_CONCAT(DISTINCT LOWER(HEX(document.id)) SEPARATOR ' ') as documentIds
+                           #documentNumberAggregate# as document_number,
+                           #documentIdsAggregate# as document_ids
                     FROM document
                     WHERE document.order_id IN (:ids)
                     GROUP BY document.order_id
                 ) as document_agg
-                    ON `order`.id = document_agg.order_id
+                    ON #orderTable#.id = document_agg.order_id
                 LEFT JOIN order_address AS billing_address
-                    ON `order`.billing_address_id = billing_address.id AND `order`.billing_address_version_id = billing_address.version_id
+                    ON #orderTable#.billing_address_id = billing_address.id AND #orderTable#.billing_address_version_id = billing_address.version_id
                 LEFT JOIN customer
                     ON order_customer.customer_id = customer.id
                 LEFT JOIN (
                     SELECT order_line_item.order_id,
                            order_line_item.order_version_id,
-                           CONCAT(
-                               '[',
-                               GROUP_CONCAT(
-                                   DISTINCT JSON_OBJECT(
-                                       'id', LOWER(HEX(order_line_item.id)),
-                                       'productId', LOWER(HEX(order_line_item.product_id)),
-                                       'code', CASE WHEN order_line_item.promotion_id IS NOT NULL THEN JSON_UNQUOTE(JSON_EXTRACT(order_line_item.payload, '$.code')) END
-                                   ) ORDER BY NULL
-                               ),
-                               ']'
-                           ) as lineItems
+                           #lineItemsAggregate# as line_items
                     FROM order_line_item
                     WHERE order_line_item.order_id IN (:ids)
                     AND order_line_item.order_version_id = :versionId
                     GROUP BY order_line_item.order_id, order_line_item.order_version_id
                 ) as line_item_agg
-                    ON `order`.id = line_item_agg.order_id AND `order`.version_id = line_item_agg.order_version_id
+                    ON #orderTable#.id = line_item_agg.order_id AND #orderTable#.version_id = line_item_agg.order_version_id
                 LEFT JOIN order_transaction AS primary_transaction
-                    ON `order`.primary_order_transaction_id = primary_transaction.id AND `order`.primary_order_transaction_version_id = primary_transaction.version_id
+                    ON #orderTable#.primary_order_transaction_id = primary_transaction.id AND #orderTable#.primary_order_transaction_version_id = primary_transaction.version_id
                 LEFT JOIN order_delivery AS primary_delivery
-                    ON `order`.primary_order_delivery_id = primary_delivery.id AND `order`.primary_order_delivery_version_id = primary_delivery.version_id
+                    ON #orderTable#.primary_order_delivery_id = primary_delivery.id AND #orderTable#.primary_order_delivery_version_id = primary_delivery.version_id
                 LEFT JOIN order_address AS primary_delivery_address
                     ON primary_delivery.shipping_order_address_id = primary_delivery_address.id AND primary_delivery.shipping_order_address_version_id = primary_delivery_address.version_id
-            WHERE `order`.id IN (:ids)
-            AND `order`.version_id = :versionId
-SQL;
+            WHERE #orderTable#.id IN (:ids)
+            AND #orderTable#.version_id = :versionId
+SQL
+        );
 
         $data = $this->connection->fetchAllAssociative(
             $baseSql,
@@ -363,11 +384,13 @@ SQL;
             ],
             [
                 'ids' => ArrayParameterType::BINARY,
+                'versionId' => ParameterType::BINARY,
             ]
         );
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([
                 $row['order_number'] ?? '',

@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\ProductStream\Aggregate\ProductStreamTranslation\ProductStreamTranslationDefinition;
 use Shopware\Core\Content\ProductStream\ProductStreamCollection;
 use Shopware\Core\Content\ProductStream\ProductStreamDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -83,15 +84,19 @@ final class ProductStreamAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            '
-            SELECT LOWER(HEX(product_stream.id)) as id,
-                   GROUP_CONCAT(DISTINCT product_stream_translation.name SEPARATOR " ") as name
+            str_replace(
+                '#nameAggregate#',
+                IndexingSql::distinctAggregate($this->connection, 'product_stream_translation.name', ' '),
+                '
+            SELECT sw_uuid_hex(product_stream.id) as id,
+                   #nameAggregate# as name
             FROM product_stream
                 INNER JOIN product_stream_translation
                     ON product_stream.id = product_stream_translation.product_stream_id
             WHERE product_stream.id IN (:ids)
             GROUP BY product_stream.id
-        ',
+        '
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -102,6 +107,7 @@ final class ProductStreamAdminSearchIndexer extends AbstractAdminIndexer
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter(array_unique(array_values($row))));
             $mapped[$id] = [

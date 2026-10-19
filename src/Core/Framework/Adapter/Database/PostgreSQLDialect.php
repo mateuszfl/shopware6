@@ -184,7 +184,7 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
             . 'ON a.value = b.value) END FROM (SELECT ' . $left . '::jsonb AS l, ' . $right . '::jsonb AS r) sw_overlap)';
     }
 
-    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false, bool $distinct = true): SqlFragment
     {
         $parts = [];
         foreach ($fields as $expression) {
@@ -193,7 +193,7 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
         }
         $sql = 'jsonb_build_object(' . implode(', ', $parts) . ')';
         if ($aggregate) {
-            $sql = 'jsonb_agg(DISTINCT ' . $sql . ')';
+            $sql = 'jsonb_agg(' . ($distinct ? 'DISTINCT ' : '') . $sql . ')';
         }
 
         return (new SqlFragment($sql, array_map(strval(...), array_keys($fields)), array_fill(0, \count($fields), ParameterType::STRING)))->named();

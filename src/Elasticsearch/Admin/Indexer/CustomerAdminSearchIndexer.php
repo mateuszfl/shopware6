@@ -8,6 +8,7 @@ use Shopware\Core\Checkout\Customer\Aggregate\CustomerAddress\CustomerAddressDef
 use Shopware\Core\Checkout\Customer\Aggregate\CustomerTag\CustomerTagDefinition;
 use Shopware\Core\Checkout\Customer\CustomerCollection;
 use Shopware\Core\Checkout\Customer\CustomerDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -183,10 +184,26 @@ final class CustomerAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(customer.id)) as id,
+            str_replace(
+                ['#countryAggregate#', '#addressFirstNameAggregate#', '#addressLastNameAggregate#', '#addressCompanyAggregate#', '#cityAggregate#', '#streetAggregate#', '#zipcodeAggregate#', '#phoneAggregate#', '#addressLine1Aggregate#', '#addressLine2Aggregate#', '#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'country_translation.name', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.first_name', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.last_name', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.company', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.city', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.street', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.zipcode', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.phone_number', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.additional_address_line1', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'customer_address.additional_address_line2', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(customer.id) as id,
                    tag_agg.tags as tags,
-                   tag_agg.tagIds as tagIds,
+                   tag_agg.tag_ids as tag_ids,
                    address_agg.country as country,
                    address_agg.address_first_name as address_first_name,
                    address_agg.address_last_name as address_last_name,
@@ -203,30 +220,30 @@ final class CustomerAdminSearchIndexer extends AbstractAdminIndexer
                    customer.company,
                    customer.customer_number,
                    customer.active AS active,
-                   customer.affiliate_code AS affiliateCode,
-                   customer.campaign_code AS campaignCode,
-                   LOWER(HEX(customer.customer_group_id)) AS groupId,
-                   LOWER(HEX(customer.salutation_id)) AS salutationId,
-                   LOWER(HEX(customer.bound_sales_channel_id)) AS boundSalesChannelId,
-                   LOWER(HEX(customer.requested_customer_group_id)) AS requestedGroupId,
-                   LOWER(HEX(customer.default_billing_address_id)) AS defaultBillingAddressId,
-                   LOWER(HEX(default_billing_address.country_id)) AS defaultBillingAddressCountryId,
-                   LOWER(HEX(customer.default_shipping_address_id)) AS defaultShippingAddressId,
-                   LOWER(HEX(default_shipping_address.country_id)) AS defaultShippingAddressCountryId,
-                   customer.created_at as createdAt
+                   customer.affiliate_code AS affiliate_code,
+                   customer.campaign_code AS campaign_code,
+                   sw_uuid_hex(customer.customer_group_id) AS group_id,
+                   sw_uuid_hex(customer.salutation_id) AS salutation_id,
+                   sw_uuid_hex(customer.bound_sales_channel_id) AS bound_sales_channel_id,
+                   sw_uuid_hex(customer.requested_customer_group_id) AS requested_group_id,
+                   sw_uuid_hex(customer.default_billing_address_id) AS default_billing_address_id,
+                   sw_uuid_hex(default_billing_address.country_id) AS default_billing_address_country_id,
+                   sw_uuid_hex(customer.default_shipping_address_id) AS default_shipping_address_id,
+                   sw_uuid_hex(default_shipping_address.country_id) AS default_shipping_address_country_id,
+                   customer.created_at as created_at
             FROM customer
                 LEFT JOIN (
                     SELECT customer_address.customer_id,
-                           GROUP_CONCAT(DISTINCT country_translation.name ORDER BY NULL SEPARATOR ' ') as country,
-                           GROUP_CONCAT(DISTINCT customer_address.first_name ORDER BY NULL SEPARATOR ' ') as address_first_name,
-                           GROUP_CONCAT(DISTINCT customer_address.last_name ORDER BY NULL SEPARATOR ' ') as address_last_name,
-                           GROUP_CONCAT(DISTINCT customer_address.company ORDER BY NULL SEPARATOR ' ') as address_company,
-                           GROUP_CONCAT(DISTINCT customer_address.city ORDER BY NULL SEPARATOR ' ') as city,
-                           GROUP_CONCAT(DISTINCT customer_address.street ORDER BY NULL SEPARATOR ' ') as street,
-                           GROUP_CONCAT(DISTINCT customer_address.zipcode ORDER BY NULL SEPARATOR ' ') as zipcode,
-                           GROUP_CONCAT(DISTINCT customer_address.phone_number ORDER BY NULL SEPARATOR ' ') as phone_number,
-                           GROUP_CONCAT(DISTINCT customer_address.additional_address_line1 ORDER BY NULL SEPARATOR ' ') as additional_address_line1,
-                           GROUP_CONCAT(DISTINCT customer_address.additional_address_line2 ORDER BY NULL SEPARATOR ' ') as additional_address_line2
+                           #countryAggregate# as country,
+                           #addressFirstNameAggregate# as address_first_name,
+                           #addressLastNameAggregate# as address_last_name,
+                           #addressCompanyAggregate# as address_company,
+                           #cityAggregate# as city,
+                           #streetAggregate# as street,
+                           #zipcodeAggregate# as zipcode,
+                           #phoneAggregate# as phone_number,
+                           #addressLine1Aggregate# as additional_address_line1,
+                           #addressLine2Aggregate# as additional_address_line2
                     FROM customer_address
                     LEFT JOIN country
                         ON customer_address.country_id = country.id
@@ -242,8 +259,8 @@ final class CustomerAdminSearchIndexer extends AbstractAdminIndexer
                     ON customer.default_shipping_address_id = default_shipping_address.id
                 LEFT JOIN (
                     SELECT customer_tag.customer_id,
-                           GROUP_CONCAT(DISTINCT tag.name ORDER BY NULL SEPARATOR ' ') as tags,
-                           GROUP_CONCAT(LOWER(HEX(tag.id)) ORDER BY NULL SEPARATOR ' ') as tagIds
+                           #tagsAggregate# as tags,
+                           #tagIdsAggregate# as tag_ids
                     FROM customer_tag
                     LEFT JOIN tag
                         ON customer_tag.tag_id = tag.id
@@ -252,7 +269,8 @@ final class CustomerAdminSearchIndexer extends AbstractAdminIndexer
                 ) as tag_agg
                     ON tag_agg.customer_id = customer.id
             WHERE customer.id IN (:ids)
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -263,6 +281,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([
                 $row['first_name'] ?? '',

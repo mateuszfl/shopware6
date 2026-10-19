@@ -4,9 +4,11 @@ namespace Shopware\Elasticsearch\Product;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use OpenSearchDSL\BuilderInterface;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\SqlHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
@@ -364,45 +366,49 @@ class ElasticsearchProductDefinition extends AbstractElasticsearchDefinition
             $languages[] = Defaults::LANGUAGE_SYSTEM;
         }
 
+        $variantListingCondition = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+            ? 'p.variant_listing_config::jsonb -> \'displayParent\' IN (\'true\'::jsonb, \'1\'::jsonb)'
+            : '(JSON_TYPE(JSON_EXTRACT(p.variant_listing_config, \'$.displayParent\')) = \'BOOLEAN\' AND JSON_UNQUOTE(JSON_EXTRACT(p.variant_listing_config, \'$.displayParent\')) = \'true\') OR (JSON_TYPE(JSON_EXTRACT(p.variant_listing_config, \'$.displayParent\')) IN (\'INTEGER\', \'DOUBLE\') AND JSON_EXTRACT(p.variant_listing_config, \'$.displayParent\') = 1)';
+
         $baseSql = <<<'SQL'
 SELECT
-    LOWER(HEX(p.id)) AS id,
-    IFNULL(p.active, pp.active) AS active,
+    sw_uuid_hex(p.id) AS id,
+    COALESCE(p.active, pp.active) AS active,
     p.available AS available,
     #tags#,
     #visibilities#,
-    IFNULL(p.manufacturer_number, pp.manufacturer_number) AS manufacturerNumber,
-    IFNULL(p.available_stock, pp.available_stock) AS availableStock,
-    IFNULL(p.rating_average, pp.rating_average) AS ratingAverage,
-    p.product_number as productNumber,
-    pp.product_number as parentProductNumber,
+    COALESCE(p.manufacturer_number, pp.manufacturer_number) AS manufacturer_number,
+    COALESCE(p.available_stock, pp.available_stock) AS available_stock,
+    COALESCE(p.rating_average, pp.rating_average) AS rating_average,
+    p.product_number as product_number,
+    pp.product_number as parent_product_number,
     p.sales,
-    LOWER(HEX(p.manufacturer)) AS productManufacturerId,
-    LOWER(HEX(p.delivery_time_id)) as deliveryTimeId,
-    IFNULL(p.shipping_free, pp.shipping_free) AS shippingFree,
-    IFNULL(p.is_closeout, pp.is_closeout) AS isCloseout,
-    LOWER(HEX(IFNULL(p.product_media_id, pp.product_media_id))) AS coverId,
-    IFNULL(p.weight, pp.weight) AS weight,
-    IFNULL(p.length, pp.length) AS length,
-    IFNULL(p.height, pp.height) AS height,
-    IFNULL(p.width, pp.width) AS width,
-    IFNULL(p.release_date, pp.release_date) AS releaseDate,
-    IFNULL(p.created_at, pp.created_at) AS createdAt,
-    IFNULL(p.category_tree, pp.category_tree) AS categoryTree,
-    IFNULL(p.category_ids, pp.category_ids) AS categoryIds,
-    IFNULL(p.option_ids, pp.option_ids) AS optionIds,
-    IFNULL(p.property_ids, pp.property_ids) AS propertyIds,
-    IFNULL(p.tag_ids, pp.tag_ids) AS tagIds,
-    IFNULL(p.stream_ids, pp.stream_ids) AS streamIds,
-    LOWER(HEX(IFNULL(p.tax_id, pp.tax_id))) AS taxId,
-    IFNULL(p.stock, pp.stock) AS stock,
-    IFNULL(p.ean, pp.ean) AS ean,
-    IFNULL(p.mark_as_topseller, pp.mark_as_topseller) AS markAsTopseller,
-    p.auto_increment as autoIncrement,
-    p.display_group as displayGroup,
-    IFNULL(p.cheapest_price_accessor, pp.cheapest_price_accessor) as cheapest_price_accessor,
-    LOWER(HEX(p.parent_id)) as parentId,
-    p.child_count as childCount,
+    sw_uuid_hex(p.manufacturer) AS product_manufacturer_id,
+    sw_uuid_hex(p.delivery_time_id) as delivery_time_id,
+    COALESCE(p.shipping_free, pp.shipping_free) AS shipping_free,
+    COALESCE(p.is_closeout, pp.is_closeout) AS is_closeout,
+    sw_uuid_hex(COALESCE(p.product_media_id, pp.product_media_id)) AS cover_id,
+    COALESCE(p.weight, pp.weight) AS weight,
+    COALESCE(p.length, pp.length) AS length,
+    COALESCE(p.height, pp.height) AS height,
+    COALESCE(p.width, pp.width) AS width,
+    COALESCE(p.release_date, pp.release_date) AS release_date,
+    COALESCE(p.created_at, pp.created_at) AS created_at,
+    COALESCE(p.category_tree, pp.category_tree) AS category_tree,
+    COALESCE(p.category_ids, pp.category_ids) AS category_ids,
+    COALESCE(p.option_ids, pp.option_ids) AS option_ids,
+    COALESCE(p.property_ids, pp.property_ids) AS property_ids,
+    COALESCE(p.tag_ids, pp.tag_ids) AS tag_ids,
+    COALESCE(p.stream_ids, pp.stream_ids) AS stream_ids,
+    sw_uuid_hex(COALESCE(p.tax_id, pp.tax_id)) AS tax_id,
+    COALESCE(p.stock, pp.stock) AS stock,
+    COALESCE(p.ean, pp.ean) AS ean,
+    COALESCE(p.mark_as_topseller, pp.mark_as_topseller) AS mark_as_topseller,
+    p.auto_increment as auto_increment,
+    p.display_group as display_group,
+    COALESCE(p.cheapest_price_accessor, pp.cheapest_price_accessor) as cheapest_price_accessor,
+    sw_uuid_hex(p.parent_id) as parent_id,
+    p.child_count as child_count,
     p.type#states#
 
 FROM product p
@@ -411,23 +417,27 @@ FROM product p
     LEFT JOIN product_tag ON (product_tag.product_id = p.tags AND product_tag.product_version_id = p.version_id)
     LEFT JOIN tag ON tag.id = product_tag.tag_id
 
-WHERE p.id IN (:ids) AND p.version_id = :liveVersionId AND (p.child_count = 0 OR p.parent_id IS NOT NULL OR JSON_EXTRACT(`p`.`variant_listing_config`, "$.displayParent") = 1)
+WHERE p.id IN (:ids) AND p.version_id = :liveVersionId AND (p.child_count = 0 OR p.parent_id IS NOT NULL OR #variantListingCondition#)
 
-GROUP BY p.id
+GROUP BY #baseGroupBy#
 SQL;
 
         $baseMapping = [
             // @deprecated tag:v6.8.0 - the `product.states` column is removed in v6.8 (see Migration1763125892),
             // so it can only be selected while the column still exists
             '#states#' => Feature::isActive('v6.8.0.0') ? '' : ",\n    p.states",
+            '#variantListingCondition#' => $variantListingCondition,
             '#tags#' => SqlHelper::objectArray([
                 'name' => 'tag.name',
-                'id' => 'LOWER(HEX(tag.id))',
-            ], 'tags'),
+                'id' => 'sw_uuid_hex(tag.id)',
+            ], 'tags', $this->connection),
             '#visibilities#' => SqlHelper::objectArray([
                 'visibility' => 'product_visibility.visibility',
-                'salesChannelId' => 'LOWER(HEX(product_visibility.sales_channel_id))',
-            ], 'visibilities'),
+                'salesChannelId' => 'sw_uuid_hex(product_visibility.sales_channel_id)',
+            ], 'visibilities', $this->connection),
+            '#baseGroupBy#' => (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+                ? 'p.id, p.version_id, pp.id, pp.version_id'
+                : 'p.id',
         ];
 
         /** @var array<string, array<string, string|null>> $base */
@@ -439,24 +449,26 @@ SQL;
             ],
             [
                 'ids' => ArrayParameterType::BINARY,
+                'liveVersionId' => ParameterType::BINARY,
             ]
         );
+        $base = self::mapDatabaseRowKeys($base);
 
         $validProductIds = array_keys($base);
 
         $translationSql = <<<'SQL'
 SELECT
-    LOWER(HEX(p.id)) AS id,
-    IFNULL(product_main.name, product_parent.name) AS name,
-    product_parent.name AS parentName,
-    IFNULL(product_main.description, product_parent.description) AS description,
-    IFNULL(product_main.meta_title, product_parent.meta_title) AS metaTitle,
-    IFNULL(product_main.meta_description, product_parent.meta_description) AS metaDescription,
-    product_main.custom_fields AS customFields,
-    product_parent.custom_fields AS parentCustomFields,
-    IFNULL(product_main.custom_search_keywords, product_parent.custom_search_keywords) AS customSearchKeywords,
-    manufacturer.name AS manufacturerName,
-    delivery_time_translation.name as deliveryTimeName,
+    sw_uuid_hex(p.id) AS id,
+    COALESCE(product_main.name, product_parent.name) AS name,
+    product_parent.name AS parent_name,
+    COALESCE(product_main.description, product_parent.description) AS description,
+    COALESCE(product_main.meta_title, product_parent.meta_title) AS meta_title,
+    COALESCE(product_main.meta_description, product_parent.meta_description) AS meta_description,
+    product_main.custom_fields AS custom_fields,
+    product_parent.custom_fields AS parent_custom_fields,
+    COALESCE(product_main.custom_search_keywords, product_parent.custom_search_keywords) AS custom_search_keywords,
+    manufacturer.name AS manufacturer_name,
+    delivery_time_translation.name as delivery_time_name,
     #categories#
 FROM product p
     LEFT JOIN product_translation product_main ON product_main.product_id = p.id AND product_main.product_version_id = p.version_id AND product_main.language_id = :languageId
@@ -468,15 +480,18 @@ FROM product p
 
 WHERE p.id IN (:ids) AND p.version_id = :liveVersionId
 
-GROUP BY p.id
+GROUP BY #translationGroupBy#
 SQL;
 
         $translationMapping = [
             '#categories#' => SqlHelper::objectArray([
-                'languageId' => 'LOWER(HEX(category.language_id))',
-                'id' => 'LOWER(HEX(category.category_id))',
+                'languageId' => 'sw_uuid_hex(category.language_id)',
+                'id' => 'sw_uuid_hex(category.category_id)',
                 'name' => 'category.name',
-            ], 'categories'),
+            ], 'categories', $this->connection),
+            '#translationGroupBy#' => (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+                ? 'p.id, p.version_id, product_main.product_id, product_main.product_version_id, product_main.language_id, product_parent.product_id, product_parent.product_version_id, product_parent.language_id, manufacturer.product_manufacturer_id, manufacturer.product_manufacturer_version_id, manufacturer.language_id, delivery_time_translation.delivery_time_id, delivery_time_translation.language_id'
+                : 'p.id',
         ];
 
         $translationSql = str_replace(array_keys($translationMapping), array_values($translationMapping), $translationSql);
@@ -492,8 +507,11 @@ SQL;
                 ],
                 [
                     'ids' => ArrayParameterType::BINARY,
+                    'languageId' => ParameterType::BINARY,
+                    'liveVersionId' => ParameterType::BINARY,
                 ]
             );
+            $translations = self::mapDatabaseRowKeys($translations);
 
             foreach ($translations as $id => $translation) {
                 $translation['languageId'] = $languageId;
@@ -529,8 +547,8 @@ SQL;
 
         $sql = <<<'SQL'
 SELECT
-       LOWER(HEX(id)) as id,
-       LOWER(HEX(property_group_id)) as groupId,
+       sw_uuid_hex(id) as id,
+       sw_uuid_hex(property_group_id) as group_id,
        #translations#
 FROM property_group_option
          LEFT JOIN property_group_option_translation
@@ -540,14 +558,14 @@ WHERE property_group_option.id in (:ids)
 GROUP BY property_group_option.id
 SQL;
 
-        /** @var array<string, array{id: string, groupId: string, translations: string}> $options */
+        /** @var array<string, array{id: string, group_id: string, translations: string}> $options */
         $options = $this->connection->fetchAllAssociativeIndexed(
             str_replace(
                 '#translations#',
                 SqlHelper::objectArray([
-                    'languageId' => 'LOWER(HEX(property_group_option_translation.language_id))',
+                    'languageId' => 'sw_uuid_hex(property_group_option_translation.language_id)',
                     'name' => 'property_group_option_translation.name',
-                ], 'translations'),
+                ], 'translations', $this->connection),
                 $sql
             ),
             [
@@ -557,10 +575,12 @@ SQL;
                 'ids' => ArrayParameterType::BINARY,
             ]
         );
-
         foreach ($options as $optionId => $option) {
+            $option['groupId'] = $option['group_id'];
+            unset($option['group_id']);
             $translation = ElasticsearchIndexingUtils::parseJson($option, 'translations');
 
+            $options[$optionId] = $option;
             $options[$optionId]['group'] = [
                 'id' => $option['groupId'],
                 '_count' => 1,
@@ -570,6 +590,67 @@ SQL;
         }
 
         return $options;
+    }
+
+    /**
+     * PostgreSQL folds unquoted snake_case SQL aliases. Restore the PHP field names expected by the mapper.
+     *
+     * @param array<string, array<string, mixed>> $rows
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private static function mapDatabaseRowKeys(array $rows): array
+    {
+        $keyMap = [
+            'manufacturer_number' => 'manufacturerNumber',
+            'available_stock' => 'availableStock',
+            'rating_average' => 'ratingAverage',
+            'product_number' => 'productNumber',
+            'parent_product_number' => 'parentProductNumber',
+            'product_manufacturer_id' => 'productManufacturerId',
+            'delivery_time_id' => 'deliveryTimeId',
+            'shipping_free' => 'shippingFree',
+            'is_closeout' => 'isCloseout',
+            'cover_id' => 'coverId',
+            'release_date' => 'releaseDate',
+            'created_at' => 'createdAt',
+            'category_tree' => 'categoryTree',
+            'category_ids' => 'categoryIds',
+            'option_ids' => 'optionIds',
+            'property_ids' => 'propertyIds',
+            'tag_ids' => 'tagIds',
+            'stream_ids' => 'streamIds',
+            'tax_id' => 'taxId',
+            'mark_as_topseller' => 'markAsTopseller',
+            'auto_increment' => 'autoIncrement',
+            'display_group' => 'displayGroup',
+            'parent_id' => 'parentId',
+            'child_count' => 'childCount',
+            'parent_name' => 'parentName',
+            'meta_title' => 'metaTitle',
+            'meta_description' => 'metaDescription',
+            'custom_fields' => 'customFields',
+            'parent_custom_fields' => 'parentCustomFields',
+            'custom_search_keywords' => 'customSearchKeywords',
+            'manufacturer_name' => 'manufacturerName',
+            'delivery_time_name' => 'deliveryTimeName',
+            'group_id' => 'groupId',
+        ];
+
+        foreach ($rows as $id => $row) {
+            foreach ($row as $key => $value) {
+                if (!isset($keyMap[$key])) {
+                    continue;
+                }
+
+                unset($row[$key]);
+                $row[$keyMap[$key]] = $value;
+            }
+
+            $rows[$id] = $row;
+        }
+
+        return $rows;
     }
 
     /**

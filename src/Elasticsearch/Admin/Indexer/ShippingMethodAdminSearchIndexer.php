@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Checkout\Shipping\Aggregate\ShippingMethodTranslation\ShippingMethodTranslationDefinition;
 use Shopware\Core\Checkout\Shipping\ShippingMethodCollection;
 use Shopware\Core\Checkout\Shipping\ShippingMethodDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -83,15 +84,19 @@ final class ShippingMethodAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            '
-            SELECT LOWER(HEX(shipping_method.id)) as id,
-                   GROUP_CONCAT(DISTINCT shipping_method_translation.name SEPARATOR " ") as name
+            str_replace(
+                '#nameAggregate#',
+                IndexingSql::distinctAggregate($this->connection, 'shipping_method_translation.name', ' '),
+                '
+            SELECT sw_uuid_hex(shipping_method.id) as id,
+                   #nameAggregate# as name
             FROM shipping_method
                 INNER JOIN shipping_method_translation
                     ON shipping_method.id = shipping_method_translation.shipping_method_id
             WHERE shipping_method.id IN (:ids)
             GROUP BY shipping_method.id
-        ',
+        '
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -102,6 +107,7 @@ final class ShippingMethodAdminSearchIndexer extends AbstractAdminIndexer
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter($row));
             $mapped[$id] = [

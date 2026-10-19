@@ -4,6 +4,7 @@ namespace Shopware\Elasticsearch\Admin\Indexer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use OpenSearchDSL\Query\Compound\BoolQuery;
 use OpenSearchDSL\Query\FullText\SimpleQueryStringQuery;
 use OpenSearchDSL\Query\TermLevel\TermQuery;
@@ -16,6 +17,8 @@ use Shopware\Core\Content\Product\Aggregate\ProductVisibility\ProductVisibilityD
 use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -210,12 +213,24 @@ final class ProductAdminSearchIndexer extends AbstractAdminIndexer
             return $this->advancedFetch($ids);
         }
 
+        $customSearchKeywords = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+            ? 'CAST(translation.custom_search_keywords AS text)'
+            : 'translation.custom_search_keywords';
+
         $data = $this->connection->fetchAllAssociative(
-            "
-            SELECT LOWER(HEX(product.id)) as id,
-                   GROUP_CONCAT(DISTINCT translation.name ORDER BY NULL SEPARATOR '\n') as name,
-                   CONCAT('[', GROUP_CONCAT(translation.custom_search_keywords), ']') as custom_search_keywords,
-                   GROUP_CONCAT(DISTINCT tag.name SEPARATOR ' ') as tags,
+            str_replace(
+                ['#nameAggregate#', '#customSearchKeywords#', '#tagsAggregate#', '#productGroupBy#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'translation.name', "\n"),
+                    'CONCAT(\'[\', ' . IndexingSql::aggregate($this->connection, $customSearchKeywords, ',', 'NULL') . ', \']\')',
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb ? 'product.id, product.version_id' : 'product.id',
+                ],
+                '
+            SELECT sw_uuid_hex(product.id) as id,
+                   #nameAggregate# as name,
+                   #customSearchKeywords# as custom_search_keywords,
+                   #tagsAggregate# as tags,
                    product.product_number,
                    product.ean,
                    product.manufacturer_number
@@ -228,29 +243,32 @@ final class ProductAdminSearchIndexer extends AbstractAdminIndexer
                     ON product_tag.tag_id = tag.id
             WHERE product.id IN (:ids)
             AND product.version_id = :versionId
-            GROUP BY product.id
-        ",
+            GROUP BY #productGroupBy#
+        '
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
                 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
             ],
             [
                 'ids' => ArrayParameterType::BINARY,
+                'versionId' => ParameterType::BINARY,
             ]
         );
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $names = $this->splitTranslatedNames(\is_string($row['name'] ?? null) ? $row['name'] : '');
-            $textBoosted = (string) ($row['product_number'] ?? '');
+            $textBoosted = (string) ($row['productNumber'] ?? '');
 
-            if ($row['custom_search_keywords']) {
-                $row['custom_search_keywords'] = json_decode((string) $row['custom_search_keywords'], true, 512, \JSON_THROW_ON_ERROR);
-                $textBoosted = trim($textBoosted . ' ' . implode(' ', array_unique(array_merge(...$row['custom_search_keywords']))));
+            if ($row['customSearchKeywords']) {
+                $row['customSearchKeywords'] = json_decode((string) $row['customSearchKeywords'], true, 512, \JSON_THROW_ON_ERROR);
+                $textBoosted = trim($textBoosted . ' ' . implode(' ', array_unique(array_merge(...$row['customSearchKeywords']))));
             }
 
             $id = (string) $row['id'];
-            unset($row['name'], $row['custom_search_keywords']);
+            unset($row['name'], $row['customSearchKeywords']);
             $text = \implode(' ', array_filter(array_unique(array_values($row))));
             $mapped[$id] = [
                 'id' => $id,
@@ -331,25 +349,25 @@ final class ProductAdminSearchIndexer extends AbstractAdminIndexer
     {
         return $this->connection->fetchAllAssociative(
             <<<'SQL'
-            SELECT LOWER(HEX(product.id)) as id,
-                   IFNULL(product.active, parent.active) AS active,
+            SELECT sw_uuid_hex(product.id) as id,
+                   COALESCE(product.active, parent.active) AS active,
                    product.available AS available,
-                   LOWER(HEX(product.parent_id)) as parentId,
-                   product.product_number as productNumber,
+                   sw_uuid_hex(product.parent_id) as parent_id,
+                   product.product_number as product_number,
                    product.ean as ean,
-                   product.manufacturer_number as manufacturerNumber,
+                   product.manufacturer_number as manufacturer_number,
                    product.sales as sales,
                    product.type as type,
                    product.states as states,
-                   LOWER(HEX(product.manufacturer)) AS manufacturerId,
-                   LOWER(HEX(product.visibilities)) AS visibilitiesId,
-                   IFNULL(product.category_ids, parent.category_ids) AS categoryIds,
+                   sw_uuid_hex(product.manufacturer) AS manufacturer_id,
+                   sw_uuid_hex(product.visibilities) AS visibilities_id,
+                   COALESCE(product.category_ids, parent.category_ids) AS category_ids,
                    product.stock as stock,
-                   IFNULL(product.price, parent.price) AS priceRaw,
-                   IFNULL(product.release_date, parent.release_date) AS releaseDate,
-                   LOWER(HEX(product.cover)) AS mediaId,
-                   product.created_at as createdAt,
-                   product.updated_at as updatedAt
+                   COALESCE(product.price, parent.price) AS price_raw,
+                   COALESCE(product.release_date, parent.release_date) AS release_date,
+                   sw_uuid_hex(product.cover) AS media_id,
+                   product.created_at as created_at,
+                   product.updated_at as updated_at
             FROM product
                 LEFT JOIN product parent
                     ON product.parent_id = parent.id
@@ -358,7 +376,7 @@ final class ProductAdminSearchIndexer extends AbstractAdminIndexer
             AND product.version_id = :versionId
 SQL,
             ['ids' => $binaryIds, 'versionId' => $versionId],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
     }
 
@@ -373,27 +391,26 @@ SQL,
             return [];
         }
 
+        $customSearchKeywords = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+            ? 'CAST(product_translation.custom_search_keywords AS text)'
+            : 'product_translation.custom_search_keywords';
+
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(product_translation.product_id)) as id,
-                   GROUP_CONCAT(DISTINCT product_translation.name ORDER BY NULL SEPARATOR ' ') as name,
-                   CONCAT(
-                       '[',
-                       IFNULL(
-                           GROUP_CONCAT(
-                               CASE
-                                   WHEN product_translation.name IS NOT NULL THEN JSON_OBJECT(
-                                       'languageId', LOWER(HEX(product_translation.language_id)),
-                                       'name', product_translation.name
-                                   )
-                               END
-                               ORDER BY NULL
-                           ),
-                           ''
-                       ),
-                       ']'
-                   ) as translatedNames,
-                   CONCAT('[', IFNULL(GROUP_CONCAT(product_translation.custom_search_keywords ORDER BY NULL), ''), ']') as customSearchKeywords
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#', '#customSearchKeywords#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'product_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(product_translation.language_id)',
+                        'name' => 'product_translation.name',
+                    ], filter: 'product_translation.name IS NOT NULL'),
+                    'CONCAT(\'[\', COALESCE(' . IndexingSql::aggregate($this->connection, $customSearchKeywords, ',', 'NULL') . ', \'\'), \']\')',
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(product_translation.product_id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
+                   #customSearchKeywords# as custom_search_keywords
             FROM product_translation
             WHERE product_translation.product_id IN (:ids)
             AND product_translation.product_version_id = :versionId
@@ -402,9 +419,10 @@ SQL,
                 OR product_translation.custom_search_keywords IS NOT NULL
             )
             GROUP BY product_translation.product_id, product_translation.product_version_id
-SQL,
+SQL
+            ),
             ['ids' => Uuid::fromHexToBytesList($translationIds), 'versionId' => $versionId],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return $this->indexRowsById($rows);
@@ -422,19 +440,23 @@ SQL,
         }
 
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(product_manufacturer_translation.product_manufacturer_id)) as id,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(product_manufacturer_translation.language_id)),
-                       'name', product_manufacturer_translation.name
-                   )) as translatedManufacturerNames
+            str_replace(
+                '#translatedManufacturerNames#',
+                IndexingSql::jsonObjectAggregate($this->connection, [
+                    'languageId' => 'sw_uuid_hex(product_manufacturer_translation.language_id)',
+                    'name' => 'product_manufacturer_translation.name',
+                ]),
+                <<<'SQL'
+            SELECT sw_uuid_hex(product_manufacturer_translation.product_manufacturer_id) as id,
+                   #translatedManufacturerNames# as translated_manufacturer_names
             FROM product_manufacturer_translation
             WHERE product_manufacturer_translation.product_manufacturer_id IN (:ids)
             AND product_manufacturer_translation.product_manufacturer_version_id = :versionId
             GROUP BY product_manufacturer_translation.product_manufacturer_id, product_manufacturer_translation.product_manufacturer_version_id
-SQL,
+SQL
+            ),
             ['ids' => Uuid::fromHexToBytesList($manufacturerIds), 'versionId' => $versionId],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return $this->indexRowsById($rows);
@@ -448,19 +470,26 @@ SQL,
     private function fetchTagsByProductIds(array $binaryIds, string $versionId): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(product_tag.product_id)) as id,
-                   GROUP_CONCAT(DISTINCT tag.name ORDER BY NULL SEPARATOR ' ') as tags,
-                   GROUP_CONCAT(LOWER(HEX(tag.id)) ORDER BY NULL SEPARATOR ' ') as tagIds
+            str_replace(
+                ['#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(product_tag.product_id) as id,
+                   #tagsAggregate# as tags,
+                   #tagIdsAggregate# as tag_ids
             FROM product_tag
                 LEFT JOIN tag
                     ON product_tag.tag_id = tag.id
             WHERE product_tag.product_id IN (:ids)
             AND product_tag.product_version_id = :versionId
             GROUP BY product_tag.product_id, product_tag.product_version_id
-SQL,
+SQL
+            ),
             ['ids' => $binaryIds, 'versionId' => $versionId],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return $this->indexRowsById($rows);
@@ -478,24 +507,22 @@ SQL,
         }
 
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(product_visibility.product_id)) as id,
-                   CONCAT(
-                       '[',
-                       GROUP_CONCAT(
-                           DISTINCT JSON_OBJECT(
-                               'salesChannelId', LOWER(HEX(product_visibility.sales_channel_id))
-                           ) ORDER BY NULL
-                       ),
-                       ']'
-                   ) as visibilities
+            str_replace(
+                '#visibilities#',
+                IndexingSql::jsonObjectAggregate($this->connection, [
+                    'salesChannelId' => 'sw_uuid_hex(product_visibility.sales_channel_id)',
+                ], distinct: true),
+                <<<'SQL'
+            SELECT sw_uuid_hex(product_visibility.product_id) as id,
+                   #visibilities# as visibilities
             FROM product_visibility
             WHERE product_visibility.product_id IN (:ids)
             AND product_visibility.product_version_id = :versionId
             GROUP BY product_visibility.product_id, product_visibility.product_version_id
-SQL,
+SQL
+            ),
             ['ids' => Uuid::fromHexToBytesList($visibilityIds), 'versionId' => $versionId],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY, 'versionId' => ParameterType::BINARY]
         );
 
         return $this->indexRowsById($rows);

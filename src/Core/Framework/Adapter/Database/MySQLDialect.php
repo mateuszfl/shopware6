@@ -128,7 +128,7 @@ final class MySQLDialect extends AbstractDatabaseDialect
         return 'JSON_OVERLAPS(' . $left . ', ' . $right . ')';
     }
 
-    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false, bool $distinct = true): SqlFragment
     {
         $parts = [];
         foreach ($fields as $expression) {
@@ -137,7 +137,7 @@ final class MySQLDialect extends AbstractDatabaseDialect
         }
         $sql = 'JSON_OBJECT(' . implode(', ', $parts) . ')';
         if ($aggregate) {
-            $sql = 'CONCAT(\'[\', GROUP_CONCAT(DISTINCT ' . $sql . '), \']\')';
+            $sql = 'CONCAT(\'[\', GROUP_CONCAT(' . ($distinct ? 'DISTINCT ' : '') . $sql . '), \']\')';
         }
 
         return (new SqlFragment($sql, array_map(strval(...), array_keys($fields)), array_fill(0, \count($fields), ParameterType::STRING)))->named();

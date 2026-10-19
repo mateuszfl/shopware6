@@ -73,7 +73,7 @@ interface DatabaseDialect
     /**
      * @param array<int|string, string> $fields Trusted SQL expressions keyed by JSON member
      */
-    public function jsonObjectExpressions(array $fields, bool $aggregate = false): SqlFragment;
+    public function jsonObjectExpressions(array $fields, bool $aggregate = false, bool $distinct = true): SqlFragment;
 
     /**
      * @param array<string, string|list<string>> $fields Map of JSON keys to column names

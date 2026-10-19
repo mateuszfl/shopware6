@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Elasticsearch\Product;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\SalesChannel\Sorting\ProductSortingDefinition;
@@ -109,6 +110,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -205,6 +208,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -256,6 +261,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId2 = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -308,6 +315,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -353,6 +362,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         // Returns empty array - no custom fields found
         $connection
             ->expects($this->once())
@@ -390,6 +401,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -465,6 +478,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -521,6 +536,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -575,6 +592,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -626,6 +645,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -662,6 +683,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->exactly(2))
             ->method('fetchFirstColumn')
@@ -731,6 +754,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -791,6 +816,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -879,6 +906,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->never())->method('fetchFirstColumn');
 
         $mappingHelper = $this->createMock(ElasticsearchCustomFieldsMappingHelper::class);
@@ -954,6 +983,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -1028,6 +1059,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -1085,6 +1118,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
         $productStreamFilterId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -1194,6 +1229,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -1251,6 +1288,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')
@@ -1295,6 +1334,8 @@ class ProductCustomFieldsUsedUpdaterTest extends TestCase
             ->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection
             ->expects($this->once())
             ->method('fetchFirstColumn')

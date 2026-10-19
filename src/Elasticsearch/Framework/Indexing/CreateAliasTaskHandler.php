@@ -3,6 +3,7 @@
 namespace Shopware\Elasticsearch\Framework\Indexing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use OpenSearch\Client;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -112,7 +113,8 @@ class CreateAliasTaskHandler extends ScheduledTaskHandler
 
             $this->connection->executeStatement(
                 'DELETE FROM elasticsearch_index_task WHERE id = :id',
-                ['id' => $row['id']]
+                ['id' => $row['id']],
+                ['id' => ParameterType::BINARY]
             );
 
             $changes[(string) $index] = $alias;

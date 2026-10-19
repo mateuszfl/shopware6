@@ -6,6 +6,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Product\SalesChannel\Sorting\ProductSortingDefinition;
 use Shopware\Core\Content\ProductStream\Aggregate\ProductStreamFilter\ProductStreamFilterDefinition;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityWriteResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenEvent;
 use Shopware\Core\Framework\Log\Package;
@@ -96,10 +97,13 @@ class ProductCustomFieldsUsedUpdater implements EventSubscriberInterface
      */
     private function fetchCustomFieldNamesFromSortings(array $productSortingIds): array
     {
+        $fieldsColumn = (new DatabasePlatformResolver($this->connection))->capabilities()->supportsJsonb
+            ? 'CAST(fields AS text)'
+            : 'CAST(fields AS CHAR)';
         $rows = $this->connection->fetchFirstColumn(
-            'SELECT fields FROM product_sorting WHERE id IN (:ids) AND fields LIKE :pattern',
+            'SELECT fields FROM product_sorting WHERE id IN (:ids) AND ' . $fieldsColumn . ' LIKE :pattern',
             ['ids' => Uuid::fromHexToBytesList($productSortingIds), 'pattern' => '%customFields.%'],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
 
         $customFieldNames = [];
@@ -138,7 +142,7 @@ class ProductCustomFieldsUsedUpdater implements EventSubscriberInterface
         return $this->connection->fetchFirstColumn(
             'SELECT DISTINCT REPLACE(field, \'customFields.\', \'\') FROM product_stream_filter WHERE id IN (:ids) AND field LIKE :field',
             ['ids' => Uuid::fromHexToBytesList($productStreamFilterIds), 'field' => 'customFields.%'],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
     }
 

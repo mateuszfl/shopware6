@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Elasticsearch\Product;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use OpenSearchDSL\Query\Compound\BoolQuery;
 use OpenSearchDSL\Query\FullText\MatchQuery;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -289,6 +290,8 @@ class ElasticsearchProductDefinitionTest extends TestCase
         ]);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $utils = new ElasticsearchIndexingUtils($connection, new EventDispatcher(), $parameterBag);
         $fieldBuilder = new ElasticsearchFieldBuilder($languageLoader, $utils, [
@@ -543,6 +546,8 @@ class ElasticsearchProductDefinitionTest extends TestCase
     public function testMappingCustomFields(): void
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $languageLoader = new StaticLanguageLoader([
             'lang_en' => [
@@ -1077,6 +1082,8 @@ class ElasticsearchProductDefinitionTest extends TestCase
     private function getConnection(int $numberOfTranslations = 1): Stub&Connection
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $calls = [
             [
@@ -1136,10 +1143,7 @@ class ElasticsearchProductDefinitionTest extends TestCase
         $calls[] = [
             '809c1844f4734243b6aa04aba860cd45' => [
                 'id' => '809c1844f4734243b6aa04aba860cd45',
-                'groupId' => 'a73b9355da654243b92ce16c63e9b6cd',
-                'group' => [
-                    'id' => 'a73b9355da654243b92ce16c63e9b6cd',
-                ],
+                'group_id' => 'a73b9355da654243b92ce16c63e9b6cd',
                 'translations' => json_encode([
                     [
                         'languageId' => '2fbb5fe2e29a4d70aa5854ce7ce3e20b',
@@ -1149,10 +1153,7 @@ class ElasticsearchProductDefinitionTest extends TestCase
             ],
             'e4a08f9dd88f4a228240de7107e4ae4b' => [
                 'id' => 'e4a08f9dd88f4a228240de7107e4ae4b',
-                'groupId' => 'a73b9355da654243b92ce16c63e9b6cd',
-                'group' => [
-                    'id' => 'a73b9355da654243b92ce16c63e9b6cd',
-                ],
+                'group_id' => 'a73b9355da654243b92ce16c63e9b6cd',
                 'translations' => json_encode([
                     [
                         'languageId' => '2fbb5fe2e29a4d70aa5854ce7ce3e20b',
@@ -1175,6 +1176,8 @@ class ElasticsearchProductDefinitionTest extends TestCase
         ?string $parentName = null
     ): Stub&Connection {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $baseProductData = [
             'id' => $this->ids->get('product-1'),

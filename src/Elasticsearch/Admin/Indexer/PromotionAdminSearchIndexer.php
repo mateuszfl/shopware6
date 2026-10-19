@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Checkout\Promotion\Aggregate\PromotionTranslation\PromotionTranslationDefinition;
 use Shopware\Core\Checkout\Promotion\PromotionCollection;
 use Shopware\Core\Checkout\Promotion\PromotionDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -135,24 +136,31 @@ class PromotionAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(promotion.id)) as id,
-                   GROUP_CONCAT(DISTINCT promotion_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(promotion_translation.language_id)),
-                       'name', promotion_translation.name
-                   )) as translatedNames,
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'promotion_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(promotion_translation.language_id)',
+                        'name' => 'promotion_translation.name',
+                    ]),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(promotion.id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
                    promotion.code AS code,
                    promotion.active AS active,
-                   promotion.valid_from AS validFrom,
-                   promotion.valid_until AS validUntil,
-                   promotion.created_at as createdAt
+                   promotion.valid_from AS valid_from,
+                   promotion.valid_until AS valid_until,
+                   promotion.created_at as created_at
             FROM promotion
                 INNER JOIN promotion_translation
                     ON promotion.id = promotion_translation.promotion_id
             WHERE promotion.id IN (:ids)
             GROUP BY promotion.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -163,6 +171,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $row['code'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

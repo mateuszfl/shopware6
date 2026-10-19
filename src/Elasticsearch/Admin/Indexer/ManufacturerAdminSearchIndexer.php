@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Product\Aggregate\ProductManufacturer\ProductManufacturerCollection;
 use Shopware\Core\Content\Product\Aggregate\ProductManufacturer\ProductManufacturerDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductManufacturerTranslation\ProductManufacturerTranslationDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -115,20 +116,27 @@ final class ManufacturerAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(product_manufacturer.id)) as id,
-                   GROUP_CONCAT(DISTINCT product_manufacturer_translation.name SEPARATOR " ") as name,
-                   JSON_ARRAYAGG(JSON_OBJECT(
-                       'languageId', LOWER(HEX(product_manufacturer_translation.language_id)),
-                       'name', product_manufacturer_translation.name
-                   )) as translatedNames,
-                   product_manufacturer.created_at as createdAt
+            str_replace(
+                ['#nameAggregate#', '#translatedNames#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'product_manufacturer_translation.name', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(product_manufacturer_translation.language_id)',
+                        'name' => 'product_manufacturer_translation.name',
+                    ]),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(product_manufacturer.id) as id,
+                   #nameAggregate# as name,
+                   #translatedNames# as translated_names,
+                   product_manufacturer.created_at as created_at
             FROM product_manufacturer
                 INNER JOIN product_manufacturer_translation
                     ON product_manufacturer.id = product_manufacturer_translation.product_manufacturer_id
             WHERE product_manufacturer.id IN (:ids)
             GROUP BY product_manufacturer.id
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -139,6 +147,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([$row['name'] ?? '', $id]));
             $translatedNames = $this->decodeTranslatedValues((string) ($row['translatedNames'] ?? ''));

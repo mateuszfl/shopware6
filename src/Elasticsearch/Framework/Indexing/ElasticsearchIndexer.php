@@ -3,6 +3,7 @@
 namespace Shopware\Elasticsearch\Framework\Indexing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use OpenSearch\Client;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -228,12 +229,19 @@ class ElasticsearchIndexer
 
             // We don't need an index task, when it's the first indexing. This will allow alias swapping to nothing
             if ($hasAlias) {
-                $this->connection->insert('elasticsearch_index_task', [
+                $platform = $this->connection->getDatabasePlatform();
+                $this->connection->insert($platform->quoteSingleIdentifier('elasticsearch_index_task'), [
                     'id' => Uuid::randomBytes(),
-                    '`entity`' => $definition->getEntityDefinition()->getEntityName(),
-                    '`index`' => $index,
-                    '`alias`' => $alias,
-                    '`doc_count`' => $iterator->fetchCount(),
+                    $platform->quoteSingleIdentifier('entity') => $definition->getEntityDefinition()->getEntityName(),
+                    $platform->quoteSingleIdentifier('index') => $index,
+                    $platform->quoteSingleIdentifier('alias') => $alias,
+                    $platform->quoteSingleIdentifier('doc_count') => $iterator->fetchCount(),
+                ], [
+                    'id' => ParameterType::BINARY,
+                    $platform->quoteSingleIdentifier('entity') => ParameterType::STRING,
+                    $platform->quoteSingleIdentifier('index') => ParameterType::STRING,
+                    $platform->quoteSingleIdentifier('alias') => ParameterType::STRING,
+                    $platform->quoteSingleIdentifier('doc_count') => ParameterType::INTEGER,
                 ]);
             }
         }
@@ -247,7 +255,11 @@ class ElasticsearchIndexer
 
         $index = $task->getIndex();
 
-        $this->connection->executeStatement('UPDATE elasticsearch_index_task SET `doc_count` = `doc_count` - :idCount WHERE `index` = :index', [
+        $platform = $this->connection->getDatabasePlatform();
+        $taskTable = $platform->quoteSingleIdentifier('elasticsearch_index_task');
+        $docCount = $platform->quoteSingleIdentifier('doc_count');
+        $indexColumn = $platform->quoteSingleIdentifier('index');
+        $this->connection->executeStatement("UPDATE $taskTable SET $docCount = $docCount - :idCount WHERE $indexColumn = :index", [
             'idCount' => \count($ids),
             'index' => $index,
         ]);

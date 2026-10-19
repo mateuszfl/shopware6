@@ -5,6 +5,7 @@ namespace Shopware\Elasticsearch\Admin;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\ParameterType;
 use OpenSearch\Client;
 use OpenSearch\Exception\OpenSearchExceptionInterface;
 use Psr\Clock\ClockInterface;
@@ -159,8 +160,10 @@ class AdminSearchRegistry implements EventSubscriberInterface
             }
         }
 
+        $platform = $this->connection->getDatabasePlatform();
+        $taskTable = $platform->quoteSingleIdentifier('admin_elasticsearch_index_task');
         /** @var array<string, string> $indices */
-        $indices = $this->connection->fetchAllKeyValue('SELECT `alias`, `index` FROM admin_elasticsearch_index_task');
+        $indices = $this->connection->fetchAllKeyValue('SELECT ' . $platform->quoteSingleIdentifier('alias') . ', ' . $platform->quoteSingleIdentifier('index') . ' FROM ' . $taskTable);
         if ($indices === []) {
             return;
         }
@@ -298,6 +301,8 @@ class AdminSearchRegistry implements EventSubscriberInterface
      */
     private function createIndices(array $entities): array
     {
+        $platform = $this->connection->getDatabasePlatform();
+        $taskTable = $platform->quoteSingleIdentifier('admin_elasticsearch_index_task');
         $indexTasks = [];
         $indices = [];
         foreach ($entities as $entityName) {
@@ -314,13 +319,7 @@ class AdminSearchRegistry implements EventSubscriberInterface
             $this->create($indexer, $index, $alias);
 
             $iterator = $indexer->getIterator();
-            $indexTasks[] = [
-                'id' => Uuid::randomBytes(),
-                '`entity`' => $indexer->getEntity(),
-                '`index`' => $index,
-                '`alias`' => $alias,
-                '`doc_count`' => $iterator->fetchCount(),
-            ];
+            $indexTasks[] = $this->createIndexTask($indexer, $index, $alias, $iterator->fetchCount());
         }
 
         if ($indices === []) {
@@ -328,13 +327,16 @@ class AdminSearchRegistry implements EventSubscriberInterface
         }
 
         $this->connection->executeStatement(
-            'DELETE FROM admin_elasticsearch_index_task WHERE `entity` IN (:entities)',
+            'DELETE FROM ' . $taskTable . ' WHERE ' . $platform->quoteSingleIdentifier('entity') . ' IN (:entities)',
             ['entities' => $entities],
             ['entities' => ArrayParameterType::STRING]
         );
 
         foreach ($indexTasks as $task) {
-            $this->connection->insert('admin_elasticsearch_index_task', $task);
+            $types = array_fill_keys(array_keys($task), ParameterType::STRING);
+            $types['id'] = ParameterType::BINARY;
+            $types[$platform->quoteSingleIdentifier('doc_count')] = ParameterType::INTEGER;
+            $this->connection->insert($taskTable, $task, $types);
         }
 
         return $indices;
@@ -357,28 +359,43 @@ class AdminSearchRegistry implements EventSubscriberInterface
             $entities[] = $indexer->getEntity();
 
             $iterator = $indexer->getIterator();
-            $indexTasks[] = [
-                'id' => Uuid::randomBytes(),
-                '`entity`' => $indexer->getEntity(),
-                '`index`' => $index,
-                '`alias`' => $alias,
-                '`doc_count`' => $iterator->fetchCount(),
-            ];
+            $indexTasks[] = $this->createIndexTask($indexer, $index, $alias, $iterator->fetchCount());
         }
 
         if ($entities === []) {
             return;
         }
 
+        $platform = $this->connection->getDatabasePlatform();
+        $taskTable = $platform->quoteSingleIdentifier('admin_elasticsearch_index_task');
         $this->connection->executeStatement(
-            'DELETE FROM admin_elasticsearch_index_task WHERE `entity` IN (:entities)',
+            'DELETE FROM ' . $taskTable . ' WHERE ' . $platform->quoteSingleIdentifier('entity') . ' IN (:entities)',
             ['entities' => $entities],
             ['entities' => ArrayParameterType::STRING]
         );
 
         foreach ($indexTasks as $task) {
-            $this->connection->insert('admin_elasticsearch_index_task', $task);
+            $types = array_fill_keys(array_keys($task), ParameterType::STRING);
+            $types['id'] = ParameterType::BINARY;
+            $types[$platform->quoteSingleIdentifier('doc_count')] = ParameterType::INTEGER;
+            $this->connection->insert($taskTable, $task, $types);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createIndexTask(AbstractAdminIndexer $indexer, string $index, string $alias, int $count): array
+    {
+        $platform = $this->connection->getDatabasePlatform();
+
+        return [
+            'id' => Uuid::randomBytes(),
+            $platform->quoteSingleIdentifier('entity') => $indexer->getEntity(),
+            $platform->quoteSingleIdentifier('index') => $index,
+            $platform->quoteSingleIdentifier('alias') => $alias,
+            $platform->quoteSingleIdentifier('doc_count') => $count,
+        ];
     }
 
     private function create(AbstractAdminIndexer $indexer, string $index, string $alias): void

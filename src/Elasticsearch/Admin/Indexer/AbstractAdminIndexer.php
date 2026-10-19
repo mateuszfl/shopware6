@@ -52,6 +52,62 @@ abstract class AbstractAdminIndexer
             ],
         ],
     ];
+    /**
+     * @var array<string, string>
+     */
+    private const DATABASE_ROW_KEY_MAP = [
+        'translated_names' => 'translatedNames',
+        'created_at' => 'createdAt',
+        'tag_ids' => 'tagIds',
+        'translated_fields' => 'translatedFields',
+        'folder_name' => 'folderName',
+        'folder_path' => 'folderPath',
+        'media_folder_id' => 'mediaFolderId',
+        'valid_from' => 'validFrom',
+        'valid_until' => 'validUntil',
+        'zip_code' => 'zipCode',
+        'sales_channel_id' => 'salesChannelId',
+        'language_id' => 'languageId',
+        'updated_at' => 'updatedAt',
+        'parent_id' => 'parentId',
+        'product_number' => 'productNumber',
+        'manufacturer_number' => 'manufacturerNumber',
+        'manufacturer_id' => 'manufacturerId',
+        'visibilities_id' => 'visibilitiesId',
+        'category_ids' => 'categoryIds',
+        'price_raw' => 'priceRaw',
+        'release_date' => 'releaseDate',
+        'media_id' => 'mediaId',
+        'custom_search_keywords' => 'customSearchKeywords',
+        'translated_manufacturer_names' => 'translatedManufacturerNames',
+        'document_number' => 'documentNumber',
+        'state_id' => 'stateId',
+        'affiliate_code' => 'affiliateCode',
+        'campaign_code' => 'campaignCode',
+        'document_ids' => 'documentIds',
+        'billing_address_id' => 'billingAddressId',
+        'billing_address_country_id' => 'billingAddressCountryId',
+        'order_customer_id' => 'orderCustomerId',
+        'customer_id' => 'customerId',
+        'customer_group_id' => 'customerGroupId',
+        'live_customer_number' => 'liveCustomerNumber',
+        'line_items' => 'lineItems',
+        'primary_transaction_id' => 'primaryTransactionId',
+        'primary_transaction_state_id' => 'primaryTransactionStateId',
+        'primary_transaction_payment_method_id' => 'primaryTransactionPaymentMethodId',
+        'primary_delivery_id' => 'primaryDeliveryId',
+        'primary_delivery_state_id' => 'primaryDeliveryStateId',
+        'primary_delivery_shipping_method_id' => 'primaryDeliveryShippingMethodId',
+        'primary_delivery_country_id' => 'primaryDeliveryCountryId',
+        'group_id' => 'groupId',
+        'salutation_id' => 'salutationId',
+        'bound_sales_channel_id' => 'boundSalesChannelId',
+        'requested_group_id' => 'requestedGroupId',
+        'default_billing_address_id' => 'defaultBillingAddressId',
+        'default_billing_address_country_id' => 'defaultBillingAddressCountryId',
+        'default_shipping_address_id' => 'defaultShippingAddressId',
+        'default_shipping_address_country_id' => 'defaultShippingAddressCountryId',
+    ];
 
     abstract public function getDecorated(): self;
 
@@ -160,6 +216,27 @@ abstract class AbstractAdminIndexer
         }
 
         return array_values(array_unique($result));
+    }
+
+    /**
+     * Map snake_case SQL aliases back to the camelCase fields used by index documents.
+     *
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, mixed>
+     */
+    protected static function mapDatabaseRowKeys(array $row): array
+    {
+        foreach (self::DATABASE_ROW_KEY_MAP as $key => $camelCase) {
+            if (!\array_key_exists($key, $row)) {
+                continue;
+            }
+
+            $row[$camelCase] = $row[$key];
+            unset($row[$key]);
+        }
+
+        return $row;
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Elasticsearch\Framework;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Api\Context\SystemSource;
@@ -55,6 +56,8 @@ class ElasticsearchFieldBuilderTest extends TestCase
         ]]);
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $utils = new ElasticsearchIndexingUtils(
             $connection,
@@ -133,6 +136,8 @@ class ElasticsearchFieldBuilderTest extends TestCase
         $parameterBag = new ParameterBag();
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $utils = new ElasticsearchIndexingUtils(
             $connection,
@@ -204,6 +209,8 @@ class ElasticsearchFieldBuilderTest extends TestCase
         ]]);
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllKeyValue')->willReturn([
             'cf_bool' => 'bool',
         ]);
@@ -288,6 +295,8 @@ class ElasticsearchFieldBuilderTest extends TestCase
         $parameterBag = new ParameterBag();
 
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllKeyValue')->willReturn([]);
 
         $utils = new ElasticsearchIndexingUtils(

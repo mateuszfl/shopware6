@@ -8,6 +8,7 @@ use Shopware\Core\Content\Media\Aggregate\MediaTag\MediaTagDefinition;
 use Shopware\Core\Content\Media\Aggregate\MediaTranslation\MediaTranslationDefinition;
 use Shopware\Core\Content\Media\MediaCollection;
 use Shopware\Core\Content\Media\MediaDefinition;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
@@ -161,33 +162,42 @@ final class MediaAdminSearchIndexer extends AbstractAdminIndexer
     public function fetch(array $ids): array
     {
         $data = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-            SELECT LOWER(HEX(media.id)) as id,
+            str_replace(
+                ['#altAggregate#', '#titleAggregate#', '#translatedFields#', '#tagsAggregate#', '#tagIdsAggregate#'],
+                [
+                    IndexingSql::distinctAggregate($this->connection, 'media_translation.alt', ' '),
+                    IndexingSql::distinctAggregate($this->connection, 'media_translation.title', ' '),
+                    IndexingSql::jsonObjectAggregate($this->connection, [
+                        'languageId' => 'sw_uuid_hex(media_translation.language_id)',
+                        'title' => 'media_translation.title',
+                        'alt' => 'media_translation.alt',
+                    ]),
+                    IndexingSql::distinctAggregate($this->connection, 'tag.name', ' '),
+                    IndexingSql::aggregate($this->connection, 'sw_uuid_hex(tag.id)', ' ', 'tag.id'),
+                ],
+                <<<'SQL'
+            SELECT sw_uuid_hex(media.id) as id,
                    tag_agg.tags as tags,
-                   tag_agg.tagIds as tagIds,
+                   tag_agg.tag_ids as tag_ids,
                    translation_agg.alt as alt,
                    translation_agg.title as title,
-                   translation_agg.translatedFields as translatedFields,
-                   media_folder.name as folderName,
-                   media_folder.path as folderPath,
+                   translation_agg.translated_fields as translated_fields,
+                   media_folder.name as folder_name,
+                   media_folder.path as folder_path,
                    media_default_folder.entity,
                    media.private,
                    media.file_name,
                    media.file_extension,
                    media.file_size,
                    media.path,
-                   LOWER(HEX(media.media_folder_id)) AS mediaFolderId,
-                   media.created_at as createdAt
+                   sw_uuid_hex(media.media_folder_id) AS media_folder_id,
+                   media.created_at as created_at
             FROM media
                 LEFT JOIN (
                     SELECT media_translation.media_id,
-                           GROUP_CONCAT(DISTINCT media_translation.alt ORDER BY NULL SEPARATOR ' ') as alt,
-                           GROUP_CONCAT(DISTINCT media_translation.title ORDER BY NULL SEPARATOR ' ') as title,
-                           JSON_ARRAYAGG(JSON_OBJECT(
-                               'languageId', LOWER(HEX(media_translation.language_id)),
-                               'title', media_translation.title,
-                               'alt', media_translation.alt
-                           )) as translatedFields
+                           #altAggregate# as alt,
+                           #titleAggregate# as title,
+                           #translatedFields# as translated_fields
                     FROM media_translation
                     WHERE media_translation.media_id IN (:ids)
                     GROUP BY media_translation.media_id
@@ -199,8 +209,8 @@ final class MediaAdminSearchIndexer extends AbstractAdminIndexer
                     ON media_folder.default_folder_id = media_default_folder.id
                 LEFT JOIN (
                     SELECT media_tag.media_id,
-                           GROUP_CONCAT(DISTINCT tag.name ORDER BY NULL SEPARATOR ' ') as tags,
-                           GROUP_CONCAT(LOWER(HEX(tag.id)) ORDER BY NULL SEPARATOR ' ') as tagIds
+                           #tagsAggregate# as tags,
+                           #tagIdsAggregate# as tag_ids
                     FROM media_tag
                     LEFT JOIN tag
                         ON media_tag.tag_id = tag.id
@@ -209,7 +219,8 @@ final class MediaAdminSearchIndexer extends AbstractAdminIndexer
                 ) as tag_agg
                     ON media.id = tag_agg.media_id
             WHERE media.id IN (:ids)
-SQL,
+SQL
+            ),
             [
                 'ids' => Uuid::fromHexToBytesList($ids),
             ],
@@ -220,6 +231,7 @@ SQL,
 
         $mapped = [];
         foreach ($data as $row) {
+            $row = self::mapDatabaseRowKeys($row);
             $id = (string) $row['id'];
             $text = \implode(' ', array_filter([
                 $row['file_name'] ?? '',

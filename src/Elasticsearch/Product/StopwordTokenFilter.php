@@ -3,6 +3,7 @@
 namespace Shopware\Elasticsearch\Product;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\Filter\AbstractTokenFilter;
 use Shopware\Core\Framework\Log\Package;
@@ -81,11 +82,11 @@ class StopwordTokenFilter extends AbstractTokenFilter
         }
 
         $config = $this->connection->fetchAssociative('
-            SELECT `min_search_length`
+            SELECT min_search_length
             FROM product_search_config
             WHERE language_id = :languageId
             LIMIT 1
-        ', ['languageId' => Uuid::fromHexToBytes($languageId)]);
+        ', ['languageId' => Uuid::fromHexToBytes($languageId)], ['languageId' => ParameterType::BINARY]);
 
         if ($config === false) {
             return null;

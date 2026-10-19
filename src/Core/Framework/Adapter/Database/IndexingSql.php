@@ -48,6 +48,38 @@ final class IndexingSql
             : "GROUP_CONCAT($expression ORDER BY $order SEPARATOR $separator)";
     }
 
+    public static function distinctAggregate(Connection $connection, string $expression, string $separator): string
+    {
+        $separator = $connection->quote($separator);
+
+        return (new DatabasePlatformResolver($connection))->capabilities()->supportsJsonb
+            ? "STRING_AGG(DISTINCT $expression, $separator ORDER BY $expression)"
+            : "GROUP_CONCAT(DISTINCT $expression ORDER BY $expression SEPARATOR $separator)";
+    }
+
+    /**
+     * @param array<string, string> $fields
+     */
+    public static function jsonObjectAggregate(Connection $connection, array $fields, bool $distinct = false, ?string $filter = null): string
+    {
+        $dialect = (new DatabasePlatformResolver($connection))->dialect();
+        if ($filter !== null && $dialect->capabilities()->supportsJsonb) {
+            $fragment = $dialect->jsonObjectExpressions($fields, aggregate: true, distinct: $distinct);
+
+            return 'COALESCE(' . $fragment->inline($connection) . ' FILTER (WHERE ' . $filter . '), \'[]\'::jsonb)';
+        }
+
+        if ($filter !== null) {
+            $object = $dialect->jsonObjectExpressions($fields)->inline($connection);
+
+            return 'CONCAT(\'[\', COALESCE(GROUP_CONCAT(' . ($distinct ? 'DISTINCT ' : '') . "CASE WHEN $filter THEN $object END), ''), ']')";
+        }
+
+        $fragment = $dialect->jsonObjectExpressions($fields, aggregate: true, distinct: $distinct);
+
+        return $fragment->inline($connection);
+    }
+
     public static function idArray(Connection $connection, string $expression): string
     {
         $hex = self::hex($connection, $expression);
