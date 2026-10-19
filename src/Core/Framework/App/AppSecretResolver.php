@@ -25,7 +25,7 @@ readonly class AppSecretResolver
 
     public function resolve(string $appName): ?string
     {
-        $secret = $this->connection->fetchOne('SELECT `app_secret` FROM `app` WHERE `name` = :name', ['name' => $appName]);
+        $secret = $this->connection->fetchOne('SELECT app_secret FROM app WHERE name = :name', ['name' => $appName]);
 
         return \is_string($secret) ? $secret : null;
     }

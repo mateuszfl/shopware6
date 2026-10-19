@@ -4,20 +4,15 @@ namespace Shopware\Tests\Unit\Core\Framework\App\Lifecycle\Handler;
 
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\App\Aggregate\FlowEvent\AppFlowEventCollection;
-use Shopware\Core\Framework\App\AppEntity;
 use Shopware\Core\Framework\App\Flow\Event\Event;
 use Shopware\Core\Framework\App\Flow\Event\Xml\CustomEvents;
-use Shopware\Core\Framework\App\Lifecycle\Context\AppActivationContext;
 use Shopware\Core\Framework\App\Lifecycle\Handler\FlowEventLifecycleHandler;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
-use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenContainerEvent;
-use Shopware\Core\Framework\Event\NestedEventCollection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
+use Shopware\Core\Test\Stub\DataAbstractionLayer\StaticEntityRepository;
 
 /**
  * @internal
@@ -26,126 +21,42 @@ use Shopware\Core\Framework\Uuid\Uuid;
 #[CoversClass(FlowEventLifecycleHandler::class)]
 class FlowEventLifecycleHandlerTest extends TestCase
 {
-    private FlowEventLifecycleHandler $flowEventLifecycleHandler;
-
-    /**
-     * @var EntityRepository<AppFlowEventCollection>&MockObject
-     */
-    private EntityRepository&MockObject $flowEventsRepositoryMock;
-
-    private Connection&MockObject $connectionMock;
-
-    protected function setUp(): void
-    {
-        $this->flowEventsRepositoryMock = $this->createMock(EntityRepository::class);
-        $this->connectionMock = $this->createMock(Connection::class);
-        $this->flowEventLifecycleHandler = new FlowEventLifecycleHandler($this->flowEventsRepositoryMock, $this->connectionMock);
-    }
-
-    public function testUpdateEvents(): void
+    public function testUpdateEventsReplacesStaleDeclaration(): void
     {
         $appId = Uuid::randomHex();
-        $this->connectionMock->expects($this->once())->method('fetchAllKeyValue')->willReturnCallback(static function ($sql, $params) use ($appId): array {
-            static::assertSame('SELECT name, LOWER(HEX(id)) FROM app_flow_event WHERE app_id = :appId;', $sql);
-            static::assertSame([
-                'appId' => Uuid::fromHexToBytes($appId),
-            ], $params);
-
-            return ['swag.before.open_the_doors' => Uuid::fromHexToBytes($appId)];
-        });
-
-        $flowEventMock = static::createStub(Event::class);
-        $domDocument = new \DOMDocument();
-        $domElement = $domDocument->createElement('root');
-        $childElementLabel = $domDocument->createElement('flow-event', 'value');
-        $childElementLabel->appendChild($domDocument->createElement('name', 'value'));
-        $domElement->appendChild($childElementLabel);
-
-        $customEventsMock = CustomEvents::fromXml($domElement);
-        $flowEventMock->method('getCustomEvents')->willReturn($customEventsMock);
-
-        $this->flowEventsRepositoryMock->expects($this->once())->method('upsert')->willReturnCallback(static function ($upserts, $context) use ($appId): EntityWrittenContainerEvent {
-            static::assertSame([
-                [
-                    'appId' => $appId,
-                    'name' => 'value',
-                    'aware' => [],
-                ],
-            ], $upserts);
-
-            return new EntityWrittenContainerEvent($context, new NestedEventCollection(), []);
-        });
-
-        $this->flowEventsRepositoryMock->expects($this->once())->method('delete')->willReturnCallback(static function ($ids, $context) use ($appId): EntityWrittenContainerEvent {
-            static::assertSame([['id' => Uuid::fromHexToBytes($appId)]], $ids);
-
-            return new EntityWrittenContainerEvent($context, new NestedEventCollection(), []);
-        });
-
-        $context = Context::createDefaultContext();
-        $this->flowEventLifecycleHandler->updateEvents($flowEventMock, $appId, $context, 'en-GB');
+        $staleId = Uuid::randomHex();
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchAllKeyValue')->willReturn(['swag.before.open_the_doors' => $staleId]);
+        $repository = StaticEntityRepository::of(AppFlowEventCollection::class);
+        $handler = new FlowEventLifecycleHandler($repository, $connection);
+        $handler->updateEvents($this->event('new.event'), $appId, Context::createDefaultContext(), 'en-GB');
+        static::assertSame([[['appId' => $appId, 'name' => 'new.event', 'aware' => []]]], $repository->upserts);
+        static::assertSame([[['id' => $staleId]]], $repository->deletes);
     }
 
-    public function testUpdateEventsDeleteOldApp(): void
+    public function testUpdateEventsKeepsIdentityOfExistingDeclaration(): void
     {
         $appId = Uuid::randomHex();
-        $this->connectionMock->expects($this->once())->method('fetchAllKeyValue')->willReturnCallback(static function ($sql, $params) use ($appId): array {
-            static::assertSame('SELECT name, LOWER(HEX(id)) FROM app_flow_event WHERE app_id = :appId;', $sql);
-            static::assertSame([
-                'appId' => Uuid::fromHexToBytes($appId),
-            ], $params);
-
-            return ['swag.before.open_the_doors' => Uuid::fromHexToBytes($appId)];
-        });
-
-        $flowEventMock = static::createStub(Event::class);
-
-        $domDocument = new \DOMDocument();
-        $domElement = $domDocument->createElement('root');
-        $childElementLabel = $domDocument->createElement('flow-event', 'value');
-        $childElementLabel->appendChild($domDocument->createElement('name', 'swag.before.open_the_doors'));
-        $domElement->appendChild($childElementLabel);
-
-        $customEventsMock = CustomEvents::fromXml($domElement);
-        $flowEventMock->method('getCustomEvents')->willReturn($customEventsMock);
-
-        $this->flowEventsRepositoryMock->expects($this->once())->method('upsert')->willReturnCallback(static function ($upserts, $context) use ($appId): EntityWrittenContainerEvent {
-            static::assertSame([
-                [
-                    'appId' => $appId,
-                    'name' => 'swag.before.open_the_doors',
-                    'aware' => [],
-                    'id' => Uuid::fromHexToBytes($appId),
-                ],
-            ], $upserts);
-
-            return new EntityWrittenContainerEvent($context, new NestedEventCollection(), []);
-        });
-
-        $this->flowEventsRepositoryMock->expects($this->never())->method('delete');
-
-        $context = Context::createDefaultContext();
-        $this->flowEventLifecycleHandler->updateEvents($flowEventMock, $appId, $context, 'en-GB');
+        $eventId = Uuid::randomHex();
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchAllKeyValue')->willReturn(['existing.event' => $eventId]);
+        $repository = StaticEntityRepository::of(AppFlowEventCollection::class);
+        $handler = new FlowEventLifecycleHandler($repository, $connection);
+        $handler->updateEvents($this->event('existing.event'), $appId, Context::createDefaultContext(), 'en-GB');
+        static::assertSame([[['appId' => $appId, 'name' => 'existing.event', 'aware' => [], 'id' => $eventId]]], $repository->upserts);
+        static::assertSame([], $repository->deletes);
     }
 
-    public function testDeactivateFlow(): void
+    private function event(string $name): Event
     {
-        $appId = Uuid::randomHex();
-        $app = new AppEntity();
-        $app->setId($appId);
+        $document = new \DOMDocument();
+        $root = $document->createElement('root');
+        $event = $document->createElement('flow-event');
+        $event->appendChild($document->createElement('name', $name));
+        $root->appendChild($event);
+        $definition = static::createStub(Event::class);
+        $definition->method('getCustomEvents')->willReturn(CustomEvents::fromXml($root));
 
-        $this->connectionMock->expects($this->once())->method('executeStatement')->willReturnCallback(static function ($sql, $params) use ($appId): int {
-            static::assertSame('UPDATE `flow` SET `active` = false WHERE `event_name` IN (SELECT `name` FROM `app_flow_event` WHERE `app_id` = :appId);', $sql);
-            static::assertSame([
-                'appId' => Uuid::fromHexToBytes($appId),
-            ], $params);
-
-            return 1;
-        });
-
-        $this->flowEventsRepositoryMock->expects($this->never())->method('upsert');
-        $this->flowEventsRepositoryMock->expects($this->never())->method('delete');
-
-        $this->flowEventLifecycleHandler->deactivate(new AppActivationContext($app, Context::createDefaultContext()));
+        return $definition;
     }
 }

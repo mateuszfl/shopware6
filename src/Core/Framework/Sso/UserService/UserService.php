@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Sso\UserService;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
@@ -110,7 +111,7 @@ final readonly class UserService
             ->update('oauth_user')
             ->set('token', ':token')
             ->where('user_id = :userId')
-            ->setParameter('userId', Uuid::fromHexToBytes($userId))
+            ->setParameter('userId', Uuid::fromHexToBytes($userId), ParameterType::BINARY)
             ->setParameter('token', null)
             ->executeStatement();
     }
@@ -118,11 +119,11 @@ final readonly class UserService
     public function searchOAuthUserByUserId(string $userId): ?ExternalAuthUser
     {
         $oAuthUserData = $this->connection->createQueryBuilder()
-            ->select('oauth_user.id', 'oauth_user.user_id', 'oauth_user.user_sub', 'oauth_user.token', 'oauth_user.expiry', 'user.email')
+            ->select('oauth_user.id', 'oauth_user.user_id', 'oauth_user.user_sub', 'oauth_user.token', 'oauth_user.expiry', 'account.email')
             ->from('oauth_user', 'oauth_user')
-            ->join('oauth_user', 'user', 'user', 'oauth_user.user_id = user.id')
+            ->join('oauth_user', $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'), 'account', 'oauth_user.user_id = account.id')
             ->where('oauth_user.user_id = :userId')
-            ->setParameter('userId', Uuid::fromHexToBytes($userId))
+            ->setParameter('userId', Uuid::fromHexToBytes($userId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchAssociative();
 
@@ -157,16 +158,17 @@ final readonly class UserService
                 'expiry' => $userSearchResult->expiry->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 'updated_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
             ],
-            ['id' => Uuid::fromHexToBytes($userSearchResult->id)]
+            ['id' => Uuid::fromHexToBytes($userSearchResult->id)],
+            ['id' => ParameterType::BINARY],
         );
     }
 
     private function searchOAuthUserBySub(string $userSubject): ?ExternalAuthUser
     {
         $oAuthUserData = $this->connection->createQueryBuilder()
-            ->select('oauth_user.id', 'oauth_user.user_id', 'oauth_user.user_sub', 'oauth_user.token', 'oauth_user.expiry', 'user.email')
+            ->select('oauth_user.id', 'oauth_user.user_id', 'oauth_user.user_sub', 'oauth_user.token', 'oauth_user.expiry', 'account.email')
             ->from('oauth_user', 'oauth_user')
-            ->join('oauth_user', 'user', 'user', 'oauth_user.user_id = user.id')
+            ->join('oauth_user', $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'), 'account', 'oauth_user.user_id = account.id')
             ->where('oauth_user.user_sub = :sub')
             ->setParameter('sub', $userSubject)
             ->executeQuery()
@@ -204,6 +206,7 @@ final readonly class UserService
                 'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 'updated_at' => null,
             ],
+            ['id' => ParameterType::BINARY, 'user_id' => ParameterType::BINARY],
         );
     }
 

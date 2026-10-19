@@ -5,9 +5,11 @@ namespace Shopware\Core\Framework\Webhook\Outbox;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -65,7 +67,8 @@ class WebhookOutboxStore
 
             $eventLogStatus = $this->connection->fetchOne(
                 'SELECT delivery_status FROM webhook_event_log WHERE id = :id FOR UPDATE',
-                ['id' => $eventLogId]
+                ['id' => $eventLogId],
+                ['id' => ParameterType::BINARY],
             );
 
             if ($eventLogStatus !== WebhookEventLogDefinition::STATUS_QUEUED) {
@@ -73,7 +76,7 @@ class WebhookOutboxStore
             }
 
             try {
-                $entry = $this->insertDeliveryAndStream($insert, $eventLogId, WebhookEventLogDefinition::STATUS_QUEUED);
+                $entry = $this->connection->transactional(fn (): OutboxEntry => $this->insertDeliveryAndStream($insert, $eventLogId, WebhookEventLogDefinition::STATUS_QUEUED));
             } catch (UniqueConstraintViolationException) {
                 // Two workers racing the same backfill — first commit wins, drop the duplicate.
                 return null;
@@ -82,7 +85,8 @@ class WebhookOutboxStore
             // Backfilled rows have no dispatch-order sequence — null signals.
             $this->connection->executeStatement(
                 'UPDATE webhook_event_log SET sequence = NULL WHERE id = :id',
-                ['id' => $eventLogId]
+                ['id' => $eventLogId],
+                ['id' => ParameterType::BINARY],
             );
 
             return $entry;
@@ -133,7 +137,8 @@ class WebhookOutboxStore
             [
                 'budget' => Types::INTEGER,
                 'statuses' => ArrayParameterType::STRING,
-            ]
+                'pk' => ParameterType::BINARY,
+            ],
         );
 
         return array_map(
@@ -142,7 +147,7 @@ class WebhookOutboxStore
                 sequence: (int) $row['id'],
                 executionCount: (int) $row['execution_count'],
                 deliveryStatus: (string) $row['delivery_status'],
-                serializedWebhookMessage: (string) $row['serialized_webhook_message'],
+                serializedWebhookMessage: \is_resource($row['serialized_webhook_message']) ? stream_get_contents($row['serialized_webhook_message']) : (string) $row['serialized_webhook_message'],
             ),
             $rows
         );
@@ -152,7 +157,8 @@ class WebhookOutboxStore
     {
         return (bool) $this->connection->fetchOne(
             'SELECT 1 FROM webhook_delivery WHERE webhook_event_log_id = :id',
-            ['id' => Uuid::fromHexToBytes($eventLogId)]
+            ['id' => Uuid::fromHexToBytes($eventLogId)],
+            ['id' => ParameterType::BINARY],
         );
     }
 
@@ -193,17 +199,15 @@ class WebhookOutboxStore
                     'failedStatus' => WebhookEventLogDefinition::STATUS_FAILED,
                     'now' => $nowFormatted,
                     'id' => $id,
-                ]
+                ],
+                ['id' => ParameterType::BINARY],
             );
 
             if ($affected > 0) {
                 $this->connection->executeStatement(
                     'UPDATE webhook_event_log SET delivery_status = :status, timestamp = :ts WHERE id = :id',
-                    [
-                        'status' => WebhookEventLogDefinition::STATUS_RUNNING,
-                        'ts' => $now->getTimestamp(),
-                        'id' => $id,
-                    ]
+                    ['status' => WebhookEventLogDefinition::STATUS_RUNNING, 'ts' => $now->getTimestamp(), 'id' => $id],
+                    ['id' => ParameterType::BINARY],
                 );
             }
 
@@ -217,7 +221,8 @@ class WebhookOutboxStore
         // Row was just updated inside the transaction; it must still exist here.
         $row = $this->connection->fetchAssociative(
             'SELECT execution_count, id FROM webhook_delivery WHERE webhook_event_log_id = :id',
-            ['id' => $id]
+            ['id' => $id],
+            ['id' => ParameterType::BINARY],
         );
         \assert($row !== false);
 
@@ -263,7 +268,8 @@ class WebhookOutboxStore
                     'nextRetryAt' => $retryAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     'now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     'id' => Uuid::fromHexToBytes($entry->webhookEventId),
-                ]
+                ],
+                ['id' => ParameterType::BINARY],
             );
 
             return true;
@@ -293,7 +299,8 @@ class WebhookOutboxStore
                     'status' => WebhookEventLogDefinition::STATUS_QUEUED,
                     'now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     'id' => Uuid::fromHexToBytes($entry->webhookEventId),
-                ]
+                ],
+                ['id' => ParameterType::BINARY],
             );
 
             return true;
@@ -345,7 +352,8 @@ class WebhookOutboxStore
 
             $delivery = $this->connection->fetchAssociative(
                 'SELECT delivery_status, next_retry_at FROM webhook_delivery WHERE webhook_event_log_id = :id FOR UPDATE',
-                ['id' => $id]
+                ['id' => $id],
+                ['id' => ParameterType::BINARY],
             );
 
             if ($delivery !== false) {
@@ -390,10 +398,7 @@ class WebhookOutboxStore
                     'queuedStatus' => WebhookEventLogDefinition::STATUS_QUEUED,
                     'pendingRetryStatus' => WebhookEventLogDefinition::STATUS_PENDING_RETRY,
                 ],
-                [
-                    'sequence' => Types::INTEGER,
-                    'executionCount' => Types::INTEGER,
-                ]
+                ['sequence' => Types::INTEGER, 'executionCount' => Types::INTEGER, 'id' => ParameterType::BINARY],
             );
 
             if (!$ownsFetchedEntry) {
@@ -409,8 +414,7 @@ class WebhookOutboxStore
 
     /**
      * Resets RUNNING rows in the partition with `last_attempt_at` older than
-     * `$staleAfterSeconds` back to PENDING_RETRY. Return value is the multi-table affected
-     * count; assertions should check row state, not the count.
+     * `$staleAfterSeconds` back to PENDING_RETRY. Returns the number of deliveries recovered.
      */
     public function resetRunningForPartition(string $partitionKey, int $staleAfterSeconds): int
     {
@@ -418,38 +422,47 @@ class WebhookOutboxStore
         $nowFormatted = $now->format(Defaults::STORAGE_DATE_TIME_FORMAT);
         $cutoff = $now->modify(\sprintf('-%d seconds', $staleAfterSeconds))->format(Defaults::STORAGE_DATE_TIME_FORMAT);
 
-        // Multi-table UPDATE acquires locks on both webhook_delivery and webhook_event_log;
-        // the terminal writers (markSuccess / markFailed / markPendingRetry) lock the same
-        // pair via two separate statements. A deadlock between the two paths is plausible
-        // under InnoDB depending on the optimizer plan. Wrap in RetryableTransaction so
-        // InnoDB aborts are retried in-place instead of bubbling into the receiver's
-        // consecutive-deadlock fuse.
-        return RetryableTransaction::retryable(
-            $this->connection,
-            fn (): int => (int) $this->connection->executeStatement(
-                'UPDATE webhook_delivery d
+        // Lock the same delivery/event pair as terminal writers, then update both in one transaction.
+        return RetryableTransaction::retryable($this->connection, function () use ($partitionKey, $now, $nowFormatted, $cutoff): int {
+            $ids = $this->connection->fetchFirstColumn(
+                'SELECT sw_uuid_hex(d.webhook_event_log_id)
+                 FROM webhook_delivery d
                  JOIN webhook_event_log el ON el.id = d.webhook_event_log_id
-                 SET d.delivery_status = :new,
-                     d.next_retry_at   = :now,
-                     d.updated_at      = :now,
-                     el.delivery_status = :new,
-                     el.timestamp       = :ts
-	                 WHERE d.partition_key = :pk
-	                   AND d.delivery_status = :old
-	                   AND d.last_attempt_at <= :cutoff
-	                   AND el.delivery_status NOT IN (:successStatus, :failedStatus)',
+                 WHERE d.partition_key = :pk AND d.delivery_status = :old
+                   AND d.last_attempt_at <= :cutoff
+                   AND el.delivery_status NOT IN (:successStatus, :failedStatus)
+                 ORDER BY d.id FOR UPDATE',
                 [
-                    'old' => WebhookEventLogDefinition::STATUS_RUNNING,
-                    'new' => WebhookEventLogDefinition::STATUS_PENDING_RETRY,
-                    'now' => $nowFormatted,
-                    'ts' => $now->getTimestamp(),
                     'pk' => $partitionKey,
+                    'old' => WebhookEventLogDefinition::STATUS_RUNNING,
                     'cutoff' => $cutoff,
                     'successStatus' => WebhookEventLogDefinition::STATUS_SUCCESS,
                     'failedStatus' => WebhookEventLogDefinition::STATUS_FAILED,
-                ]
-            )
-        );
+                ],
+                ['pk' => ParameterType::BINARY],
+            );
+            if ($ids === []) {
+                return 0;
+            }
+            $parameters = [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'status' => WebhookEventLogDefinition::STATUS_PENDING_RETRY,
+                'now' => $nowFormatted,
+            ];
+            $types = ['ids' => ArrayParameterType::BINARY];
+            $this->connection->executeStatement(
+                'UPDATE webhook_delivery SET delivery_status = :status, next_retry_at = :now, updated_at = :now WHERE webhook_event_log_id IN (:ids)',
+                $parameters,
+                $types,
+            );
+            $this->connection->executeStatement(
+                'UPDATE webhook_event_log SET delivery_status = :status, timestamp = :ts WHERE id IN (:ids)',
+                ['ids' => $parameters['ids'], 'status' => $parameters['status'], 'ts' => $now->getTimestamp()],
+                $types,
+            );
+
+            return \count($ids);
+        });
     }
 
     /**
@@ -462,7 +475,7 @@ class WebhookOutboxStore
             $eventLogId = Uuid::fromHexToBytes($insert->webhookEventId);
 
             try {
-                $inserted = $this->insertEventLog($insert, $eventLogId, $initialStatus);
+                $inserted = $this->connection->transactional(fn (): bool => $this->insertEventLog($insert, $eventLogId, $initialStatus));
             } catch (UniqueConstraintViolationException) {
                 return null;
             }
@@ -484,36 +497,46 @@ class WebhookOutboxStore
 
         $webhookId = $this->connection->fetchOne(
             'SELECT id FROM webhook WHERE id = :webhookId',
-            ['webhookId' => Uuid::fromHexToBytes($insert->webhookId)]
+            ['webhookId' => Uuid::fromHexToBytes($insert->webhookId)],
+            ['webhookId' => ParameterType::BINARY],
         );
 
-        $this->connection->insert('webhook_delivery', [
-            'webhook_event_log_id' => $eventLogId,
-            'webhook_id' => $webhookId === false ? null : $webhookId,
-            'partition_key' => $insert->partitionKey,
-            'delivery_status' => $initialStatus,
-            'execution_count' => $executionCount,
-            'last_attempt_at' => $isRunning ? $nowFormatted : null,
-            'created_at' => $nowFormatted,
-        ]);
+        $webhookId = $webhookId === false ? null : Uuid::fromHexToBytes(Uuid::fromBytesToHex($webhookId));
+        $this->connection->insert(
+            'webhook_delivery',
+            [
+                'webhook_event_log_id' => $eventLogId,
+                'webhook_id' => $webhookId,
+                'partition_key' => $insert->partitionKey,
+                'delivery_status' => $initialStatus,
+                'execution_count' => $executionCount,
+                'last_attempt_at' => $isRunning ? $nowFormatted : null,
+                'created_at' => $nowFormatted,
+            ],
+            [
+                'webhook_event_log_id' => ParameterType::BINARY,
+                'webhook_id' => ParameterType::BINARY,
+                'partition_key' => ParameterType::BINARY,
+            ],
+        );
 
         $sequence = (int) $this->connection->lastInsertId();
 
         $this->connection->executeStatement(
             'UPDATE webhook_event_log SET sequence = :sequence WHERE id = :id',
-            ['sequence' => $sequence, 'id' => $eventLogId]
+            ['sequence' => $sequence, 'id' => $eventLogId],
+            ['id' => ParameterType::BINARY],
         );
 
         // Restart the stream's cleanup grace window on every delivery write.
-        $this->connection->executeStatement(
-            'INSERT INTO webhook_stream (id, partition_key, created_at) VALUES (:id, :pk, :now)
-             ON DUPLICATE KEY UPDATE created_at = :now',
-            [
-                'id' => Uuid::randomBytes(),
-                'pk' => $insert->partitionKey,
-                'now' => $nowFormatted,
-            ]
+        $query = (new DatabasePlatformResolver($this->connection))->dialect()->upsert(
+            'webhook_stream',
+            ['id' => Uuid::randomBytes(), 'partition_key' => $insert->partitionKey, 'created_at' => $nowFormatted],
+            ['partition_key'],
+            ['created_at'],
+            ['id' => ParameterType::BINARY, 'partition_key' => ParameterType::BINARY]
         );
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
 
         return new OutboxEntry(
             webhookEventId: $insert->webhookEventId,
@@ -543,7 +566,8 @@ class WebhookOutboxStore
                     'id' => $id,
                     'successStatus' => WebhookEventLogDefinition::STATUS_SUCCESS,
                     'failedStatus' => WebhookEventLogDefinition::STATUS_FAILED,
-                ]
+                ],
+                ['id' => ParameterType::BINARY],
             );
 
             return $affected > 0;
@@ -569,7 +593,8 @@ class WebhookOutboxStore
                 'id' => $id,
                 'successStatus' => WebhookEventLogDefinition::STATUS_SUCCESS,
                 'failedStatus' => WebhookEventLogDefinition::STATUS_FAILED,
-            ]
+            ],
+            ['id' => ParameterType::BINARY],
         );
 
         return $affected > 0;
@@ -596,10 +621,7 @@ class WebhookOutboxStore
                 'executionCount' => $entry->executionCount,
                 'status' => WebhookEventLogDefinition::STATUS_RUNNING,
             ],
-            [
-                'sequence' => Types::INTEGER,
-                'executionCount' => Types::INTEGER,
-            ]
+            ['sequence' => Types::INTEGER, 'executionCount' => Types::INTEGER, 'id' => ParameterType::BINARY],
         );
     }
 
@@ -607,7 +629,8 @@ class WebhookOutboxStore
     {
         $this->connection->executeStatement(
             'DELETE FROM webhook_delivery WHERE webhook_event_log_id = :id',
-            ['id' => Uuid::fromHexToBytes($eventLogId)]
+            ['id' => Uuid::fromHexToBytes($eventLogId)],
+            ['id' => ParameterType::BINARY],
         );
     }
 
@@ -626,26 +649,31 @@ class WebhookOutboxStore
 
         $affected = $this->connection->executeStatement(
             <<<'SQL'
-                INSERT INTO webhook_event_log (
-                    id, app_name, delivery_status, webhook_name, event_name,
-                    app_version, url, only_live_version, created_at,
-                    serialized_webhook_message
-                )
-                SELECT
-                    :id, a.name, :status, w.name, w.event_name,
-                    a.version, w.url, w.only_live_version, :createdAt,
-                    :serializedMessage
-                FROM webhook w
-                LEFT JOIN app a ON (a.id = w.app_id)
-                WHERE w.id = :webhookId
-            SQL,
+    INSERT INTO webhook_event_log (
+        id, app_name, delivery_status, webhook_name, event_name,
+        app_version, url, only_live_version, created_at,
+        serialized_webhook_message
+    )
+    SELECT
+        :id, a.name, :status, w.name, w.event_name,
+        a.version, w.url, w.only_live_version, :createdAt,
+        :serializedMessage
+    FROM webhook w
+    LEFT JOIN app a ON (a.id = w.app_id)
+    WHERE w.id = :webhookId
+SQL,
             [
                 'id' => $eventLogId,
                 'status' => $status,
                 'createdAt' => $createdAt,
                 'serializedMessage' => $insert->serializedMessage,
                 'webhookId' => $webhookId,
-            ]
+            ],
+            [
+                'id' => ParameterType::BINARY,
+                'webhookId' => ParameterType::BINARY,
+                'serializedMessage' => ParameterType::BINARY,
+            ],
         );
 
         return $affected > 0;

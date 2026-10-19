@@ -278,7 +278,7 @@ class Translator extends AbstractTranslator
         }
 
         // get snippet set by locale but in case there are more than one sets with a same locale, we should prioritize the domain's snippet set
-        $snippetSetIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM snippet_set WHERE iso = :iso', ['iso' => $locale]);
+        $snippetSetIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM snippet_set WHERE iso = :iso', ['iso' => $locale]);
 
         if ($snippetSetIds !== []) {
             $snippetSetId = \in_array($snippetSetId, $snippetSetIds, true) ? $snippetSetId : $snippetSetIds[0];

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\OAuth;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
 use League\OAuth2\Server\Repositories\AuthCodeRepositoryInterface;
 use Psr\Clock\ClockInterface;
@@ -41,14 +42,18 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface
             return;
         }
 
-        $this->connection->insert('oauth_auth_code', [
-            'id' => Uuid::randomBytes(),
-            'code_id' => $authCodeEntity->getIdentifier(),
-            'user_id' => Uuid::fromHexToBytes($userIdentifier),
-            'client_id' => $authCodeEntity->getClient()->getIdentifier(),
-            'issued_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            'expires_at' => $authCodeEntity->getExpiryDateTime()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        $this->connection->insert(
+            'oauth_auth_code',
+            [
+                'id' => Uuid::randomBytes(),
+                'code_id' => $authCodeEntity->getIdentifier(),
+                'user_id' => Uuid::fromHexToBytes($userIdentifier),
+                'client_id' => $authCodeEntity->getClient()->getIdentifier(),
+                'issued_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+                'expires_at' => $authCodeEntity->getExpiryDateTime()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ],
+            ['user_id' => ParameterType::BINARY, 'id' => ParameterType::BINARY],
+        );
 
         $this->cleanUpExpiredAuthCodes();
     }
@@ -66,7 +71,7 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface
 
         $found = $this->connection->fetchOne(
             'SELECT 1 FROM oauth_auth_code WHERE code_id = :codeId FOR UPDATE',
-            ['codeId' => $codeId]
+            ['codeId' => $codeId],
         );
 
         return $found === false;
@@ -74,14 +79,14 @@ class AuthCodeRepository implements AuthCodeRepositoryInterface
 
     public function revokeAuthCodesForUser(string $userId): void
     {
-        $this->connection->delete('oauth_auth_code', ['user_id' => Uuid::fromHexToBytes($userId)]);
+        $this->connection->delete('oauth_auth_code', ['user_id' => Uuid::fromHexToBytes($userId)], ['user_id' => ParameterType::BINARY]);
     }
 
     private function cleanUpExpiredAuthCodes(): void
     {
         $this->connection->executeStatement(
             'DELETE FROM oauth_auth_code WHERE expires_at < :now',
-            ['now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)]
+            ['now' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
         );
     }
 }

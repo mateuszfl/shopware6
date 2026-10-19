@@ -73,7 +73,8 @@ class IncrementerGatewayCompilerPass implements CompilerPassInterface
         switch ($type) {
             case 'array':
             case 'mysql':
-                $referenceDefinition = $container->getDefinition($fallback);
+            case 'database':
+                $referenceDefinition = $container->findDefinition($fallback);
 
                 $definition = new Definition($referenceDefinition->getClass());
                 $definition->setArguments($referenceDefinition->getArguments());

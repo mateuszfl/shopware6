@@ -138,7 +138,7 @@ class PromotionGenerator implements DemodataGeneratorInterface
      */
     private function getSalesChannels(): array
     {
-        $ids = $this->connection->fetchAllAssociative('SELECT LOWER(HEX(id)) as id FROM `sales_channel` LIMIT 100');
+        $ids = $this->connection->fetchAllAssociative('SELECT sw_uuid_hex(id) as id FROM sales_channel LIMIT 100');
 
         return array_map(static fn ($id) => ['salesChannelId' => $id['id'], 'priority' => 1], $ids);
     }

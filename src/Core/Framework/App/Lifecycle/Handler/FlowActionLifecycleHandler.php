@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\App\Lifecycle\Handler;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\App\Aggregate\FlowAction\AppFlowActionCollection;
 use Shopware\Core\Framework\App\Flow\Action\Action;
 use Shopware\Core\Framework\App\Lifecycle\Context\AppPersistContext;
@@ -44,9 +45,7 @@ class FlowActionLifecycleHandler extends AbstractLifecycleHandler
             return;
         }
 
-        $existingFlowActions = $this->connection->fetchAllKeyValue('SELECT name, LOWER(HEX(id)) FROM app_flow_action WHERE app_id = :appId', [
-            'appId' => Uuid::fromHexToBytes($context->app->getId()),
-        ]);
+        $existingFlowActions = $this->connection->fetchAllKeyValue('SELECT name, sw_uuid_hex(id) FROM app_flow_action WHERE app_id = :appId', ['appId' => Uuid::fromHexToBytes($context->app->getId())], ['appId' => ParameterType::BINARY]);
 
         $flowActions = $flowAction->getActions()?->getActions() ?? [];
         $upserts = [];

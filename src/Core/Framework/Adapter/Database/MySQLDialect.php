@@ -21,6 +21,11 @@ final class MySQLDialect extends AbstractDatabaseDialect
         return new SqlFragment('SELECT 0');
     }
 
+    public function random(): string
+    {
+        return 'RAND()';
+    }
+
     public function capabilities(): DatabaseCapabilities
     {
         return new DatabaseCapabilities(false, false, false, false);

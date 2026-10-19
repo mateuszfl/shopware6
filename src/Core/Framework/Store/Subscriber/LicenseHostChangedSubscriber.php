@@ -46,6 +46,6 @@ class LicenseHostChangedSubscriber implements EventSubscriberInterface
         $this->systemConfigService->delete(InAppPurchaseProvider::CONFIG_STORE_IAP_KEY, null, false);
 
         // Log out all users to enforce re-authentication
-        $this->connection->executeStatement('UPDATE user SET store_token = NULL');
+        $this->connection->executeStatement('UPDATE ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user') . ' SET store_token = NULL');
     }
 }

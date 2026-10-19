@@ -156,18 +156,7 @@ class ExtensionsResourceTest extends TestCase
     private function makeResourceWithExtensions(array $extensions, array $pluginRows = [], array $appRows = [], array $registeredBundles = []): ExtensionsResource
     {
         $connection = static::createStub(Connection::class);
-        $connection->method('fetchAllKeyValue')->willReturnCallback(
-            static function (string $sql) use ($pluginRows, $appRows): array {
-                if (str_contains($sql, '`plugin`')) {
-                    return $pluginRows;
-                }
-                if (str_contains($sql, '`app`')) {
-                    return $appRows;
-                }
-
-                return [];
-            }
-        );
+        $connection->method('fetchAllKeyValue')->willReturn([...$pluginRows, ...$appRows]);
 
         $kernel = static::createStub(KernelInterface::class);
         $kernel->method('getBundles')->willReturn($registeredBundles);
@@ -199,18 +188,7 @@ class ExtensionsResourceTest extends TestCase
     private function makeResource(array $pluginRows = [], array $appRows = [], array $registeredBundles = []): ExtensionsResource
     {
         $connection = static::createStub(Connection::class);
-        $connection->method('fetchAllKeyValue')->willReturnCallback(
-            static function (string $sql) use ($pluginRows, $appRows): array {
-                if (str_contains($sql, '`plugin`')) {
-                    return $pluginRows;
-                }
-                if (str_contains($sql, '`app`')) {
-                    return $appRows;
-                }
-
-                return [];
-            }
-        );
+        $connection->method('fetchAllKeyValue')->willReturn([...$pluginRows, ...$appRows]);
 
         $kernel = static::createStub(KernelInterface::class);
         $kernel->method('getBundles')->willReturn($registeredBundles);

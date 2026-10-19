@@ -31,6 +31,19 @@ class ConfigurationTest extends TestCase
         static::assertSame('shopware', $tree->buildTree()->getName());
     }
 
+    public function testNeutralDatabaseStorageConfigurationKeepsMysqlDefaults(): void
+    {
+        $processor = new Processor();
+        $defaults = $processor->processConfiguration(new Configuration(), [['cache' => ['invalidation' => ['delay_options' => []]]]]);
+        static::assertSame('mysql', $defaults['cache']['invalidation']['delay_options']['storage']);
+        $config = $processor->processConfiguration(new Configuration(), [[
+            'cache' => ['invalidation' => ['delay_options' => ['storage' => 'database']]],
+            'increment' => ['contract' => ['type' => 'database']],
+        ]]);
+        static::assertSame('database', $config['cache']['invalidation']['delay_options']['storage']);
+        static::assertSame('database', $config['increment']['contract']['type']);
+    }
+
     public function testFeatureToggleConfigTreeNode(): void
     {
         $configuration = new Configuration();

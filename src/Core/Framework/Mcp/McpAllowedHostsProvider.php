@@ -42,7 +42,7 @@ class McpAllowedHostsProvider
         $hosts = self::LOCAL_HOSTS;
 
         /** @var list<string> $urls */
-        $urls = $this->connection->fetchFirstColumn('SELECT `url` FROM `sales_channel_domain`');
+        $urls = $this->connection->fetchFirstColumn('SELECT url FROM sales_channel_domain');
 
         foreach ([$this->appUrl, ...$urls] as $url) {
             $host = $this->extractHost($url);

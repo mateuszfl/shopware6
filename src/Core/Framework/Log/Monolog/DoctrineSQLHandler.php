@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Log\Monolog;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -40,11 +41,11 @@ class DoctrineSQLHandler extends AbstractProcessingHandler
         ];
 
         try {
-            $this->connection->insert('log_entry', $envelope);
+            $this->connection->transactional(fn () => $this->connection->insert('log_entry', $envelope, ['id' => ParameterType::BINARY]));
         } catch (\Throwable) {
             $envelope['context'] = json_encode([]);
             $envelope['extra'] = json_encode([]);
-            $this->connection->insert('log_entry', $envelope);
+            $this->connection->transactional(fn () => $this->connection->insert('log_entry', $envelope, ['id' => ParameterType::BINARY]));
         }
     }
 }

@@ -104,7 +104,7 @@ class SalesChannelAuthenticationListener implements EventSubscriberInterface
             'sales_channel.id AS id',
             'sales_channel.maintenance AS maintenance',
             // @deprecated tag:v6.8.0 - remove the COALESCE fallback to the deprecated `maintenance_ip_whitelist` column
-            'COALESCE(sales_channel.maintenance_ip_allowlist, sales_channel.maintenance_ip_whitelist) AS maintenanceIpAllowlist'
+            'COALESCE(sales_channel.maintenance_ip_allowlist, sales_channel.maintenance_ip_whitelist) AS maintenance_ip_allowlist'
         )
             ->from('sales_channel')
             ->where('sales_channel.access_key = :accessKey')
@@ -146,7 +146,7 @@ class SalesChannelAuthenticationListener implements EventSubscriberInterface
 
         try {
             /** @var list<string> $allowedIps */
-            $allowedIps = Json::decodeToList((string) ($salesChannelData['maintenanceIpAllowlist'] ?? ''));
+            $allowedIps = Json::decodeToList((string) ($salesChannelData['maintenance_ip_allowlist'] ?? ''));
         } catch (UtilException) {
             return;
         }

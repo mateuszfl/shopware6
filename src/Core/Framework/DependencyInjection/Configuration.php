@@ -780,6 +780,7 @@ class Configuration implements ConfigurationInterface
                         ->arrayNode('delay_options')
                             ->children()
                                 ->scalarNode('storage')
+                                    ->info('Use database for SQL storage; mysql remains a backwards compatible alias.')
                                     ->defaultValue('mysql')
                                 ->end()
                                 ->scalarNode('connection')

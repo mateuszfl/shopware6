@@ -48,7 +48,7 @@ class ShopSecretInvalidMiddleware implements MiddlewareInterface
                     return $response;
                 }
 
-                $this->connection->executeStatement('UPDATE user SET store_token = NULL');
+                $this->connection->executeStatement('UPDATE ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user') . ' SET store_token = NULL');
 
                 $this->systemConfigService->delete(StoreRequestOptionsProvider::CONFIG_KEY_STORE_SHOP_SECRET, null, true);
 

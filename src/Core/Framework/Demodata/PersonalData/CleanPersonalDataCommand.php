@@ -87,9 +87,10 @@ class CleanPersonalDataCommand extends Command
 
         if (\in_array(self::TYPE_CARTS, $types, true)) {
             $this->connection->executeStatement(
-                'DELETE FROM cart
-                WHERE DATE(created_at) <= (DATE_SUB(CURDATE(), INTERVAL :days DAY))',
-                ['days' => $days]
+                'DELETE FROM cart WHERE created_at < :cutoff',
+                [
+                    'cutoff' => $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))->setTime(0, 0)->modify(\sprintf('%+d days', 1 - $days))->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+                ],
             );
 
             $io->success('Personal data for carts successfully cleaned!');

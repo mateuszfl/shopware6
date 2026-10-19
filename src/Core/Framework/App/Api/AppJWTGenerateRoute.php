@@ -97,13 +97,16 @@ class AppJWTGenerateRoute
      */
     private function fetchAppDetails(string $name): array
     {
-        $row = $this->connection->fetchAssociative('SELECT
-    `app`.app_secret,
-    `acl_role`.privileges
-FROM `app`
+        $row = $this->connection->fetchAssociative(
+            'SELECT
+    app.app_secret,
+    acl_role.privileges
+FROM app
 LEFT JOIN acl_role ON app.acl_role_id = acl_role.id
-WHERE `app`.name = ? AND
-      active = 1', [$name]);
+WHERE app.name = ? AND
+      active = 1',
+            [$name],
+        );
 
         if ($row === false) {
             throw AppException::notFound($name);

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\App\Lifecycle\Handler;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\App\Aggregate\FlowEvent\AppFlowEventCollection;
 use Shopware\Core\Framework\App\Flow\Event\Event;
 use Shopware\Core\Framework\App\Lifecycle\Context\AppActivationContext;
@@ -41,18 +42,15 @@ class FlowEventLifecycleHandler extends AbstractLifecycleHandler
     public function deactivate(AppActivationContext $context): void
     {
         $this->connection->executeStatement(
-            'UPDATE `flow` SET `active` = false WHERE `event_name` IN (SELECT `name` FROM `app_flow_event` WHERE `app_id` = :appId);',
-            [
-                'appId' => Uuid::fromHexToBytes($context->app->getId()),
-            ],
+            'UPDATE flow SET active = 0 WHERE event_name IN (SELECT name FROM app_flow_event WHERE app_id = :appId);',
+            ['appId' => Uuid::fromHexToBytes($context->app->getId())],
+            ['appId' => ParameterType::BINARY],
         );
     }
 
     public function updateEvents(Event $flowEvent, string $appId, Context $context, string $defaultLocale): void
     {
-        $existingFlowEvents = $this->connection->fetchAllKeyValue('SELECT name, LOWER(HEX(id)) FROM app_flow_event WHERE app_id = :appId;', [
-            'appId' => Uuid::fromHexToBytes($appId),
-        ]);
+        $existingFlowEvents = $this->connection->fetchAllKeyValue('SELECT name, sw_uuid_hex(id) FROM app_flow_event WHERE app_id = :appId;', ['appId' => Uuid::fromHexToBytes($appId)], ['appId' => ParameterType::BINARY]);
 
         $flowEvents = $flowEvent->getCustomEvents()?->getCustomEvents() ?? [];
         $upserts = [];

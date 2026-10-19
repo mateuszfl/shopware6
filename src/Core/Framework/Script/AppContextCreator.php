@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Script;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Api\Context\AdminApiSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
@@ -65,12 +66,16 @@ class AppContextCreator
      */
     private function fetchPrivileges(string $appId): array
     {
-        $privileges = $this->connection->fetchOne('
-            SELECT `acl_role`.`privileges` AS `privileges`
-            FROM `acl_role`
-            INNER JOIN `app` ON `app`.`acl_role_id` = `acl_role`.`id`
-            WHERE `app`.`id` = :appId
-        ', ['appId' => Uuid::fromHexToBytes($appId)]);
+        $privileges = $this->connection->fetchOne(
+            '
+            SELECT acl_role.privileges AS privileges
+            FROM acl_role
+            INNER JOIN app ON app.acl_role_id = acl_role.id
+            WHERE app.id = :appId
+        ',
+            ['appId' => Uuid::fromHexToBytes($appId)],
+            ['appId' => ParameterType::BINARY],
+        );
 
         if (!$privileges) {
             return [];

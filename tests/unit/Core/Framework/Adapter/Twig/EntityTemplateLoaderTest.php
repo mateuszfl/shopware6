@@ -30,7 +30,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -51,7 +51,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -85,7 +85,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -118,7 +118,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -138,7 +138,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -157,7 +157,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => '2020-01-01 00:00:00',
+                    'updated_at' => '2020-01-01 00:00:00',
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -176,7 +176,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => '2099-01-01 00:00:00',
+                    'updated_at' => '2099-01-01 00:00:00',
                     'namespace' => 'TestApp',
                 ],
             ]);
@@ -203,7 +203,7 @@ class EntityTemplateLoaderTest extends TestCase
                     'path' => 'storefront/page/index.html.twig',
                     'template' => '<div>Hello</div>',
                     'hash' => 'abc123',
-                    'updatedAt' => null,
+                    'updated_at' => null,
                     'namespace' => '',
                 ],
             ]);

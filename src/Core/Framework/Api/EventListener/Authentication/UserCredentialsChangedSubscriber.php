@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\EventListener\Authentication;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Api\OAuth\AuthCodeRepository;
@@ -70,11 +71,12 @@ class UserCredentialsChangedSubscriber implements EventSubscriberInterface
 
     private function updateLastUpdatedPasswordTimestamp(string $userId): void
     {
-        $this->connection->update('user', [
-            'last_updated_password_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ], [
-            'id' => Uuid::fromHexToBytes($userId),
-        ]);
+        $this->connection->update(
+            $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'),
+            ['last_updated_password_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
+            ['id' => Uuid::fromHexToBytes($userId)],
+            ['id' => ParameterType::BINARY],
+        );
     }
 
     private function revokeUserTokens(string $userId): void

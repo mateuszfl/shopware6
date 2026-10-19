@@ -118,21 +118,32 @@ class ScriptLoader implements EventSubscriberInterface, ResetInterface
             $this->scriptPersister->refresh();
         }
 
+        $scripts = $this->connection->fetchAllAssociative(
+            '
+            SELECT sw_uuid_hex(script.app_id) as app_id,
+                   script.name AS script_name,
+                   script.script AS script,
+                   script.hook AS hook,
+                   app.name AS app_name,
+                   app.version AS app_version,
+                   sw_uuid_hex(app.integration_id) AS integration_id,
+                   COALESCE(script.updated_at, script.created_at) AS last_modified,
+                   CASE WHEN script.active = 1 AND (app.id IS NULL OR app.active = 1) THEN 1 ELSE 0 END AS active
+            FROM script
+            LEFT JOIN app ON script.app_id = app.id
+            ORDER BY app.created_at, app.id, script.name
+        ',
+        );
+
         /** @var list<ScriptInfo> $scripts */
-        $scripts = $this->connection->fetchAllAssociative('
-            SELECT LOWER(HEX(`script`.`app_id`)) as `app_id`,
-                   `script`.`name` AS scriptName,
-                   `script`.`script` AS script,
-                   `script`.`hook` AS hook,
-                   `app`.`name` AS appName,
-                   `app`.`version` AS appVersion,
-                   LOWER(HEX(`app`.`integration_id`)) AS integrationId,
-                   IFNULL(`script`.`updated_at`, `script`.`created_at`) AS lastModified,
-                   IF(`script`.`active` = 1 AND (`app`.id IS NULL OR `app`.`active` = 1), 1, 0) AS active
-            FROM `script`
-            LEFT JOIN `app` ON `script`.`app_id` = `app`.`id`
-            ORDER BY `app`.`created_at`, `app`.`id`, `script`.`name`
-        ');
+        $scripts = array_map(static fn (array $row): array => [
+            ...$row,
+            'scriptName' => $row['script_name'],
+            'appName' => $row['app_name'],
+            'appVersion' => $row['app_version'],
+            'integrationId' => $row['integration_id'],
+            'lastModified' => $row['last_modified'],
+        ], $scripts);
 
         $executableScripts = [];
         $appIncludes = [];

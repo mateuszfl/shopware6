@@ -96,9 +96,9 @@ class InAppPurchaseUpdater
     private function fetchAppList(): array
     {
         return $this->connection->fetchAllKeyValue('
-            SELECT `name`, LOWER(HEX(`id`)) AS `id`
-            FROM `app`
-            WHERE `active` = 1');
+            SELECT name, sw_uuid_hex(id) AS id
+            FROM app
+            WHERE active = 1');
     }
 
     private function validateData(string $array): bool

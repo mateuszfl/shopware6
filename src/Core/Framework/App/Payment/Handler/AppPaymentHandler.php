@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\App\Payment\Handler;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionCollection;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionDefinition;
@@ -78,7 +79,7 @@ class AppPaymentHandler extends AbstractPaymentHandler
             ->select($requiredUrl)
             ->from('app_payment_method')
             ->where('payment_method_id = :paymentMethodId')
-            ->setParameter('paymentMethodId', Uuid::fromHexToBytes($paymentMethodId))
+            ->setParameter('paymentMethodId', Uuid::fromHexToBytes($paymentMethodId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchOne();
 

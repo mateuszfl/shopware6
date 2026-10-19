@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Store\Services;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -67,8 +68,8 @@ class StoreSessionExpiredMiddleware implements MiddlewareInterface
     private function logoutUserByToken(string $token): void
     {
         $this->connection->executeStatement(
-            'UPDATE user SET store_token = NULL WHERE store_token = :token',
-            ['token' => $token]
+            'UPDATE ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user') . ' SET store_token = NULL WHERE store_token = :token',
+            ['token' => $token],
         );
     }
 
@@ -95,8 +96,9 @@ class StoreSessionExpiredMiddleware implements MiddlewareInterface
         }
 
         $this->connection->executeStatement(
-            'UPDATE user SET store_token = NULL WHERE id = :userId',
-            ['userId' => Uuid::fromHexToBytes($userId)]
+            'UPDATE ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user') . ' SET store_token = NULL WHERE id = :userId',
+            ['userId' => Uuid::fromHexToBytes($userId)],
+            ['userId' => ParameterType::BINARY],
         );
     }
 }

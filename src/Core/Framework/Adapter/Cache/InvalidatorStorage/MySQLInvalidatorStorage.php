@@ -2,11 +2,12 @@
 
 namespace Shopware\Core\Framework\Adapter\Cache\InvalidatorStorage;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\TransactionIsolationLevel;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
-use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -42,7 +43,8 @@ class MySQLInvalidatorStorage extends AbstractInvalidatorStorage
             array_map(
                 static fn (string $tag) => ['id' => Uuid::randomBytes(), 'tag' => $tag],
                 array_values($tags)
-            )
+            ),
+            ['id' => ParameterType::BINARY]
         );
 
         // we execute in read committed isolation so that row gap locks are not applied when inserting
@@ -74,7 +76,7 @@ class MySQLInvalidatorStorage extends AbstractInvalidatorStorage
         // fetch and lock records, ignoring locked records, so we don't handle tags
         // being processed by parallel worker
         $rows = $this->connection->fetchAllAssociative(
-            \sprintf('SELECT id, tag FROM %s ORDER BY id FOR UPDATE SKIP LOCKED', self::TABLE_NAME)
+            \sprintf('SELECT id, tag FROM %s ORDER BY id FOR UPDATE SKIP LOCKED', self::TABLE_NAME),
         );
 
         ($this->debug)($this, $rows);
@@ -83,17 +85,15 @@ class MySQLInvalidatorStorage extends AbstractInvalidatorStorage
             return [];
         }
 
-        $firstTagId = $rows[0]['id'];
-        $lastTagId = $rows[array_key_last($rows)]['id'];
-
-        $query = new RetryableQuery(
-            $this->connection,
-            $this->connection->prepare(\sprintf('DELETE FROM %s WHERE id BETWEEN :firstTagId AND :lastTagId', self::TABLE_NAME))
-        );
-        $query->execute([
-            'firstTagId' => $firstTagId,
-            'lastTagId' => $lastTagId,
-        ]);
+        // Delete only rows claimed above: a skipped lock may lie between two claimed IDs.
+        foreach (array_chunk($rows, 1000) as $chunk) {
+            $ids = array_map(static fn (array $row): string => Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['id'])), $chunk);
+            $this->connection->executeStatement(
+                'DELETE FROM ' . self::TABLE_NAME . ' WHERE id IN (:ids)',
+                ['ids' => $ids],
+                ['ids' => ArrayParameterType::BINARY],
+            );
+        }
 
         return array_column($rows, 'tag');
     }
@@ -107,6 +107,10 @@ class MySQLInvalidatorStorage extends AbstractInvalidatorStorage
      */
     private function readCommittedIsolation(\Closure $callback): mixed
     {
+        if ($this->connection->isTransactionActive()) {
+            return RetryableTransaction::transactional($this->connection, $callback);
+        }
+
         // used so that we don't lock the table for inserts
         $transactionIsolation = $this->connection->getTransactionIsolation();
         $this->connection->setTransactionIsolation(TransactionIsolationLevel::READ_COMMITTED);

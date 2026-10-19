@@ -54,11 +54,13 @@ class ActiveAppsLoader implements ResetInterface
     private function loadApps(): array
     {
         try {
-            $data = $this->connection->fetchAllAssociative('
-                SELECT `name`, `path`, `author`, `self_managed`, `version`
-                FROM `app`
-                WHERE `active` = 1
-            ');
+            $data = $this->connection->fetchAllAssociative(
+                '
+                SELECT name, path, author, self_managed, version
+                FROM app
+                WHERE active = 1
+            ',
+            );
 
             return array_map(static fn (array $app) => [
                 'name' => $app['name'],

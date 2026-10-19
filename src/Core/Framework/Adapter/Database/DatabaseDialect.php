@@ -16,6 +16,8 @@ interface DatabaseDialect
 {
     public function capabilities(): DatabaseCapabilities;
 
+    public function random(): string;
+
     /**
      * Query counting conflicts that cannot use the audited delete/insert replacement strategy.
      */

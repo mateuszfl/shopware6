@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Adapter\Storage;
 
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Symfony\Contracts\Service\ResetInterface;
 
@@ -40,17 +41,18 @@ class MySQLKeyValueStorage extends AbstractKeyValueStorage implements ResetInter
 
     public function set(string $key, mixed $value): void
     {
-        $this->connection->executeStatement('REPLACE INTO `app_config` (`key`, `value`) VALUES (:key, :value)', [
+        $query = (new DatabasePlatformResolver($this->connection))->dialect()->upsert('app_config', [
             'key' => $key,
             'value' => \is_array($value) ? json_encode($value) : (string) $value,
-        ]);
+        ], ['key'], ['value']);
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
 
         $this->reset();
     }
 
     public function remove(string $key): void
     {
-        $this->connection->delete('app_config', ['`key`' => $key]);
+        $this->connection->delete('app_config', [$this->connection->getDatabasePlatform()->quoteSingleIdentifier('key') => $key]);
 
         if ($this->config && \array_key_exists($key, $this->config)) {
             unset($this->config[$key]);
@@ -67,6 +69,6 @@ class MySQLKeyValueStorage extends AbstractKeyValueStorage implements ResetInter
      */
     private function load(): array
     {
-        return $this->connection->fetchAllKeyValue('SELECT `key`, `value` FROM `app_config`');
+        return $this->connection->fetchAllKeyValue('SELECT ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('key') . ', value FROM app_config');
     }
 }

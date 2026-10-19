@@ -121,19 +121,19 @@ class ScriptLoaderTest extends TestCase
     }
 
     /**
-     * @return array{app_id: string, scriptName: string, script: string, hook: string, appName: string, appVersion: string, integrationId: string, lastModified: string, active: string}
+     * @return array{app_id: string, script_name: string, script: string, hook: string, app_name: string, app_version: string, integration_id: string, last_modified: string, active: string}
      */
     private function createScriptInfo(string $hook): array
     {
         return [
             'app_id' => '018f89c8a0cf70b5ac102d19a804db18',
-            'scriptName' => $hook,
+            'script_name' => $hook,
             'script' => '',
             'hook' => $hook,
-            'appName' => 'TestApp',
-            'appVersion' => '1.0.0',
-            'integrationId' => '018f89c8a0cf70b5ac102d19a804db19',
-            'lastModified' => '2024-01-01 00:00:00.000',
+            'app_name' => 'TestApp',
+            'app_version' => '1.0.0',
+            'integration_id' => '018f89c8a0cf70b5ac102d19a804db19',
+            'last_modified' => '2024-01-01 00:00:00.000',
             'active' => '1',
         ];
     }

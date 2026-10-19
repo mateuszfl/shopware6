@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\App\Flow\Action;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Flow\Dispatching\StorableFlow;
 use Shopware\Core\Framework\Adapter\Twig\StringTemplateRenderer;
 use Shopware\Core\Framework\App\AppException;
@@ -90,8 +91,9 @@ class AppFlowActionProvider
     private function getAppFlowActionData(string $appFlowActionId): array
     {
         return $this->connection->fetchAssociative(
-            'SELECT `parameters`, `headers` FROM `app_flow_action` WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($appFlowActionId)]
+            'SELECT parameters, headers FROM app_flow_action WHERE id = :id',
+            ['id' => Uuid::fromHexToBytes($appFlowActionId)],
+            ['id' => ParameterType::BINARY],
         ) ?: [];
     }
 }

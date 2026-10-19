@@ -104,6 +104,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             param('shopware.messenger.routing_overwrite'),
         ]);
 
+    $services->alias('shopware.message_queue.stats.database', MySQLStatsRepository::class);
+
     $services->set(MySQLStatsRepository::class)
         ->args([
             service(Connection::class),

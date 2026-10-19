@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Mcp\AllowList;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Api\Util\AccessKeyHelper;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -117,7 +118,7 @@ class McpAllowlistProvider
     public function forAccessKey(string $accessKey): McpAllowlist
     {
         $json = $this->connection->fetchOne(
-            'SELECT `mcp_allowlist` FROM `integration` WHERE `access_key` = :key AND `deleted_at` IS NULL',
+            'SELECT mcp_allowlist FROM integration WHERE access_key = :key AND deleted_at IS NULL',
             ['key' => $accessKey],
         );
 
@@ -128,8 +129,9 @@ class McpAllowlistProvider
     public function forUserId(string $userId): McpAllowlist
     {
         $row = $this->connection->fetchAssociative(
-            'SELECT `mcp_allowlist`, `admin` FROM `user` WHERE `id` = :id AND `active` = 1',
+            'SELECT mcp_allowlist, admin FROM ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user') . ' WHERE id = :id AND active = 1',
             ['id' => Uuid::fromHexToBytes($userId)],
+            ['id' => ParameterType::BINARY],
         );
 
         // Unknown or inactive: not a verified administrator, so no bypass.
@@ -148,7 +150,7 @@ class McpAllowlistProvider
     private function forUserAccessKey(string $accessKey): McpAllowlist
     {
         $userId = $this->connection->fetchOne(
-            'SELECT `user_id` FROM `user_access_key` WHERE `access_key` = :key',
+            'SELECT user_id FROM user_access_key WHERE access_key = :key',
             ['key' => $accessKey],
         );
 

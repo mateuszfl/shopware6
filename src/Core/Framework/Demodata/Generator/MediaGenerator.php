@@ -141,7 +141,7 @@ class MediaGenerator implements DemodataGeneratorInterface
     private function getIds(): array
     {
         /** @var list<string> $ids */
-        $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM tag LIMIT 500');
+        $ids = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) as id FROM tag LIMIT 500');
 
         return $ids;
     }

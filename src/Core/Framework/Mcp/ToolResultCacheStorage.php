@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Mcp;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
@@ -34,13 +35,17 @@ class ToolResultCacheStorage
     {
         $id = Uuid::randomBytes();
 
-        $this->connection->insert('mcp_tool_result_cache', [
-            'id' => $id,
-            'session_id' => $sessionId,
-            'mime_type' => $mimeType,
-            'content' => $content,
-            'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        $this->connection->insert(
+            'mcp_tool_result_cache',
+            [
+                'id' => $id,
+                'session_id' => $sessionId,
+                'mime_type' => $mimeType,
+                'content' => $content,
+                'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ],
+            ['id' => ParameterType::BINARY],
+        );
 
         return Uuid::fromBytesToHex($id);
     }
@@ -53,11 +58,9 @@ class ToolResultCacheStorage
     public function read(string $id, string $sessionId): ?array
     {
         $row = $this->connection->fetchAssociative(
-            'SELECT `content`, `mime_type` FROM `mcp_tool_result_cache` WHERE `id` = :id AND `session_id` = :sessionId',
-            [
-                'id' => Uuid::fromHexToBytes($id),
-                'sessionId' => $sessionId,
-            ],
+            'SELECT content, mime_type FROM mcp_tool_result_cache WHERE id = :id AND session_id = :sessionId',
+            ['id' => Uuid::fromHexToBytes($id), 'sessionId' => $sessionId],
+            ['id' => ParameterType::BINARY],
         );
 
         if ($row === false) {
@@ -76,7 +79,7 @@ class ToolResultCacheStorage
     public function deleteForSession(string $sessionId): void
     {
         $this->connection->executeStatement(
-            'DELETE FROM `mcp_tool_result_cache` WHERE `session_id` = :sessionId',
+            'DELETE FROM mcp_tool_result_cache WHERE session_id = :sessionId',
             ['sessionId' => $sessionId],
         );
     }

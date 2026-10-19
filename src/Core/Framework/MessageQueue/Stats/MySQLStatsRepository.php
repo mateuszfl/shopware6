@@ -61,7 +61,8 @@ class MySQLStatsRepository extends AbstractStatsRepository
             ->from('messenger_stats')
             ->where('created_at >= :newerThan')
             ->groupBy('message_type')
-            ->orderBy('created_at', 'DESC')
+            ->orderBy('MAX(created_at)', 'DESC')
+            ->addOrderBy('message_type', 'ASC')
             ->setMaxResults(self::MESSAGE_TYPES_LIMIT)
             ->setParameter('newerThan', $newerThan->format(Defaults::STORAGE_DATE_TIME_FORMAT));
 
@@ -79,11 +80,14 @@ class MySQLStatsRepository extends AbstractStatsRepository
 
     private function insertMessageStats(string $messageFqcn, int $timeInQueue, \DateTimeInterface $createdAt): void
     {
-        $this->connection->insert('messenger_stats', [
-            'message_type' => $messageFqcn,
-            'time_in_queue' => $timeInQueue,
-            'created_at' => $createdAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        $this->connection->insert(
+            'messenger_stats',
+            [
+                'message_type' => $messageFqcn,
+                'time_in_queue' => $timeInQueue,
+                'created_at' => $createdAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ],
+        );
     }
 
     private function deleteStatsOlderThan(\DateTimeInterface $olderThan): void

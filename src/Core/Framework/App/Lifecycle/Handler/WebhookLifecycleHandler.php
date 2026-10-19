@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\App\Lifecycle\Handler;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\App\AppException;
@@ -71,7 +72,7 @@ class WebhookLifecycleHandler extends AbstractLifecycleHandler
         }
 
         foreach ($updates as $id => $update) {
-            $this->connection->update('webhook', $update, ['id' => Uuid::fromHexToBytes($id)]);
+            $this->connection->update('webhook', $update, ['id' => Uuid::fromHexToBytes($id)], ['id' => ParameterType::BINARY]);
         }
 
         foreach ($inserts as $insert) {
@@ -90,7 +91,7 @@ class WebhookLifecycleHandler extends AbstractLifecycleHandler
         $this->connection->executeStatement(
             'DELETE FROM webhook WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList(array_keys($toBeRemoved))],
-            ['ids' => ArrayParameterType::STRING],
+            ['ids' => ArrayParameterType::BINARY],
         );
     }
 
@@ -101,11 +102,11 @@ class WebhookLifecycleHandler extends AbstractLifecycleHandler
     {
         $sql = <<<'SQL'
             SELECT
-                LOWER(HEX(w.id)) as webhookId,
-                w.name as webhookName
+                sw_uuid_hex(w.id) as webhook_id,
+                w.name as webhook_name
             FROM webhook w
             LEFT JOIN app a ON (a.id = w.app_id)
-            WHERE LOWER(HEX(a.id)) = :appId
+            WHERE sw_uuid_hex(a.id) = :appId
 
         SQL;
 

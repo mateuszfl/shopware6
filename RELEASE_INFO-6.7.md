@@ -2,6 +2,12 @@
 
 ## Core
 
+### Database selectors for Framework storage
+
+Increment pools and delayed cache invalidation accept the neutral `database` storage selector. Existing `mysql` configuration and service/class names remain supported, and the defaults are unchanged. See [the Framework SQL contract](dev-tools/database/FRAMEWORK_SQL_CONTRACT.md) for the aliases and database validation boundary.
+
+Delayed cache invalidation deletes only the tags claimed by its worker. Message statistics order each message type by its most recent occurrence, with stable ordering for ties.
+
 ### Checkout persistence and promotion codes
 
 Checkout order persistence now groups database writes, stock changes and individual

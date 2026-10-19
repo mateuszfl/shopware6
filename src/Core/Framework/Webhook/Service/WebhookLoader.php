@@ -32,12 +32,12 @@ class WebhookLoader
     {
         $roles = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT `id`, `privileges`
-                FROM `acl_role`
-                WHERE `id` IN (:aclRoleIds)
+                SELECT id, privileges
+                FROM acl_role
+                WHERE id IN (:aclRoleIds)
             SQL,
             ['aclRoleIds' => Uuid::fromHexToBytesList($roleIds)],
-            ['aclRoleIds' => ArrayParameterType::BINARY]
+            ['aclRoleIds' => ArrayParameterType::BINARY],
         );
 
         if (!$roles) {
@@ -60,18 +60,18 @@ class WebhookLoader
     {
         $sql = <<<'SQL'
             SELECT
-                LOWER(HEX(w.id)) as webhookId,
-                w.name as webhookName,
-                w.event_name as eventName,
-                w.url as webhookUrl,
-                w.only_live_version as onlyLiveVersion,
-                LOWER(HEX(a.id)) AS appId,
-                a.name AS appName,
-                a.active AS appActive,
-                a.source_type AS appSourceType,
-                a.version AS appVersion,
-                a.app_secret AS appSecret,
-                LOWER(HEX(a.acl_role_id)) as appAclRoleId
+                sw_uuid_hex(w.id) AS webhook_id,
+                w.name AS webhook_name,
+                w.event_name AS event_name,
+                w.url AS webhook_url,
+                w.only_live_version AS only_live_version,
+                sw_uuid_hex(a.id) AS app_id,
+                a.name AS app_name,
+                a.active AS app_active,
+                a.source_type AS app_source_type,
+                a.version AS app_version,
+                a.app_secret AS app_secret,
+                sw_uuid_hex(a.acl_role_id) AS app_acl_role_id
             FROM webhook w
             LEFT JOIN app a ON (a.id = w.app_id)
             WHERE w.active = 1
@@ -81,18 +81,18 @@ class WebhookLoader
 
         return array_map(
             static fn (array $webhook) => new Webhook(
-                $webhook['webhookId'],
-                $webhook['webhookName'],
-                $webhook['eventName'],
-                $webhook['webhookUrl'],
-                (bool) $webhook['onlyLiveVersion'],
-                $webhook['appId'],
-                $webhook['appName'],
-                $webhook['appSourceType'],
-                (bool) $webhook['appActive'],
-                $webhook['appVersion'],
-                $webhook['appSecret'],
-                $webhook['appAclRoleId']
+                $webhook['webhook_id'],
+                $webhook['webhook_name'],
+                $webhook['event_name'],
+                $webhook['webhook_url'],
+                (bool) $webhook['only_live_version'],
+                $webhook['app_id'],
+                $webhook['app_name'],
+                $webhook['app_source_type'],
+                (bool) $webhook['app_active'],
+                $webhook['app_version'],
+                $webhook['app_secret'],
+                $webhook['app_acl_role_id']
             ),
             $webhooks
         );

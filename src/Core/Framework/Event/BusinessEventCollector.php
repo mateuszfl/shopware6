@@ -88,9 +88,9 @@ class BusinessEventCollector
     private function fetchAppEvents(BusinessEventCollectorResponse $result): BusinessEventCollectorResponse
     {
         $appEvents = $this->connection->fetchAllAssociative(
-            'SELECT `app_flow_event`.`name`, `app_flow_event`.`aware`
-             FROM `app_flow_event` JOIN `app` ON `app_flow_event`.`app_id` = `app`.`id`
-             WHERE `app`.`active` = 1'
+            'SELECT app_flow_event.name, app_flow_event.aware
+             FROM app_flow_event JOIN app ON app_flow_event.app_id = app.id
+             WHERE app.active = 1',
         );
 
         array_map(static function (array $event) use ($result): void {

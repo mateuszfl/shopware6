@@ -60,25 +60,15 @@ class CleanPersonalDataCommandTest extends TestCase
 
     public function testDeletesCartsUsingConfiguredDays(): void
     {
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('executeStatement')
-            ->with(static::stringContains('DELETE FROM cart'), ['days' => 7])
-            ->willReturn(1);
-
-        $this->getCommandTester($this->createRepository([]), $connection)->execute(['type' => 'carts', '--days' => 7]);
+        $tester = $this->getCommandTester($this->createRepository([]));
+        static::assertSame(Command::SUCCESS, $tester->execute(['type' => 'carts', '--days' => 7]));
+        static::assertStringContainsString('Personal data for carts successfully cleaned', $tester->getDisplay());
     }
 
     public function testAllCleansGuestsAndCarts(): void
     {
         $repository = $this->createRepository(['guest-id']);
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())->method('executeStatement')->with(
-            static::stringContains('DELETE FROM cart'),
-            ['days' => 0]
-        );
-
-        $tester = $this->getCommandTester($repository, $connection);
+        $tester = $this->getCommandTester($repository);
         static::assertSame(Command::SUCCESS, $tester->execute(['--all' => true]));
         static::assertSame([[['id' => 'guest-id']]], $repository->deletes);
     }

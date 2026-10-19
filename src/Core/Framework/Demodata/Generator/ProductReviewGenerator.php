@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Demodata\Generator;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Customer\Service\ProductReviewCountService;
 use Shopware\Core\Content\Product\Aggregate\ProductReview\ProductReviewDefinition;
 use Shopware\Core\Defaults;
@@ -46,7 +47,7 @@ class ProductReviewGenerator implements DemodataGeneratorInterface
 
         $customerIds = $this->getCustomerIds();
         $productIds = $this->getProductIds();
-        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM sales_channel');
+        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM sales_channel');
         if ($salesChannelIds === []) {
             throw DemodataException::wrongExecutionOrder();
         }
@@ -105,7 +106,7 @@ class ProductReviewGenerator implements DemodataGeneratorInterface
      */
     private function getCustomerIds(): array
     {
-        $sql = 'SELECT LOWER(HEX(id)) as id FROM customer LIMIT 200';
+        $sql = 'SELECT sw_uuid_hex(id) as id FROM customer LIMIT 200';
 
         $customerIds = $this->connection->fetchAllAssociative($sql);
 
@@ -117,9 +118,13 @@ class ProductReviewGenerator implements DemodataGeneratorInterface
      */
     private function getProductIds(): array
     {
-        $sql = 'SELECT LOWER(HEX(id)) as id FROM product WHERE version_id = :liveVersionId LIMIT 200';
+        $sql = 'SELECT sw_uuid_hex(id) as id FROM product WHERE version_id = :liveVersionId LIMIT 200';
 
-        $productIds = $this->connection->fetchAllAssociative($sql, ['liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)]);
+        $productIds = $this->connection->fetchAllAssociative(
+            $sql,
+            ['liveVersionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
+            ['liveVersionId' => ParameterType::BINARY],
+        );
 
         return array_column($productIds, 'id');
     }

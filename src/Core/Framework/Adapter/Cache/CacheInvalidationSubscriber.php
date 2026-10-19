@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\Adapter\Cache;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\CachedRuleLoader;
 use Shopware\Core\Checkout\Customer\Aggregate\CustomerGroup\CustomerGroupDefinition;
 use Shopware\Core\Checkout\Payment\PaymentMethodDefinition;
@@ -363,13 +364,13 @@ class CacheInvalidationSubscriber
         /** @var list<array{'product_id':string, 'variant_id':string|null}> $productIds */
         $productIds = $this->connection->fetchAllAssociative(
             'SELECT
-                    LOWER(HEX(pm.product_id)) as product_id,
-                    IF(variant.id IS NULL,  NULL, LOWER(HEX(variant.id))) as variant_id
+                    sw_uuid_hex(pm.product_id) as product_id,
+                    CASE WHEN variant.id IS NULL THEN NULL ELSE sw_uuid_hex(variant.id) END as variant_id
                     FROM product_media AS pm
                     LEFT JOIN product as variant ON (pm.product_id = variant.parent_id)
                     WHERE media_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($event->getIds())],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $variantIds = array_filter(array_column($productIds, 'variant_id'));
@@ -443,13 +444,16 @@ class CacheInvalidationSubscriber
         }
 
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(category_id)) as category_id
+            'SELECT DISTINCT sw_uuid_hex(category_id) as category_id
              FROM product_category_tree
                 INNER JOIN product ON product.id = product_category_tree.product_id AND product_category_tree.product_version_id = product.version_id
              WHERE product.product_manufacturer_id IN (:ids)
              AND product.version_id = :version',
-            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
+            ],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY],
         );
 
         $this->cacheInvalidator->invalidate(
@@ -473,12 +477,15 @@ class CacheInvalidationSubscriber
 
         // invalidates product listings which are based on a product stream
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(product_stream_id))
+            'SELECT DISTINCT sw_uuid_hex(product_stream_id)
              FROM product_stream_mapping
              WHERE product_stream_mapping.product_id IN (:ids)
              AND product_stream_mapping.product_version_id = :version',
-            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
+            ],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY],
         );
 
         $this->cacheInvalidator->invalidate(
@@ -514,13 +521,16 @@ class CacheInvalidationSubscriber
     private function getProductCategoryIds(array $ids): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(category_id)) as category_id
+            'SELECT DISTINCT sw_uuid_hex(category_id) as category_id
              FROM product_category_tree
              WHERE product_id IN (:ids)
              AND product_version_id = :version
              AND category_version_id = :version',
-            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
+            ],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY],
         );
     }
 
@@ -535,9 +545,9 @@ class CacheInvalidationSubscriber
         }
 
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(sales_channel_id)) as id FROM sales_channel_shipping_method WHERE shipping_method_id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) as id FROM sales_channel_shipping_method WHERE shipping_method_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $tags = [];
@@ -572,9 +582,9 @@ class CacheInvalidationSubscriber
         }
 
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(sales_channel_id)) as id FROM sales_channel_payment_method WHERE payment_method_id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) as id FROM sales_channel_payment_method WHERE payment_method_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $tags = [];
@@ -610,9 +620,9 @@ class CacheInvalidationSubscriber
 
         // Used to detect changes to the country itself and invalidate the route for all sales channels in which the country is assigned.
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(sales_channel_id)) as id FROM sales_channel_country WHERE country_id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) as id FROM sales_channel_country WHERE country_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $tags = [];
@@ -661,9 +671,9 @@ class CacheInvalidationSubscriber
 
         // Used to detect changes to the language itself and invalidate the route for all sales channels in which the language is assigned.
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(sales_channel_id)) as id FROM sales_channel_language WHERE language_id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) as id FROM sales_channel_language WHERE language_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $tags = [];
@@ -700,9 +710,9 @@ class CacheInvalidationSubscriber
 
         // Used to detect changes to the currency itself and invalidate the route for all sales channels in which the currency is assigned.
         $ids = $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(sales_channel_id)) as id FROM sales_channel_currency WHERE currency_id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(sales_channel_id) as id FROM sales_channel_currency WHERE currency_id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
 
         $tags = [];
@@ -734,9 +744,12 @@ class CacheInvalidationSubscriber
     private function getParentIds(array $ids): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(COALESCE(parent_id, id))) as id FROM product WHERE id IN (:ids) AND version_id = :version',
-            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            'SELECT DISTINCT sw_uuid_hex(COALESCE(parent_id, id)) as id FROM product WHERE id IN (:ids) AND version_id = :version',
+            [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
+            ],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY],
         );
     }
 
@@ -752,12 +765,15 @@ class CacheInvalidationSubscriber
         }
 
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(product_stream_id))
+            'SELECT DISTINCT sw_uuid_hex(product_stream_id)
              FROM product_stream_mapping
              WHERE product_stream_mapping.product_id IN (:ids)
              AND product_stream_mapping.product_version_id = :version',
-            ['ids' => Uuid::fromHexToBytesList($ids), 'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
-            ['ids' => ArrayParameterType::BINARY]
+            [
+                'ids' => Uuid::fromHexToBytesList($ids),
+                'version' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
+            ],
+            ['ids' => ArrayParameterType::BINARY, 'version' => ParameterType::BINARY],
         );
     }
 
@@ -865,11 +881,11 @@ class CacheInvalidationSubscriber
         }
 
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(cross_selling_id))
+            'SELECT DISTINCT sw_uuid_hex(cross_selling_id)
              FROM product_cross_selling_assigned_products
              WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
     }
 
@@ -887,14 +903,14 @@ class CacheInvalidationSubscriber
         }
 
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(COALESCE(product.parent_id, product.id)))
+            'SELECT DISTINCT sw_uuid_hex(COALESCE(product.parent_id, product.id))
              FROM product_cross_selling
              INNER JOIN product
                 ON product.id = product_cross_selling.product_id
                 AND product.version_id = product_cross_selling.product_version_id
              WHERE product_cross_selling.id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
     }
 
@@ -906,9 +922,9 @@ class CacheInvalidationSubscriber
     private function getSetIds(array $ids): array
     {
         return $this->connection->fetchFirstColumn(
-            'SELECT DISTINCT LOWER(HEX(snippet_set_id)) FROM snippet WHERE id IN (:ids)',
+            'SELECT DISTINCT sw_uuid_hex(snippet_set_id) FROM snippet WHERE id IN (:ids)',
             ['ids' => Uuid::fromHexToBytesList($ids)],
-            ['ids' => ArrayParameterType::BINARY]
+            ['ids' => ArrayParameterType::BINARY],
         );
     }
 }

@@ -151,6 +151,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service(Connection::class),
         ]);
 
+    $services->alias('shopware.webhook.receiver.database', MySQLWebhookReceiver::class);
+
     $services->set(MySQLWebhookReceiver::class)
         ->args([
             service(StreamLockService::class),

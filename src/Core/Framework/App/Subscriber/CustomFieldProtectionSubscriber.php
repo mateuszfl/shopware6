@@ -88,12 +88,15 @@ class CustomFieldProtectionSubscriber implements EventSubscriberInterface
     private function fetchIntegrationIdOfAssociatedApp(WriteCommand $command): ?string
     {
         $id = $command->getPrimaryKey()['id'];
-        $integrationId = $this->connection->executeQuery('
-            SELECT `app`.`integration_id`
-            FROM `app`
-            INNER JOIN `custom_field_set` ON `custom_field_set`.`app_id` = `app`.`id`
-            WHERE `custom_field_set`.`id` = :customFieldSetId
-        ', ['customFieldSetId' => $id])->fetchOne();
+        $integrationId = $this->connection->executeQuery(
+            '
+            SELECT app.integration_id
+            FROM app
+            INNER JOIN custom_field_set ON custom_field_set.app_id = app.id
+            WHERE custom_field_set.id = :customFieldSetId
+        ',
+            ['customFieldSetId' => $id],
+        )->fetchOne();
 
         if (!$integrationId) {
             return null;

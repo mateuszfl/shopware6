@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\Mcp;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -28,14 +29,12 @@ class McpToolsetSessionStorage
 
     public function enable(string $sessionId, string $toolsetName): void
     {
-        $this->connection->executeStatement(
-            'INSERT IGNORE INTO `mcp_toolset_session` (`session_id`, `toolset_name`, `created_at`) VALUES (:sessionId, :toolsetName, :createdAt)',
-            [
-                'sessionId' => $sessionId,
-                'toolsetName' => $toolsetName,
-                'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ],
-        );
+        $query = (new DatabasePlatformResolver($this->connection))->dialect()->upsert('mcp_toolset_session', [
+            'session_id' => $sessionId,
+            'toolset_name' => $toolsetName,
+            'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+        ], ['session_id', 'toolset_name'], []);
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
     }
 
     /**
@@ -46,7 +45,7 @@ class McpToolsetSessionStorage
         return array_values(array_map(
             static fn (mixed $toolsetName): string => (string) $toolsetName,
             $this->connection->fetchFirstColumn(
-                'SELECT `toolset_name` FROM `mcp_toolset_session` WHERE `session_id` = :sessionId ORDER BY `toolset_name` ASC',
+                'SELECT toolset_name FROM mcp_toolset_session WHERE session_id = :sessionId ORDER BY toolset_name ASC',
                 ['sessionId' => $sessionId],
             ),
         ));
@@ -55,7 +54,7 @@ class McpToolsetSessionStorage
     public function deleteForSession(string $sessionId): void
     {
         $this->connection->executeStatement(
-            'DELETE FROM `mcp_toolset_session` WHERE `session_id` = :sessionId',
+            'DELETE FROM mcp_toolset_session WHERE session_id = :sessionId',
             ['sessionId' => $sessionId],
         );
     }
@@ -67,7 +66,7 @@ class McpToolsetSessionStorage
     {
         return array_values(array_map(
             static fn (mixed $sessionId): string => (string) $sessionId,
-            $this->connection->fetchFirstColumn('SELECT DISTINCT `session_id` FROM `mcp_toolset_session`'),
+            $this->connection->fetchFirstColumn('SELECT DISTINCT session_id FROM mcp_toolset_session'),
         ));
     }
 }

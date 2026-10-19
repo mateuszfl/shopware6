@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\App\Privileges;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\App\AppException;
 use Shopware\Core\Framework\App\Event\AppPermissionsUpdated;
 use Shopware\Core\Framework\Context;
@@ -139,12 +140,12 @@ class Privileges
         /** @var array<string, string> $privileges */
         $privileges = $this->connection->fetchAllKeyValue(
             <<<'SQL'
-                SELECT LOWER(HEX(app.id)) AS app_id, requested_privileges
+                SELECT sw_uuid_hex(app.id) AS app_id, requested_privileges
                 FROM app
                 WHERE id IN (:ids)
             SQL,
             ['ids' => Uuid::fromHexToBytesList($appIds)],
-            ['ids' => ArrayParameterType::STRING]
+            ['ids' => ArrayParameterType::BINARY]
         );
 
         return $this->decodePrivileges($privileges);
@@ -156,11 +157,12 @@ class Privileges
     public function setPrivileges(string $appId, array $privileges, Context $context): void
     {
         $this->connection->executeStatement(
-            'UPDATE `acl_role` SET `privileges` = :privileges WHERE id = (SELECT acl_role_id FROM app WHERE id = :id)',
+            'UPDATE acl_role SET privileges = :privileges WHERE id = (SELECT acl_role_id FROM app WHERE id = :id)',
             [
                 'privileges' => json_encode($privileges, \JSON_THROW_ON_ERROR),
                 'id' => Uuid::fromHexToBytes($appId),
-            ]
+            ],
+            ['id' => ParameterType::BINARY],
         );
 
         $this->eventDispatcher->dispatch(new AppPermissionsUpdated($appId, $privileges, $context));
@@ -172,8 +174,9 @@ class Privileges
     public function requestPrivileges(string $appId, array $privileges, Context $context): void
     {
         $existingPrivileges = $this->connection->fetchOne(
-            'SELECT privileges FROM `acl_role` WHERE id = (SELECT acl_role_id FROM app WHERE id = :id)',
-            ['id' => Uuid::fromHexToBytes($appId)]
+            'SELECT privileges FROM acl_role WHERE id = (SELECT acl_role_id FROM app WHERE id = :id)',
+            ['id' => Uuid::fromHexToBytes($appId)],
+            ['id' => ParameterType::BINARY],
         );
 
         $existingPrivileges = json_decode($existingPrivileges, true, flags: \JSON_THROW_ON_ERROR);
@@ -220,13 +223,13 @@ class Privileges
         /** @var array<string, array{privileges: string, requested_privileges: string}> $privileges */
         $privileges = $this->connection->fetchAllAssociativeIndexed(
             <<<'SQL'
-                SELECT LOWER(HEX(a.id)), privileges, requested_privileges
-                FROM `acl_role` r
-                INNER JOIN `app` a ON a.acl_role_id = r.id
+                SELECT sw_uuid_hex(a.id), privileges, requested_privileges
+                FROM acl_role r
+                INNER JOIN app a ON a.acl_role_id = r.id
                 WHERE a.id IN (:appIds)
             SQL,
             ['appIds' => Uuid::fromHexToBytesList($appIds)],
-            ['appIds' => ArrayParameterType::STRING]
+            ['appIds' => ArrayParameterType::BINARY]
         );
 
         return array_map(static fn (array $row): array => [
@@ -246,26 +249,28 @@ class Privileges
             static function (Connection $transaction) use ($appId, $privileges, $requestedPrivileges): void {
                 $transaction->executeStatement(
                     <<<'SQL'
-                UPDATE `acl_role`
-                SET `privileges` = :privileges
+                UPDATE acl_role
+                SET privileges = :privileges
                 WHERE id = (SELECT acl_role_id FROM app WHERE id = :id)
             SQL,
                     [
                         'privileges' => json_encode($privileges, \JSON_THROW_ON_ERROR),
                         'id' => Uuid::fromHexToBytes($appId),
-                    ]
+                    ],
+                    ['id' => ParameterType::BINARY]
                 );
 
                 $transaction->executeStatement(
                     <<<'SQL'
-                UPDATE `app`
-                SET `requested_privileges` = :requestedPrivileges
+                UPDATE app
+                SET requested_privileges = :requestedPrivileges
                 WHERE id = :id
             SQL,
                     [
                         'requestedPrivileges' => json_encode($requestedPrivileges, \JSON_THROW_ON_ERROR),
                         'id' => Uuid::fromHexToBytes($appId),
-                    ]
+                    ],
+                    ['id' => ParameterType::BINARY]
                 );
             }
         );

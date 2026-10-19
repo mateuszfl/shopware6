@@ -56,7 +56,7 @@ class TwigLoaderConfigCompilerPass implements CompilerPassInterface
         $connection = $container->get(Connection::class);
 
         try {
-            $apps = $connection->fetchAllAssociative('SELECT `name`, `path` FROM `app` WHERE `active` = 1');
+            $apps = $connection->fetchAllAssociative('SELECT name, path FROM app WHERE active = 1');
         } catch (Exception) {
             // If DB is not yet set up correctly we don't need to add app paths
             return;

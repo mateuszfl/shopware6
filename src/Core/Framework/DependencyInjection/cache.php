@@ -102,7 +102,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service(Connection::class),
             service('logger'),
         ])
-        ->tag('shopware.cache.invalidator.storage', ['storage' => 'mysql']);
+        ->tag('shopware.cache.invalidator.storage', ['storage' => 'mysql'])
+        ->tag('shopware.cache.invalidator.storage', ['storage' => 'database']);
 
     $services->set('shopware.cache.invalidator.storage.locator', TaggedServiceLocator::class)
         ->args([

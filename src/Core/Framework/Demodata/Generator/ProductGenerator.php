@@ -375,7 +375,9 @@ class ProductGenerator implements DemodataGeneratorInterface
      */
     private function getProperties(): array
     {
-        $options = $this->connection->fetchAllAssociative('SELECT LOWER(HEX(id)) as id, LOWER(HEX(property_group_id)) as property_group_id FROM property_group_option LIMIT 5000');
+        $options = $this->connection->fetchAllAssociative(
+            'SELECT sw_uuid_hex(id) as id, sw_uuid_hex(property_group_id) as property_group_id FROM property_group_option LIMIT 5000',
+        );
 
         $grouped = [];
         foreach ($options as $option) {
@@ -390,7 +392,7 @@ class ProductGenerator implements DemodataGeneratorInterface
      */
     private function buildVisibilities(): array
     {
-        $ids = $this->connection->fetchAllAssociative('SELECT LOWER(HEX(id)) as id FROM sales_channel LIMIT 100');
+        $ids = $this->connection->fetchAllAssociative('SELECT sw_uuid_hex(id) as id FROM sales_channel LIMIT 100');
 
         return array_map(static fn ($id) => ['salesChannelId' => $id['id'], 'visibility' => ProductVisibilityDefinition::VISIBILITY_ALL], $ids);
     }
@@ -414,7 +416,7 @@ class ProductGenerator implements DemodataGeneratorInterface
      */
     private function getIds(string $table): array
     {
-        return $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM ' . $table . ' LIMIT 500');
+        return $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) as id FROM ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier($table) . ' LIMIT 500');
     }
 
     /**
@@ -423,15 +425,17 @@ class ProductGenerator implements DemodataGeneratorInterface
     private function getCategoryIds(): array
     {
         /** @var list<array{id: string}> $result */
-        $result = $this->connection->fetchAllAssociative('
-            SELECT LOWER(HEX(category.id)) as id
+        $result = $this->connection->fetchAllAssociative(
+            '
+            SELECT sw_uuid_hex(category.id) as id
             FROM category
              LEFT JOIN product_category pc
                ON pc.category_id = category.id
             WHERE category.child_count = 0
             GROUP BY category.id
             ORDER BY COUNT(pc.product_id) ASC
-            LIMIT ' . $this->faker->numberBetween(1, 3));
+            LIMIT ' . $this->faker->numberBetween(1, 3),
+        );
 
         return $result;
     }
@@ -455,7 +459,10 @@ class ProductGenerator implements DemodataGeneratorInterface
 
     private function getInstantDeliveryId(): ?string
     {
-        $id = $this->connection->fetchOne('SELECT LOWER(HEX(delivery_time_id)) FROM delivery_time_translation WHERE `name` = "Instant download" LIMIT 1');
+        $id = $this->connection->fetchOne(
+            'SELECT sw_uuid_hex(delivery_time_id) FROM delivery_time_translation WHERE name = :name LIMIT 1',
+            ['name' => 'Instant download'],
+        );
 
         return \is_string($id) ? $id : null;
     }

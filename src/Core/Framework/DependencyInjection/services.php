@@ -908,6 +908,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service('request_stack'),
         ]);
 
+    $services->alias('shopware.key_value_storage.database', AbstractKeyValueStorage::class);
+
     $services->set(AbstractKeyValueStorage::class, MySQLKeyValueStorage::class)
         ->public()
         ->args([

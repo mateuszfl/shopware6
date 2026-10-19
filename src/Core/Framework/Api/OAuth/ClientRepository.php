@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\OAuth;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
@@ -111,7 +112,8 @@ class ClientRepository implements ClientRepositoryInterface
         $this->connection->update(
             'integration',
             ['last_usage_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
-            ['id' => $integrationId]
+            ['id' => $integrationId],
+            ['id' => ParameterType::BINARY],
         );
     }
 
@@ -143,7 +145,7 @@ class ClientRepository implements ClientRepositoryInterface
             'SELECT user_id, secret_access_key
              FROM user_access_key
              WHERE access_key = :accessKey',
-            ['accessKey' => $clientIdentifier]
+            ['accessKey' => $clientIdentifier],
         );
 
         if ($key === false) {
@@ -158,13 +160,13 @@ class ClientRepository implements ClientRepositoryInterface
      */
     private function getIntegrationByAccessKey(string $clientIdentifier): ?array
     {
-        /** @var array{id: string, label: string, active: '1'|'0', secret_access_key: string}|false $key */
+        /** @var array{id: string, label: string, active: string|int|null, secret_access_key: string}|false $key */
         $key = $this->connection->fetchAssociative(
             'SELECT integration.id AS id, label, app.active AS active, secret_access_key
              FROM integration
              LEFT JOIN app ON app.integration_id = integration.id
              WHERE access_key = :accessKey',
-            ['accessKey' => $clientIdentifier]
+            ['accessKey' => $clientIdentifier],
         );
 
         if ($key === false) {
@@ -173,10 +175,11 @@ class ClientRepository implements ClientRepositoryInterface
 
         // inactive apps cannot access the api
         // if the integration is not associated to an app `active` will be null
-        if ($key['active'] === '0') {
+        if ($key['active'] !== null && !(bool) $key['active']) {
             return null;
         }
         unset($key['active']);
+        $key['id'] = \is_resource($key['id']) ? stream_get_contents($key['id']) : $key['id'];
 
         return $key;
     }

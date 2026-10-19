@@ -45,6 +45,9 @@
         <testsuite name="database-system">
             <directory>tests/integration/Core/System/Contract</directory>
         </testsuite>
+        <testsuite name="database-framework">
+            <directory>tests/integration/Core/Framework/Contract</directory>
+        </testsuite>
         <testsuite name="database-functions">
             <file>tests/integration/Core/Framework/Adapter/Database/DatabaseFunctionInstallerTest.php</file>
         </testsuite>

@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\Webhook\Command;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\Feature;
@@ -170,8 +171,16 @@ final readonly class WebhookDrainToAsyncCommand
                 'claimable' => ArrayParameterType::STRING,
                 'terminal' => ArrayParameterType::STRING,
                 'batch' => Types::INTEGER,
-            ]
+            ],
         );
+
+        foreach ($rows as &$row) {
+            $row['webhook_event_log_id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['webhook_event_log_id']));
+            if (\is_resource($row['serialized_webhook_message'])) {
+                $row['serialized_webhook_message'] = stream_get_contents($row['serialized_webhook_message']);
+            }
+        }
+        unset($row);
 
         return $rows;
     }
@@ -214,7 +223,8 @@ final readonly class WebhookDrainToAsyncCommand
                 [
                     'queued' => WebhookEventLogDefinition::STATUS_QUEUED,
                     'id' => $eventLogId,
-                ]
+                ],
+                ['id' => ParameterType::BINARY],
             );
 
             $this->updateEventLogStatus($eventLogId, WebhookEventLogDefinition::STATUS_QUEUED);
@@ -228,7 +238,8 @@ final readonly class WebhookDrainToAsyncCommand
 
             $this->connection->executeStatement(
                 'DELETE FROM webhook_delivery WHERE webhook_event_log_id = :id',
-                ['id' => $eventLogId]
+                ['id' => $eventLogId],
+                ['id' => ParameterType::BINARY],
             );
         });
     }
@@ -245,7 +256,8 @@ final readonly class WebhookDrainToAsyncCommand
                 'id' => $eventLogId,
                 'successStatus' => WebhookEventLogDefinition::STATUS_SUCCESS,
                 'failedStatus' => WebhookEventLogDefinition::STATUS_FAILED,
-            ]
+            ],
+            ['id' => ParameterType::BINARY],
         );
     }
 }

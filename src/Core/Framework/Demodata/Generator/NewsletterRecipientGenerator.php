@@ -38,7 +38,7 @@ class NewsletterRecipientGenerator implements DemodataGeneratorInterface
     {
         $context->getConsole()->progressStart($numberOfItems);
 
-        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM sales_channel');
+        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM sales_channel');
         if ($salesChannelIds === []) {
             throw DemodataException::wrongExecutionOrder();
         }

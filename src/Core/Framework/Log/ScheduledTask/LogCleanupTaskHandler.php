@@ -40,19 +40,17 @@ final class LogCleanupTaskHandler extends ScheduledTaskHandler
             $deleteBefore = (new \DateTime(\sprintf('- %d seconds', $entryLifetimeSeconds)))
                 ->format(Defaults::STORAGE_DATE_TIME_FORMAT);
             $this->connection->executeStatement(
-                'DELETE FROM `log_entry` WHERE `created_at` < :before',
-                ['before' => $deleteBefore]
+                'DELETE FROM log_entry WHERE created_at < :before',
+                ['before' => $deleteBefore],
             );
         }
 
         if ($maxEntries !== -1) {
-            $sql = 'DELETE ld FROM `log_entry` ld LEFT JOIN (
-                        SELECT id
-                        FROM `log_entry`
-                        ORDER BY `created_at`
-                        DESC LIMIT :maxEntries
-                    ) ls ON ld.ID = ls.ID
-                    WHERE ls.ID IS NULL;';
+            $sql = 'DELETE FROM log_entry WHERE id NOT IN (
+                        SELECT id FROM (
+                            SELECT id FROM log_entry ORDER BY created_at DESC, id DESC LIMIT :maxEntries
+                        ) retained
+                    )';
 
             $statement = $this->connection->prepare($sql);
             $statement->bindValue('maxEntries', $maxEntries, ParameterType::INTEGER);

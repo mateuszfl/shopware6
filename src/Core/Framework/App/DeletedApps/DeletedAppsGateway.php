@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\App\DeletedApps;
 
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -30,17 +31,14 @@ readonly class DeletedAppsGateway
         #[\SensitiveParameter]
         array $unconfirmedAppSecrets = []
     ): void {
-        $this->connection->executeStatement('
-            INSERT INTO deleted_apps (name, app_secret, unconfirmed_app_secrets)
-            VALUES (:name, :app_secret, :unconfirmed_app_secrets)
-            ON DUPLICATE KEY UPDATE app_secret = VALUES(app_secret), unconfirmed_app_secrets = VALUES(unconfirmed_app_secrets)
-        ', [
+        $query = (new DatabasePlatformResolver($this->connection))->dialect()->upsert('deleted_apps', [
             'name' => $appName,
             'app_secret' => $appSecret,
             'unconfirmed_app_secrets' => $unconfirmedAppSecrets === []
                 ? null
                 : json_encode($unconfirmedAppSecrets, \JSON_THROW_ON_ERROR),
-        ]);
+        ], ['name'], ['app_secret', 'unconfirmed_app_secrets']);
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
     }
 
     public function getDeletedAppSecret(string $appName): ?string
@@ -59,7 +57,7 @@ readonly class DeletedAppsGateway
     {
         $secrets = $this->connection->fetchOne(
             'SELECT unconfirmed_app_secrets FROM deleted_apps WHERE name = :name',
-            ['name' => $appName]
+            ['name' => $appName],
         );
 
         if (!\is_string($secrets)) {

@@ -68,6 +68,18 @@ class IncrementerGatewayCompilerPassTest extends TestCase
         static::assertTrue($definition->hasTag('shopware.increment.gateway'));
     }
 
+    public function testDatabaseAliasResolvesTheSameSqlImplementationAsMysql(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('shopware.increment', ['legacy' => ['type' => 'mysql'], 'neutral' => ['type' => 'database']]);
+        $container->register('shopware.increment.gateway.mysql', MySQLIncrementer::class);
+        $container->setAlias('shopware.increment.gateway.database', 'shopware.increment.gateway.mysql');
+        (new IncrementerGatewayCompilerPass())->process($container);
+        static::assertSame(MySQLIncrementer::class, $container->getDefinition('shopware.increment.legacy.gateway.mysql')->getClass());
+        static::assertSame(MySQLIncrementer::class, $container->getDefinition('shopware.increment.neutral.gateway.database')->getClass());
+        static::assertSame([['setPool', ['neutral']], ['setConfig', [[]]]], $container->getDefinition('shopware.increment.neutral.gateway.database')->getMethodCalls());
+    }
+
     public function testCustomPoolGateway(): void
     {
         $container = new ContainerBuilder();

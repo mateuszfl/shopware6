@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\App\Lifecycle;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\App\Manifest\Xml\Permission\Permissions;
@@ -46,21 +47,21 @@ class PermissionLifecycleService
     public function removeRole(string $roleId): void
     {
         $this->connection->executeStatement(
-            'DELETE FROM `acl_role` WHERE id = :id',
-            [
-                'id' => Uuid::fromHexToBytes($roleId),
-            ]
+            'DELETE FROM acl_role WHERE id = :id',
+            ['id' => Uuid::fromHexToBytes($roleId)],
+            ['id' => ParameterType::BINARY],
         );
     }
 
     public function softDeleteRole(string $roleId): void
     {
         $this->connection->executeStatement(
-            'UPDATE `acl_role` SET `deleted_at` = :datetime WHERE id = :id',
+            'UPDATE acl_role SET deleted_at = :datetime WHERE id = :id',
             [
                 'id' => Uuid::fromHexToBytes($roleId),
                 'datetime' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
+            ],
+            ['id' => ParameterType::BINARY],
         );
     }
 }

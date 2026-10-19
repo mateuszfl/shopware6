@@ -88,7 +88,7 @@ class CustomerGenerator implements DemodataGeneratorInterface
         if ($countries === []) {
             throw DemodataException::wrongExecutionOrder();
         }
-        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM sales_channel');
+        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM sales_channel');
         if ($salesChannelIds === []) {
             throw DemodataException::wrongExecutionOrder();
         }
@@ -147,7 +147,7 @@ class CustomerGenerator implements DemodataGeneratorInterface
         $customerGroups = [TestDefaults::FALLBACK_CUSTOMER_GROUP, $netCustomerGroupId];
         $tags = $this->getTagIds();
 
-        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) FROM sales_channel');
+        $salesChannelIds = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) FROM sales_channel');
         if ($salesChannelIds === []) {
             throw DemodataException::wrongExecutionOrder();
         }
@@ -256,7 +256,7 @@ class CustomerGenerator implements DemodataGeneratorInterface
      */
     private function getTagIds(): array
     {
-        return $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM tag LIMIT 500');
+        return $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) as id FROM tag LIMIT 500');
     }
 
     private function getRandomSalutationId(): string

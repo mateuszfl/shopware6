@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\OAuth;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
 use League\OAuth2\Server\Grant\AuthCodeGrant;
@@ -17,6 +18,7 @@ use Shopware\Core\Framework\Api\OAuth\Scope\WriteScope;
 use Shopware\Core\Framework\Deprecation\BCChange\BecomesInternal;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Sso\ShopwareGrantType;
+use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
  * OAuth integrations should rely on {@see ScopeRepositoryInterface} instead of this concrete Shopware class.
@@ -117,9 +119,9 @@ class ScopeRepository implements ScopeRepositoryInterface
 
         $isAdmin = $this->connection->createQueryBuilder()
             ->select('admin')
-            ->from('user')
-            ->where('id = UNHEX(:accessKey)')
-            ->setParameter('accessKey', $userIdentifier)
+            ->from($this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'))
+            ->where('id = :accessKey')
+            ->setParameter('accessKey', $userIdentifier !== null && Uuid::isValid($userIdentifier) ? Uuid::fromHexToBytes($userIdentifier) : null, ParameterType::BINARY)
             ->setMaxResults(1)
             ->executeQuery()
             ->fetchOne();

@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Webhook\Subscriber;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -69,7 +70,8 @@ class RetryWebhookMessageFailedSubscriber implements EventSubscriberInterface
 
         $rows = $this->connection->fetchAllAssociative(
             'SELECT active, error_count FROM webhook WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($webhookId)]
+            ['id' => Uuid::fromHexToBytes($webhookId)],
+            ['id' => ParameterType::BINARY],
         );
 
         /** @var array{active: int, error_count: int} $webhook */
@@ -84,7 +86,7 @@ class RetryWebhookMessageFailedSubscriber implements EventSubscriberInterface
             WebhookFailureStrategy::Ignore => $this->handleIgnore($webhook),
         };
 
-        $this->connection->update('webhook', $params, ['id' => Uuid::fromHexToBytes($webhookId)]);
+        $this->connection->update('webhook', $params, ['id' => Uuid::fromHexToBytes($webhookId)], ['id' => ParameterType::BINARY]);
     }
 
     /**

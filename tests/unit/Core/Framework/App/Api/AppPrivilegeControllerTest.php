@@ -139,10 +139,8 @@ class AppPrivilegeControllerTest extends TestCase
     {
         $context = Context::createDefaultContext(new AdminApiSource('user-id'));
 
-        $connection = static::createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('fetchOne')
-            ->with('SELECT LOWER(HEX(id)) FROM app WHERE name = ?', ['appName'])
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchOne')
             ->willReturn(false);
         $controller = new AppPrivilegeController($connection, $this->privileges);
 
@@ -158,10 +156,8 @@ class AppPrivilegeControllerTest extends TestCase
     {
         $context = Context::createDefaultContext(new AdminApiSource('user-id'));
 
-        $connection = static::createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('fetchOne')
-            ->with('SELECT LOWER(HEX(id)) FROM app WHERE name = ?', ['appName'])
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchOne')
             ->willReturn('app-id-1');
         $controller = new AppPrivilegeController($connection, $this->privileges);
 

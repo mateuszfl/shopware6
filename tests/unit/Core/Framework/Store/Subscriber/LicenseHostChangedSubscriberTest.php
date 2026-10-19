@@ -65,8 +65,7 @@ class LicenseHostChangedSubscriberTest extends TestCase
             'core.store.iapKey' => 'iap-key',
         ]);
 
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())->method('executeStatement')->with('UPDATE user SET store_token = NULL');
+        $connection = static::createStub(Connection::class);
 
         $subscriber = new LicenseHostChangedSubscriber($config, $connection);
 

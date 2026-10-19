@@ -28,6 +28,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service(ClockInterface::class),
         ]);
 
+    $services->alias('shopware.increment.gateway.database', 'shopware.increment.gateway.mysql');
+
     $services->set('shopware.increment.gateway.array', ArrayIncrementer::class)
         ->tag('kernel.reset', ['method' => 'resetAll']);
 

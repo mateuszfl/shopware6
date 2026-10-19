@@ -141,7 +141,7 @@ class CategoryGenerator implements DemodataGeneratorInterface
      */
     private function getIds(string $table): array
     {
-        return $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM ' . $table . ' LIMIT 500');
+        return $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) as id FROM ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier($table) . ' LIMIT 500');
     }
 
     private function randomDepartment(Generator $faker, int $max = 3, bool $fixedAmount = false, bool $unique = true): string

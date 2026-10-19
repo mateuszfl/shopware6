@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Mcp\Notification;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\App\Mcp\Mcp;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -47,8 +48,9 @@ class AppMcpCapabilityDetector
     private function hasCapabilityRows(string $table, string $appId): bool
     {
         return $this->connection->fetchOne(
-            \sprintf('SELECT 1 FROM `%s` WHERE `app_id` = :appId LIMIT 1', $table),
+            \sprintf('SELECT 1 FROM %s WHERE app_id = :appId LIMIT 1', $this->connection->getDatabasePlatform()->quoteSingleIdentifier($table)),
             ['appId' => $appId],
+            ['appId' => ParameterType::BINARY],
         ) !== false;
     }
 }

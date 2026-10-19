@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\OAuth;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use League\OAuth2\Server\Repositories\RefreshTokenRepositoryInterface;
 use Psr\Clock\ClockInterface;
@@ -63,7 +64,7 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface
                     'familyId' => $familyId ?? Uuid::randomBytes(),
                     'issuedAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                     'expiresAt' => $refreshTokenEntity->getExpiryDateTime()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ])
+                ], ['id' => ParameterType::BINARY, 'userId' => ParameterType::BINARY, 'familyId' => ParameterType::BINARY])
                 ->executeStatement();
         }
 
@@ -110,16 +111,24 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface
         }
 
         $familyId = $refreshToken['family_id'];
-        if (!\is_string($familyId)) {
+        if ($familyId === null) {
             $familyId = $refreshToken['id'];
-            $this->connection->update('refresh_token', ['family_id' => $familyId], ['token_id' => $tokenId]);
+            $familyId = Uuid::fromHexToBytes(Uuid::fromBytesToHex($familyId));
+            $this->connection->update(
+                'refresh_token',
+                ['family_id' => $familyId],
+                ['token_id' => $tokenId],
+                ['family_id' => ParameterType::BINARY],
+            );
+        } else {
+            $familyId = Uuid::fromHexToBytes(Uuid::fromBytesToHex($familyId));
         }
 
         if ($refreshToken['revoked_at'] === null) {
             return false;
         }
 
-        $this->connection->delete('refresh_token', ['family_id' => $familyId]);
+        $this->connection->delete('refresh_token', ['family_id' => $familyId], ['family_id' => ParameterType::BINARY]);
 
         return true;
     }
@@ -128,18 +137,18 @@ class RefreshTokenRepository implements RefreshTokenRepositoryInterface
     {
         $familyId = $this->connection->fetchOne(
             'SELECT family_id FROM refresh_token WHERE token_id = :tokenId',
-            ['tokenId' => $tokenId]
+            ['tokenId' => $tokenId],
         );
 
-        return \is_string($familyId) ? $familyId : null;
+        return $familyId === false || $familyId === null ? null : Uuid::fromHexToBytes(Uuid::fromBytesToHex($familyId));
     }
 
     public function revokeRefreshTokensForUser(string $userId): void
     {
         $this->connection->createQueryBuilder()
             ->delete('refresh_token')
-            ->where('user_id = UNHEX(:userId)')
-            ->setParameter('userId', $userId)
+            ->where('user_id = :userId')
+            ->setParameter('userId', Uuid::fromHexToBytes($userId), ParameterType::BINARY)
             ->executeStatement();
     }
 

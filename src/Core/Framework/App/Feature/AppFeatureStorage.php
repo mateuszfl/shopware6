@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\App\Feature;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
@@ -45,18 +46,18 @@ class AppFeatureStorage
         $definition = $this->registry->forFeature($featureClass);
 
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`app_feature`.`app_id`)) AS `app_id`,
-                    `app`.`name` AS `app_name`,
-                    `app`.`active` AS `app_active`,
-                    `app`.`version` AS `app_version`,
-                    `app`.`app_secret` IS NOT NULL AS `app_has_secret`,
-                    `app_feature`.`created_at` AS `created_at`,
-                    `app_feature`.`payload` AS `payload`
-             FROM `app_feature`
-             INNER JOIN `app` ON `app`.`id` = `app_feature`.`app_id`
-             WHERE `app_feature`.`type` = :type AND `app`.`active` = 1
-             ORDER BY `app`.`name`, `app_feature`.`name`',
-            ['type' => $definition->getType()]
+            'SELECT sw_uuid_hex(app_feature.app_id) AS app_id,
+                    app.name AS app_name,
+                    app.active AS app_active,
+                    app.version AS app_version,
+                    app.app_secret IS NOT NULL AS app_has_secret,
+                    app_feature.created_at AS created_at,
+                    app_feature.payload AS payload
+             FROM app_feature
+             INNER JOIN app ON app.id = app_feature.app_id
+             WHERE app_feature.type = :type AND app.active = 1
+             ORDER BY app.name, app_feature.name',
+            ['type' => $definition->getType()],
         );
 
         return $this->hydrate($definition, $rows);
@@ -77,18 +78,19 @@ class AppFeatureStorage
         $definition = $this->registry->forFeature($featureClass);
 
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(`app_feature`.`app_id`)) AS `app_id`,
-                    `app`.`name` AS `app_name`,
-                    `app`.`active` AS `app_active`,
-                    `app`.`version` AS `app_version`,
-                    `app`.`app_secret` IS NOT NULL AS `app_has_secret`,
-                    `app_feature`.`created_at` AS `created_at`,
-                    `app_feature`.`payload` AS `payload`
-             FROM `app_feature`
-             INNER JOIN `app` ON `app`.`id` = `app_feature`.`app_id`
-             WHERE `app_feature`.`app_id` = :appId AND `app_feature`.`type` = :type
-             ORDER BY `app_feature`.`name`',
-            ['appId' => Uuid::fromHexToBytes($appId), 'type' => $definition->getType()]
+            'SELECT sw_uuid_hex(app_feature.app_id) AS app_id,
+                    app.name AS app_name,
+                    app.active AS app_active,
+                    app.version AS app_version,
+                    app.app_secret IS NOT NULL AS app_has_secret,
+                    app_feature.created_at AS created_at,
+                    app_feature.payload AS payload
+             FROM app_feature
+             INNER JOIN app ON app.id = app_feature.app_id
+             WHERE app_feature.app_id = :appId AND app_feature.type = :type
+             ORDER BY app_feature.name',
+            ['appId' => Uuid::fromHexToBytes($appId), 'type' => $definition->getType()],
+            ['appId' => ParameterType::BINARY],
         );
 
         return $this->hydrate($definition, $rows);
@@ -109,8 +111,9 @@ class AppFeatureStorage
         $this->connection->transactional(function (Connection $connection) use ($appIdBytes, $appName, $rows, $now): void {
             $existing = [];
             $stored = $connection->fetchAllAssociative(
-                'SELECT LOWER(HEX(`id`)) AS `id`, `type`, `name` FROM `app_feature` WHERE `app_id` = :appId',
-                ['appId' => $appIdBytes]
+                'SELECT sw_uuid_hex(id) AS id, type, name FROM app_feature WHERE app_id = :appId',
+                ['appId' => $appIdBytes],
+                ['appId' => ParameterType::BINARY],
             );
             foreach ($stored as $row) {
                 $existing[$row['type']][$row['name']] = $row['id'];
@@ -120,25 +123,31 @@ class AppFeatureStorage
                 $id = $existing[$row['type']][$row['name']] ?? null;
 
                 if ($id !== null) {
-                    $connection->update('app_feature', [
-                        'payload' => Json::encode($row['payload']),
-                        'updated_at' => $now,
-                    ], ['id' => Uuid::fromHexToBytes($id)]);
+                    $connection->update(
+                        'app_feature',
+                        ['payload' => Json::encode($row['payload']), 'updated_at' => $now],
+                        ['id' => Uuid::fromHexToBytes($id)],
+                        ['id' => ParameterType::BINARY],
+                    );
 
                     unset($existing[$row['type']][$row['name']]);
 
                     continue;
                 }
 
-                $connection->insert('app_feature', [
-                    'id' => Uuid::randomBytes(),
-                    'app_id' => $appIdBytes,
-                    'app_name' => $appName,
-                    'type' => $row['type'],
-                    'name' => $row['name'],
-                    'payload' => Json::encode($row['payload']),
-                    'created_at' => $now,
-                ]);
+                $connection->insert(
+                    'app_feature',
+                    [
+                        'id' => Uuid::randomBytes(),
+                        'app_id' => $appIdBytes,
+                        'app_name' => $appName,
+                        'type' => $row['type'],
+                        'name' => $row['name'],
+                        'payload' => Json::encode($row['payload']),
+                        'created_at' => $now,
+                    ],
+                    ['app_id' => ParameterType::BINARY, 'id' => ParameterType::BINARY],
+                );
             }
 
             $staleIds = [];
@@ -150,9 +159,9 @@ class AppFeatureStorage
 
             if ($staleIds !== []) {
                 $connection->executeStatement(
-                    'DELETE FROM `app_feature` WHERE `id` IN (:ids)',
+                    'DELETE FROM app_feature WHERE id IN (:ids)',
                     ['ids' => $staleIds],
-                    ['ids' => ArrayParameterType::BINARY]
+                    ['ids' => ArrayParameterType::BINARY],
                 );
             }
         });
@@ -166,8 +175,9 @@ class AppFeatureStorage
     public function reattachKeptFeatures(string $appId, string $appName): void
     {
         $this->connection->executeStatement(
-            'UPDATE `app_feature` SET `app_id` = :appId WHERE `app_id` IS NULL AND `app_name` = :appName',
-            ['appId' => Uuid::fromHexToBytes($appId), 'appName' => $appName]
+            'UPDATE app_feature SET app_id = :appId WHERE app_id IS NULL AND app_name = :appName',
+            ['appId' => Uuid::fromHexToBytes($appId), 'appName' => $appName],
+            ['appId' => ParameterType::BINARY],
         );
     }
 
@@ -177,8 +187,9 @@ class AppFeatureStorage
     public function deleteForApp(string $appId): void
     {
         $this->connection->executeStatement(
-            'DELETE FROM `app_feature` WHERE `app_id` = :appId',
-            ['appId' => Uuid::fromHexToBytes($appId)]
+            'DELETE FROM app_feature WHERE app_id = :appId',
+            ['appId' => Uuid::fromHexToBytes($appId)],
+            ['appId' => ParameterType::BINARY],
         );
     }
 
@@ -192,8 +203,9 @@ class AppFeatureStorage
         $name = $config->getName();
 
         $id = $this->connection->fetchOne(
-            'SELECT `id` FROM `app_feature` WHERE `app_id` = :appId AND `type` = :type AND `name` = :name',
-            ['appId' => Uuid::fromHexToBytes($appId), 'type' => $definition->getType(), 'name' => $name]
+            'SELECT sw_uuid_hex(id) FROM app_feature WHERE app_id = :appId AND type = :type AND name = :name',
+            ['appId' => Uuid::fromHexToBytes($appId), 'type' => $definition->getType(), 'name' => $name],
+            ['appId' => ParameterType::BINARY],
         );
 
         if ($id === false) {
@@ -206,7 +218,8 @@ class AppFeatureStorage
                 'payload' => Json::encode($definition->toPayload($config, null)),
                 'updated_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
             ],
-            ['id' => $id]
+            ['id' => Uuid::fromHexToBytes($id)],
+            ['id' => ParameterType::BINARY],
         );
     }
 

@@ -76,10 +76,10 @@ class BundleHierarchyBuilder implements TemplateNamespaceHierarchyBuilderInterfa
     private function getAppTemplateNamespaces(): array
     {
         return $this->connection->fetchAllAssociativeIndexed(
-            'SELECT `app`.`name`, `app`.`version`, `app`.`template_load_priority`
-             FROM `app`
-             INNER JOIN `app_template` ON `app_template`.`app_id` = `app`.`id`
-             WHERE `app`.`active` = 1 AND `app_template`.`active` = 1'
+            'SELECT app.name, app.version, app.template_load_priority
+             FROM app
+             INNER JOIN app_template ON app_template.app_id = app.id
+             WHERE app.active = 1 AND app_template.active = 1'
         );
     }
 }

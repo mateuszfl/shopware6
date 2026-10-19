@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\Acl;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Api\ApiException;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
@@ -81,12 +82,13 @@ class AclAnnotationValidator implements EventSubscriberInterface
 
         $appName = $this->connection->fetchOne(
             '
-                SELECT `app`.`name` AS `name`
-                FROM `app`
-                INNER JOIN `app_action_button` ON `app`.`id` = `app_action_button`.`app_id`
-                WHERE `app_action_button`.`id` = :id
+                SELECT app.name AS name
+                FROM app
+                INNER JOIN app_action_button ON app.id = app_action_button.app_id
+                WHERE app_action_button.id = :id
             ',
             ['id' => Uuid::fromHexToBytes($actionId)],
+            ['id' => ParameterType::BINARY],
         );
 
         return 'app.' . $appName;

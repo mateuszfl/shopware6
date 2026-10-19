@@ -100,7 +100,7 @@ class AppPrivilegeController
 
     private function fetchAppId(string $appName): string
     {
-        $id = $this->connection->fetchOne('SELECT LOWER(HEX(id)) FROM app WHERE name = ?', [$appName]);
+        $id = $this->connection->fetchOne('SELECT sw_uuid_hex(id) FROM app WHERE name = ?', [$appName]);
 
         if (!$id) {
             throw AppException::notFoundByField($appName, 'name');

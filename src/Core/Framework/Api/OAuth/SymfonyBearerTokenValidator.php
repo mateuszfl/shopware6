@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Api\OAuth;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Exception;
 use Lcobucci\JWT\UnencryptedToken;
@@ -89,9 +90,9 @@ readonly class SymfonyBearerTokenValidator
     {
         $user = $this->connection->createQueryBuilder()
             ->select('last_updated_password_at', 'active')
-            ->from('user')
+            ->from($this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'))
             ->where('id = :userId')
-            ->setParameter('userId', Uuid::fromHexToBytes($userId))
+            ->setParameter('userId', Uuid::fromHexToBytes($userId), ParameterType::BINARY)
             ->executeQuery()
             ->fetchAssociative();
 

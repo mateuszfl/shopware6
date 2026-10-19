@@ -65,7 +65,7 @@ class WebhookCleanup
 
         do {
             $deleted = $this->connection->executeStatement(
-                'DELETE FROM `webhook_event_log` WHERE `created_at` < :before AND `delivery_status` IN (:status) LIMIT :limit',
+                'DELETE FROM webhook_event_log WHERE id IN (SELECT id FROM (SELECT id FROM webhook_event_log WHERE created_at < :before AND delivery_status IN (:status) ORDER BY id LIMIT :limit) stale)',
                 [
                     'before' => $deleteBefore,
                     'status' => $status,
@@ -74,7 +74,7 @@ class WebhookCleanup
                 [
                     'limit' => Types::INTEGER,
                     'status' => ArrayParameterType::STRING,
-                ]
+                ],
             );
         } while ($deleted === self::BATCH_SIZE);
     }
@@ -88,15 +88,15 @@ class WebhookCleanup
 
         do {
             $deleted = $this->connection->executeStatement(
-                'DELETE FROM `webhook_event_log`
-                 WHERE `created_at` < :before
-                   AND `delivery_status` = :status
+                'DELETE FROM webhook_event_log WHERE id IN (SELECT id FROM (SELECT id FROM webhook_event_log
+                 WHERE created_at < :before
+                   AND delivery_status = :status
                    AND NOT EXISTS (
                        SELECT 1
-                       FROM `webhook_delivery`
-                       WHERE `webhook_delivery`.`webhook_event_log_id` = `webhook_event_log`.`id`
+                       FROM webhook_delivery
+                       WHERE webhook_delivery.webhook_event_log_id = webhook_event_log.id
                    )
-                 LIMIT :limit',
+                 ORDER BY id LIMIT :limit) stale)',
                 [
                     'before' => $deleteBefore,
                     'status' => WebhookEventLogDefinition::STATUS_QUEUED,
@@ -104,7 +104,7 @@ class WebhookCleanup
                 ],
                 [
                     'limit' => Types::INTEGER,
-                ]
+                ],
             );
         } while ($deleted === self::BATCH_SIZE);
     }

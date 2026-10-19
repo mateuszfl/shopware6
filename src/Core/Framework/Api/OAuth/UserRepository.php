@@ -46,8 +46,8 @@ class UserRepository implements UserRepositoryInterface
         }
 
         $builder = $this->connection->createQueryBuilder();
-        $user = $builder->select('user.id', 'user.password', 'user.active')
-            ->from('user')
+        $user = $builder->select('id', 'password', 'active')
+            ->from($this->connection->getDatabasePlatform()->quoteSingleIdentifier('user'))
             ->where('username = :username')
             ->setParameter('username', $username)
             ->fetchAssociative();

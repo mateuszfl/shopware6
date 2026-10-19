@@ -115,13 +115,13 @@ class ExtensionsResource
         $appNames = $this->filterNamesByType($extensions, 'app');
 
         $pluginRows = $pluginNames !== [] ? $this->connection->fetchAllKeyValue(
-            'SELECT `name`, `active` FROM `plugin` WHERE `name` IN (:names)',
+            'SELECT name, active FROM plugin WHERE name IN (:names)',
             ['names' => $pluginNames],
             ['names' => ArrayParameterType::STRING],
         ) : [];
 
         $appRows = $appNames !== [] ? $this->connection->fetchAllKeyValue(
-            'SELECT `name`, `active` FROM `app` WHERE `name` IN (:names)',
+            'SELECT name, active FROM app WHERE name IN (:names)',
             ['names' => $appNames],
             ['names' => ArrayParameterType::STRING],
         ) : [];

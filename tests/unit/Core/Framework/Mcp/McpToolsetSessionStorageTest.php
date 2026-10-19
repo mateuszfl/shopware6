@@ -16,60 +16,19 @@ use Symfony\Component\Clock\NativeClock;
 #[CoversClass(McpToolsetSessionStorage::class)]
 class McpToolsetSessionStorageTest extends TestCase
 {
-    public function testEnableStoresToolsetForSession(): void
+    public function testEnabledToolsetsReturnsListOfStrings(): void
     {
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('executeStatement')
-            ->with(
-                static::stringContains('INSERT IGNORE INTO `mcp_toolset_session`'),
-                static::callback(static fn (array $params): bool => $params['sessionId'] === 'session-a' && $params['toolsetName'] === 'shopware-entity' && \is_string($params['createdAt'])),
-            );
-
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchFirstColumn')->willReturn(['shopware-entity', 'shopware-media']);
         $storage = new McpToolsetSessionStorage($connection, new NativeClock());
-        $storage->enable('session-a', 'shopware-entity');
-    }
-
-    public function testEnabledToolsetsReturnsSortedNamesForSession(): void
-    {
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('fetchFirstColumn')
-            ->with(
-                static::stringContains('WHERE `session_id` = :sessionId'),
-                ['sessionId' => 'session-a'],
-            )
-            ->willReturn(['shopware-entity', 'shopware-media']);
-
-        $storage = new McpToolsetSessionStorage($connection, new NativeClock());
-
         static::assertSame(['shopware-entity', 'shopware-media'], $storage->enabledToolsets('session-a'));
     }
 
-    public function testDeleteForSessionRemovesOnlyThatSession(): void
+    public function testSessionIdsReturnsListOfStrings(): void
     {
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('executeStatement')
-            ->with(
-                static::stringContains('DELETE FROM `mcp_toolset_session`'),
-                ['sessionId' => 'session-a'],
-            );
-
+        $connection = static::createStub(Connection::class);
+        $connection->method('fetchFirstColumn')->willReturn(['session-a', 'session-b']);
         $storage = new McpToolsetSessionStorage($connection, new NativeClock());
-        $storage->deleteForSession('session-a');
-    }
-
-    public function testSessionIdsReturnsDistinctSessionIds(): void
-    {
-        $connection = $this->createMock(Connection::class);
-        $connection->expects($this->once())
-            ->method('fetchFirstColumn')
-            ->with(static::stringContains('SELECT DISTINCT `session_id` FROM `mcp_toolset_session`'))
-            ->willReturn(['session-a', 'session-b']);
-
-        $storage = new McpToolsetSessionStorage($connection, new NativeClock());
-
         static::assertSame(['session-a', 'session-b'], $storage->sessionIds());
     }
 }

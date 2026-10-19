@@ -107,23 +107,25 @@ class EntityTemplateLoader implements LoaderInterface, EventSubscriberInterface,
                 return null;
             }
 
-            /** @var list<array{path: string, template: string, updatedAt: string|null, namespace: string, hash: string}> $templates */
-            $templates = $this->connection->fetchAllAssociative('
+            /** @var list<array{path: string, template: string, updated_at: string|null, namespace: string, hash: string}> $templates */
+            $templates = $this->connection->fetchAllAssociative(
+                '
                 SELECT
-                    `app_template`.`path` AS `path`,
-                    `app_template`.`template` AS `template`,
-                    `app_template`.`hash` AS `hash`,
-                    `app_template`.`updated_at` AS `updatedAt`,
-                    `app`.`name` AS `namespace`
-                FROM `app_template`
-                INNER JOIN `app` ON `app_template`.`app_id` = `app`.`id`
-                WHERE `app_template`.`active` = 1 AND `app`.`active` = 1
-            ');
+                    app_template.path AS path,
+                    app_template.template AS template,
+                    app_template.hash AS hash,
+                    app_template.updated_at AS updated_at,
+                    app.name AS namespace
+                FROM app_template
+                INNER JOIN app ON app_template.app_id = app.id
+                WHERE app_template.active = 1 AND app.active = 1
+            ',
+            );
 
             foreach ($templates as $template) {
                 $this->databaseTemplateCache[$template['path']][$template['namespace']] = [
                     'template' => $template['template'],
-                    'updatedAt' => $template['updatedAt'] ? new \DateTimeImmutable($template['updatedAt']) : null,
+                    'updatedAt' => $template['updated_at'] ? new \DateTimeImmutable($template['updated_at']) : null,
                     'hash' => $template['hash'],
                 ];
             }

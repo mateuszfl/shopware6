@@ -2,11 +2,13 @@
 
 namespace Shopware\Core\Framework\Mcp\Loader;
 
+use Doctrine\DBAL\ParameterType;
 use Mcp\Capability\RegistryInterface;
 use Mcp\Schema\ResourceDefinition;
 use Mcp\Server\RequestContext;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
  * @experimental stableVersion:v6.8.0
@@ -33,10 +35,11 @@ class AppMcpResourceLoader extends AbstractAppMcpLoader
             INNER JOIN app a ON r.app_id = a.id AND a.active = 1
             LEFT JOIN app_mcp_resource_translation rt
                 ON r.id = rt.app_mcp_resource_id
-                AND rt.language_id = UNHEX(:languageId)
+                AND rt.language_id = :languageId
             WHERE a.app_secret IS NOT NULL
             ORDER BY a.name, r.name',
-            ['languageId' => Defaults::LANGUAGE_SYSTEM],
+            ['languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)],
+            ['languageId' => ParameterType::BINARY],
         );
     }
 

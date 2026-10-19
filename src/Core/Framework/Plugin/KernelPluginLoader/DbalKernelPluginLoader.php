@@ -25,9 +25,9 @@ class DbalKernelPluginLoader extends KernelPluginLoader
         $sql = <<<'SQL'
         -- dbal-plugin-loader
         SELECT name, base_class, path, version, autoload, managed_by_composer, composer_name,
-               CASE WHEN active AND installed_at IS NOT NULL THEN 1 ELSE 0 END AS active
+               CASE WHEN active = 1 AND installed_at IS NOT NULL THEN 1 ELSE 0 END AS active
         FROM plugin
-        ORDER BY installed_at
+        ORDER BY CASE WHEN installed_at IS NULL THEN 0 ELSE 1 END, installed_at, name
         SQL;
 
         $plugins = $this->connection->executeQuery($sql)->fetchAllAssociative();

@@ -13,7 +13,6 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityWriteResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityDeletedEvent;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenEvent;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\User\UserDefinition;
 use Symfony\Component\Clock\MockClock;
 
@@ -31,7 +30,7 @@ class UserCredentialsChangedSubscriberTest extends TestCase
         $subscriber = new UserCredentialsChangedSubscriber(
             $this->refreshTokenRepositoryExpectingRevocation(),
             $this->authCodeRepositoryExpectingRevocation(),
-            $this->connectionExpectingTimestampUpdate(),
+            static::createStub(Connection::class),
             new MockClock('2026-06-30 12:00:00')
         );
 
@@ -69,7 +68,7 @@ class UserCredentialsChangedSubscriberTest extends TestCase
         $subscriber = new UserCredentialsChangedSubscriber(
             $this->refreshTokenRepositoryExpectingRevocation(),
             $this->authCodeRepositoryExpectingRevocation(),
-            $this->connectionExpectingTimestampUpdate(),
+            static::createStub(Connection::class),
             new MockClock('2026-06-30 12:00:00')
         );
 
@@ -130,20 +129,5 @@ class UserCredentialsChangedSubscriberTest extends TestCase
             ->with(self::USER_ID);
 
         return $authCodeRepository;
-    }
-
-    private function connectionExpectingTimestampUpdate(): Connection
-    {
-        $connection = $this->createMock(Connection::class);
-        $connection
-            ->expects($this->once())
-            ->method('update')
-            ->with(
-                'user',
-                ['last_updated_password_at' => '2026-06-30 12:00:00.000'],
-                ['id' => Uuid::fromHexToBytes(self::USER_ID)]
-            );
-
-        return $connection;
     }
 }

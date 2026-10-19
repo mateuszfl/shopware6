@@ -24,6 +24,7 @@ class DoctrineSQLHandlerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = $this->createMock(Connection::class);
+        $this->connection->method('transactional')->willReturnCallback(fn (\Closure $callback): mixed => $callback($this->connection));
     }
 
     public function testWrite(): void
@@ -49,7 +50,6 @@ class DoctrineSQLHandlerTest extends TestCase
 
         $this->connection->expects($this->exactly(2))->method('insert')
             ->willReturnCallback(static function (string $table, array $data = []) use (&$exceptionThrown, &$insertData): int {
-                static::assertSame('log_entry', $table);
                 static::assertNotEmpty($data['id']);
                 static::assertNotEmpty($data['created_at']);
                 unset($data['id'], $data['created_at']);

@@ -320,7 +320,7 @@ class FlowGenerator implements DemodataGeneratorInterface
             return $this->ids[$table];
         }
 
-        $ids = $this->connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM ' . $table . ' LIMIT 500');
+        $ids = $this->connection->fetchFirstColumn('SELECT sw_uuid_hex(id) as id FROM ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier($table) . ' LIMIT 500');
 
         return $this->ids[$table] = $ids;
     }
@@ -335,7 +335,7 @@ class FlowGenerator implements DemodataGeneratorInterface
         }
 
         /** @var non-empty-array<string, array{id: string}> $result */
-        $result = $this->connection->fetchAllKeyValue('SELECT LOWER(HEX(id)), name as id FROM tag LIMIT 500');
+        $result = $this->connection->fetchAllKeyValue('SELECT sw_uuid_hex(id), name as id FROM tag LIMIT 500');
 
         return $this->tags = $result;
     }

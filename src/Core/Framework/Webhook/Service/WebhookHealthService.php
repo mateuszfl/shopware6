@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Webhook\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Framework\Webhook\WebhookFailureStrategy;
@@ -27,7 +28,8 @@ class WebhookHealthService
     {
         $row = $this->connection->fetchAssociative(
             'SELECT active, error_count FROM webhook WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($webhookId)]
+            ['id' => Uuid::fromHexToBytes($webhookId)],
+            ['id' => ParameterType::BINARY],
         );
 
         if (!\is_array($row) || !$row['active']) {
@@ -40,11 +42,16 @@ class WebhookHealthService
             ? ['error_count' => 0, 'active' => 0]
             : ['error_count' => $newCount];
 
-        $this->connection->update('webhook', $params, ['id' => Uuid::fromHexToBytes($webhookId)]);
+        $this->connection->update('webhook', $params, ['id' => Uuid::fromHexToBytes($webhookId)], ['id' => ParameterType::BINARY]);
     }
 
     public function resetErrorCount(string $webhookId): void
     {
-        $this->connection->update('webhook', ['error_count' => 0], ['id' => Uuid::fromHexToBytes($webhookId)]);
+        $this->connection->update(
+            'webhook',
+            ['error_count' => 0],
+            ['id' => Uuid::fromHexToBytes($webhookId)],
+            ['id' => ParameterType::BINARY],
+        );
     }
 }

@@ -25,6 +25,11 @@ final class PostgreSQLDialect extends AbstractDatabaseDialect
         );
     }
 
+    public function random(): string
+    {
+        return 'RANDOM()';
+    }
+
     public function capabilities(): DatabaseCapabilities
     {
         return new DatabaseCapabilities(true, true, true, true);
