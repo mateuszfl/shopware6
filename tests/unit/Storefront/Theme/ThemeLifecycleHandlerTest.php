@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -57,6 +58,8 @@ class ThemeLifecycleHandlerTest extends TestCase
         $this->themeLifecycleServiceMock = static::createStub(ThemeLifecycleService::class);
         $this->themeRepositoryMock = static::createStub(EntityRepository::class);
         $this->connectionMock = static::createStub(Connection::class);
+        $this->connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         $this->themeLifecycleHandler = new ThemeLifecycleHandler(
             $this->themeLifecycleServiceMock,
@@ -266,6 +269,10 @@ class ThemeLifecycleHandlerTest extends TestCase
             ->with($config, $context);
 
         $connectionMock = $this->createMock(Connection::class);
+
+        $connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connectionMock
             ->expects($this->once())
             ->method('fetchAllAssociative')
@@ -291,6 +298,10 @@ class ThemeLifecycleHandlerTest extends TestCase
         $configurationCollection = new StorefrontPluginConfigurationCollection();
 
         $connectionMock = $this->createMock(Connection::class);
+
+        $connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connectionMock
             ->expects($this->once())
             ->method('fetchAllAssociative')

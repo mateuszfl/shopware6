@@ -4,6 +4,8 @@ namespace Shopware\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\ConnectionException;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
@@ -439,16 +441,18 @@ class ThemeService implements ResetInterface
     public function getThemeDependencyMapping(string $themeId): ThemeSalesChannelCollection
     {
         $mappings = new ThemeSalesChannelCollection();
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $themeData = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(theme.id)) as id, LOWER(HEX(childTheme.id)) as dependentId,
-            LOWER(HEX(tsc.sales_channel_id)) as saleschannelId,
-            LOWER(HEX(dtsc.sales_channel_id)) as dsaleschannelId
+            'SELECT ' . $dialect->hex(['theme', 'id']) . ' AS id, ' . $dialect->hex(['child_theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('dependentId') . ',
+            ' . $dialect->hex(['tsc', 'sales_channel_id']) . ' AS ' . $dialect->quoteIdentifier('saleschannelId') . ',
+            ' . $dialect->hex(['dtsc', 'sales_channel_id']) . ' AS ' . $dialect->quoteIdentifier('dsaleschannelId') . '
             FROM theme
-            LEFT JOIN theme as childTheme ON childTheme.parent_theme_id = theme.id
+            LEFT JOIN theme as child_theme ON child_theme.parent_theme_id = theme.id
             LEFT JOIN theme_sales_channel as tsc ON theme.id = tsc.theme_id
-            LEFT JOIN theme_sales_channel as dtsc ON childTheme.id = dtsc.theme_id
+            LEFT JOIN theme_sales_channel as dtsc ON child_theme.id = dtsc.theme_id
             WHERE theme.id = :id',
-            ['id' => Uuid::fromHexToBytes($themeId)]
+            ['id' => Uuid::fromHexToBytes($themeId)],
+            ['id' => ParameterType::BINARY],
         );
 
         foreach ($themeData as $data) {

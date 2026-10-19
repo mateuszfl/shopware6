@@ -3,6 +3,8 @@
 namespace Shopware\Storefront\Framework\Twig;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Adapter\Request\RequestParamHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Term\Filter\AbstractTokenFilter;
 use Shopware\Core\Framework\Log\Package;
@@ -112,8 +114,9 @@ class TemplateDataExtension extends AbstractExtension implements GlobalsInterfac
     private function minSearchLength(SalesChannelContext $context): int
     {
         $min = (int) $this->connection->fetchOne(
-            'SELECT `min_search_length` FROM `product_search_config` WHERE `language_id` = :id',
-            ['id' => Uuid::fromHexToBytes($context->getLanguageId())]
+            'SELECT min_search_length FROM product_search_config WHERE language_id = :id',
+            ['id' => Uuid::fromHexToBytes($context->getLanguageId())],
+            ['id' => ParameterType::BINARY],
         );
 
         return $min ?: AbstractTokenFilter::DEFAULT_MIN_SEARCH_TERM_LENGTH;
@@ -122,7 +125,7 @@ class TemplateDataExtension extends AbstractExtension implements GlobalsInterfac
     private function resolveNavigationIdForLandingPage(string $landingPageId): string
     {
         $categoryId = $this->connection->fetchOne(
-            'SELECT LOWER(HEX(ct.category_id))
+            'SELECT ' . (new DatabasePlatformResolver($this->connection))->dialect()->hex(['ct', 'category_id']) . '
              FROM category_translation ct
              WHERE ct.link_type = :linkType
                AND ct.internal_link = :landingPageId
@@ -130,7 +133,8 @@ class TemplateDataExtension extends AbstractExtension implements GlobalsInterfac
             [
                 'linkType' => 'landing_page',
                 'landingPageId' => Uuid::fromHexToBytes($landingPageId),
-            ]
+            ],
+            ['landingPageId' => ParameterType::BINARY],
         );
 
         return $categoryId ?: '';
@@ -143,7 +147,8 @@ class TemplateDataExtension extends AbstractExtension implements GlobalsInterfac
     {
         $path = $this->connection->fetchOne(
             'SELECT path FROM category WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($activeNavigationId)]
+            ['id' => Uuid::fromHexToBytes($activeNavigationId)],
+            ['id' => ParameterType::BINARY],
         ) ?: '';
 
         $navigationPathIdList = array_filter(explode('|', $path));

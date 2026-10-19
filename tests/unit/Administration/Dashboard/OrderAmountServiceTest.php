@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Administration\Dashboard;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Result;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -37,6 +38,8 @@ class OrderAmountServiceTest extends TestCase
     {
         parent::setUp();
         $this->connection = static::createStub(Connection::class);
+        $this->connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->cashRounding = static::createStub(CashRounding::class);
         $this->cashRounding->method('cashRound')->willReturnCallback(static fn ($amount) => round($amount, 2));
         $this->context = Context::createDefaultContext();

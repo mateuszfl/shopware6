@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Administration\Controller;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\Flysystem\UnableToReadFile;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -508,13 +509,18 @@ class AdministrationControllerTest extends TestCase
         }
 
         $connection->expects($this->once())->method('executeStatement')
-            ->with(
-                'UPDATE `product_search_config` SET `excluded_terms` = :excludedTerms WHERE `id` = :id',
-                [
-                    'excludedTerms' => json_encode($excludedTerms, \JSON_THROW_ON_ERROR),
-                    'id' => $searchConfigId,
-                ]
-            );
+            ->willReturnCallback(static function (string $sql, array $parameters, array $types) use ($excludedTerms, $searchConfigId): int {
+                static::assertSame(
+                    [
+                        'excludedTerms' => json_encode($excludedTerms, \JSON_THROW_ON_ERROR),
+                        'id' => $searchConfigId,
+                    ],
+                    $parameters
+                );
+                static::assertSame(['id' => ParameterType::BINARY], $types);
+
+                return 1;
+            });
 
         $controller = $this->createAdministrationController(connection: $connection, eventDispatcher: $eventDispatcher);
 

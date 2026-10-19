@@ -3,8 +3,10 @@
 namespace Shopware\Storefront\Mcp\Tool;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Mcp\Attribute\McpToolGroup;
@@ -206,17 +208,16 @@ class ThemeConfigTool extends McpToolResponse
         return array_map(
             static fn (mixed $id): string => (string) $id,
             $this->connection->fetchFirstColumn(
-                <<<'SQL'
-                    SELECT DISTINCT LOWER(HEX(`sc`.`id`))
-                    FROM `sales_channel` `sc`
-                    LEFT JOIN `sales_channel_translation` `sct` ON `sct`.`sales_channel_id` = `sc`.`id`
-                    WHERE `sc`.`id` = :id OR `sct`.`name` = :name
-                    SQL,
+                'SELECT DISTINCT ' . (new DatabasePlatformResolver($this->connection))->dialect()->hex(['sc', 'id']) . '
+                 FROM sales_channel sc
+                 LEFT JOIN sales_channel_translation sct ON sct.sales_channel_id = sc.id
+                 WHERE sc.id = :id OR sct.name = :name',
                 [
                     // A non-UUID input binds NULL, which no ID can equal.
                     'id' => Uuid::isValid($uuid) ? Uuid::fromHexToBytes($uuid) : null,
                     'name' => $input,
                 ],
+                ['id' => $uuid !== '' && Uuid::isValid($uuid) ? ParameterType::BINARY : ParameterType::NULL],
             ),
         );
     }
@@ -229,7 +230,7 @@ class ThemeConfigTool extends McpToolResponse
         return array_map(
             static fn (mixed $name): string => (string) $name,
             $this->connection->fetchFirstColumn(
-                'SELECT DISTINCT `name` FROM `sales_channel_translation` WHERE `name` IS NOT NULL ORDER BY `name`',
+                'SELECT DISTINCT name FROM sales_channel_translation WHERE name IS NOT NULL ORDER BY name',
             ),
         );
     }
@@ -237,8 +238,9 @@ class ThemeConfigTool extends McpToolResponse
     private function resolveThemeId(string $salesChannelId): ?string
     {
         $result = $this->connection->fetchOne(
-            'SELECT LOWER(HEX(theme_id)) FROM theme_sales_channel WHERE sales_channel_id = :id',
+            'SELECT ' . (new DatabasePlatformResolver($this->connection))->dialect()->hex(['theme_id']) . ' FROM theme_sales_channel WHERE sales_channel_id = :id',
             ['id' => Uuid::fromHexToBytes($salesChannelId)],
+            ['id' => ParameterType::BINARY],
         );
 
         return $result !== false ? (string) $result : null;

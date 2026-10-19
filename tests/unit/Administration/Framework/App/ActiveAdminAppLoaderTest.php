@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Administration\Framework\App;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestDox;
@@ -92,6 +93,8 @@ class ActiveAdminAppLoaderTest extends TestCase
     private function stubConnection(array $rows): Connection
     {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchAllAssociative')->willReturn($rows);
 
         return $connection;

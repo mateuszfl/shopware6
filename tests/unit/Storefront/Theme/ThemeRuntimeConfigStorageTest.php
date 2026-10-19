@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Driver\PDO\Exception as PdoException;
 use Doctrine\DBAL\Exception\DeadlockException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
@@ -25,13 +26,16 @@ class ThemeRuntimeConfigStorageTest extends TestCase
         $attempts = 0;
 
         $connection = $this->createMock(Connection::class);
-        // Not inside a transaction: RetryableQuery is allowed to retry the statement itself.
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(fn (\Closure $callback): mixed => $callback($connection));
+        // Not inside a transaction: RetryableTransaction is allowed to retry the operation.
         $connection->method('getTransactionNestingLevel')->willReturn(0);
-        $connection->expects($this->exactly(2))
+        $connection->expects($this->exactly(4))
             ->method('executeStatement')
             ->willReturnCallback(static function () use (&$attempts): int {
                 ++$attempts;
-                if ($attempts === 1) {
+                if ($attempts === 2) {
                     throw new DeadlockException(new PdoException('Deadlock found (1213)'), null);
                 }
 
@@ -41,13 +45,16 @@ class ThemeRuntimeConfigStorageTest extends TestCase
         $storage = new ThemeRuntimeConfigStorage($connection);
         $storage->save($this->createConfig());
 
-        static::assertSame(2, $attempts);
+        static::assertSame(4, $attempts);
     }
 
     public function testSaveDoesNotRetryInsideTransaction(): void
     {
         $connection = $this->createMock(Connection::class);
-        // Inside a surrounding transaction the deadlock already rolled it back, so RetryableQuery
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(fn (\Closure $callback): mixed => $callback($connection));
+        // Inside a surrounding transaction the deadlock already rolled it back, so RetryableTransaction
         // must rethrow instead of retrying the single statement.
         $connection->method('getTransactionNestingLevel')->willReturn(1);
         $connection->expects($this->once())
@@ -63,6 +70,9 @@ class ThemeRuntimeConfigStorageTest extends TestCase
     public function testSaveDoesNotRetryUnrelatedDatabaseErrors(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('transactional')->willReturnCallback(fn (\Closure $callback): mixed => $callback($connection));
         $connection->method('getTransactionNestingLevel')->willReturn(0);
         $connection->expects($this->once())
             ->method('executeStatement')

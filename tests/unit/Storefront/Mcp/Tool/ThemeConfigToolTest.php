@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Storefront\Mcp\Tool;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Mcp\Capability\Discovery\DocBlockParser;
 use Mcp\Capability\Discovery\SchemaGenerator;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -278,6 +279,8 @@ class ThemeConfigToolTest extends TestCase
         $failure = new \RuntimeException('SQLSTATE[HY000] host db-01 refused');
 
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchFirstColumn')->willThrowException($failure);
 
         $contextProvider = static::createStub(McpContextProvider::class);
@@ -414,7 +417,7 @@ class ThemeConfigToolTest extends TestCase
         $tool = new ThemeConfigTool(
             static::createStub(ThemeService::class),
             static::createStub(McpContextProvider::class),
-            static::createStub(Connection::class),
+            $this->createConfiguredConnection(),
         );
 
         $output = $tool(Uuid::randomHex(), 'delete');
@@ -523,7 +526,7 @@ class ThemeConfigToolTest extends TestCase
         $tool = new ThemeConfigTool(
             static::createStub(ThemeService::class),
             static::createStub(McpContextProvider::class),
-            static::createStub(Connection::class),
+            $this->createConfiguredConnection(),
         );
 
         $output = $tool('');
@@ -541,7 +544,7 @@ class ThemeConfigToolTest extends TestCase
         $tool = new ThemeConfigTool(
             static::createStub(ThemeService::class),
             $contextProvider,
-            static::createStub(Connection::class),
+            $this->createConfiguredConnection(),
         );
 
         $output = $tool(Uuid::randomHex(), 'get');
@@ -567,6 +570,15 @@ class ThemeConfigToolTest extends TestCase
         }
     }
 
+    private function createConfiguredConnection(): Connection
+    {
+        $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+
+        return $connection;
+    }
+
     /**
      * The tool issues three queries: the sales channel lookup, the name hint list and the theme
      * lookup. The two column queries are told apart by their parameters rather than their SQL, so
@@ -583,6 +595,8 @@ class ThemeConfigToolTest extends TestCase
         array &$lookupParams = [],
     ): Connection {
         $connection = static::createStub(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
         // resolveThemeId() is the only remaining fetchOne() caller.
         $connection->method('fetchOne')->willReturn($themeId);

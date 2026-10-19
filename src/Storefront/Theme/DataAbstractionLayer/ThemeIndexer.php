@@ -4,6 +4,8 @@ namespace Shopware\Storefront\Theme\DataAbstractionLayer;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\IndexingSql;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
@@ -77,8 +79,11 @@ class ThemeIndexer extends EntityIndexer
         }
 
         $context = $message->getContext();
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $insertIgnore = IndexingSql::insertIgnorePrefix($this->connection);
+        $ignoreConflict = $dialect->insertConflictClause([], [], true);
 
-        RetryableTransaction::retryable($this->connection, function () use ($ids): void {
+        RetryableTransaction::retryable($this->connection, function () use ($ids, $insertIgnore, $ignoreConflict): void {
             $this->connection->executeStatement(
                 'DELETE FROM theme_child WHERE parent_id IN (:ids)',
                 ['ids' => Uuid::fromHexToBytesList($ids)],
@@ -86,12 +91,12 @@ class ThemeIndexer extends EntityIndexer
             );
 
             $this->connection->executeStatement(
-                'INSERT IGNORE INTO theme_child (child_id, parent_id)
+                $insertIgnore . ' theme_child (child_id, parent_id)
                     (
                         SELECT id as child_id, parent_theme_id as parent_id FROM theme
                         WHERE parent_theme_id IS NOT NULL AND id IN (:ids) AND technical_name IS NULL
                     )
-                ',
+                ' . $ignoreConflict,
                 ['ids' => Uuid::fromHexToBytesList($ids)],
                 ['ids' => ArrayParameterType::BINARY]
             );

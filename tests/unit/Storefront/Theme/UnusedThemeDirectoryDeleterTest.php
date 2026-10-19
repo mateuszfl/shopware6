@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\DirectoryAttributes;
 use League\Flysystem\DirectoryListing;
 use League\Flysystem\FileAttributes;
@@ -25,6 +26,8 @@ class UnusedThemeDirectoryDeleterTest extends TestCase
     public function testDeleteUnusedDirectories(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllAssociative')->willReturn([
             ['salesChannelId' => 'salesChannelId1', 'themeId' => 'themeId1'],
             ['salesChannelId' => 'salesChannelId2', 'themeId' => 'themeId1'],

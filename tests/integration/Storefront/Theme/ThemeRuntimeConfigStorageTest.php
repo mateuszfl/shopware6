@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Integration\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
@@ -28,6 +29,8 @@ class ThemeRuntimeConfigStorageTest extends TestCase
 
     private ThemeRuntimeConfigStorage $storage;
 
+    private Connection $connection;
+
     /**
      * @var EntityRepository<ThemeCollection>
      */
@@ -35,7 +38,8 @@ class ThemeRuntimeConfigStorageTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->storage = new ThemeRuntimeConfigStorage($this->getContainer()->get(Connection::class));
+        $this->connection = $this->getContainer()->get(Connection::class);
+        $this->storage = new ThemeRuntimeConfigStorage($this->connection);
         $this->themeRepository = $this->getContainer()->get('theme.repository');
     }
 
@@ -259,6 +263,49 @@ class ThemeRuntimeConfigStorageTest extends TestCase
         $byName = $this->storage->getByName($nameB);
         static::assertNotNull($byName);
         static::assertSame($themeIdX, $byName->themeId);
+    }
+
+    public function testSaveRollsBackTechnicalNameReplacementWhenInsertFails(): void
+    {
+        $binaryType = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform ? 'BYTEA' : 'BINARY(16)';
+        $this->connection->executeStatement(<<<SQL
+            CREATE TEMPORARY TABLE theme_runtime_config (
+                theme_id $binaryType PRIMARY KEY,
+                technical_name VARCHAR(255) NULL UNIQUE,
+                resolved_config TEXT NOT NULL CHECK (resolved_config <> '{"key":"failure"}'),
+                view_inheritance TEXT NOT NULL,
+                script_files TEXT NOT NULL,
+                icon_sets TEXT NOT NULL,
+                import_map TEXT NULL,
+                updated_at VARCHAR(32) NOT NULL
+            )
+            SQL);
+
+        $themeId = Uuid::randomHex();
+        $previous = $this->createThemeRuntimeConfig(['themeId' => $themeId, 'technicalName' => 'shared-name']);
+        $this->storage->save($previous);
+
+        $saveFailed = false;
+        try {
+            $this->storage->save($this->createThemeRuntimeConfig([
+                'themeId' => Uuid::randomHex(),
+                'technicalName' => 'shared-name',
+                'resolvedConfig' => ['key' => 'failure'],
+            ]));
+        } catch (\Throwable) {
+            // The failed insert must roll back the preceding technical-name delete.
+            $saveFailed = true;
+        }
+
+        try {
+            static::assertTrue($saveFailed, 'The fixture constraint should reject the replacement row');
+            $retrieved = $this->storage->getByName('shared-name');
+            static::assertNotNull($retrieved);
+            static::assertSame($themeId, $retrieved->themeId);
+            static::assertSame($previous->resolvedConfig, $retrieved->resolvedConfig);
+        } finally {
+            $this->connection->executeStatement('DROP TABLE theme_runtime_config');
+        }
     }
 
     public function testSaveAllowsMultipleCopiesWithNullTechnicalName(): void

@@ -4,8 +4,10 @@ namespace Shopware\Storefront\Theme;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableQuery;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 
@@ -29,16 +31,16 @@ class ThemeRuntimeConfigStorage
         $record = $this->connection->fetchAssociative(
             <<<'SQL'
                 SELECT
-                `theme_id`,
-                `technical_name`,
-                `resolved_config`,
-                `view_inheritance`,
-                `script_files`,
-                `icon_sets`,
-                `import_map`,
-                `updated_at`
-                FROM `theme_runtime_config`
-                WHERE `technical_name` = :technicalName
+                theme_id,
+                technical_name,
+                resolved_config,
+                view_inheritance,
+                script_files,
+                icon_sets,
+                import_map,
+                updated_at
+                FROM theme_runtime_config
+                WHERE technical_name = :technicalName
             SQL,
             ['technicalName' => $technicalName],
         );
@@ -55,18 +57,19 @@ class ThemeRuntimeConfigStorage
         $record = $this->connection->fetchAssociative(
             <<<'SQL'
                 SELECT
-                `theme_id`,
-                `technical_name`,
-                `resolved_config`,
-                `view_inheritance`,
-                `script_files`,
-                `icon_sets`,
-                `import_map`,
-                `updated_at`
-                FROM `theme_runtime_config`
-                WHERE `theme_id` = :themeId
+                theme_id,
+                technical_name,
+                resolved_config,
+                view_inheritance,
+                script_files,
+                icon_sets,
+                import_map,
+                updated_at
+                FROM theme_runtime_config
+                WHERE theme_id = :themeId
             SQL,
             ['themeId' => Uuid::fromHexToBytes($themeId)],
+            ['themeId' => ParameterType::BINARY],
         );
 
         if (!$record) {
@@ -91,19 +94,42 @@ class ThemeRuntimeConfigStorage
             'updatedAt' => $config->updatedAt->format(Defaults::STORAGE_DATE_TIME_FORMAT),
         ];
 
-        RetryableQuery::retryable($this->connection, function () use ($parameters): void {
-            $this->connection->executeStatement(<<<'SQL'
-                REPLACE INTO `theme_runtime_config` (theme_id, technical_name, resolved_config, view_inheritance, script_files, icon_sets, import_map, updated_at)
-                VALUES (:themeId, :technicalName, :resolvedConfig, :viewInheritance, :scriptFiles, :iconSets, :importMap, :updatedAt)
-                SQL, $parameters);
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $upsert = $dialect->upsert(
+            'theme_runtime_config',
+            [
+                'theme_id' => $parameters['themeId'],
+                'technical_name' => $parameters['technicalName'],
+                'resolved_config' => $parameters['resolvedConfig'],
+                'view_inheritance' => $parameters['viewInheritance'],
+                'script_files' => $parameters['scriptFiles'],
+                'icon_sets' => $parameters['iconSets'],
+                'import_map' => $parameters['importMap'],
+                'updated_at' => $parameters['updatedAt'],
+            ],
+            ['theme_id'],
+            ['technical_name', 'resolved_config', 'view_inheritance', 'script_files', 'icon_sets', 'import_map', 'updated_at'],
+            ['theme_id' => ParameterType::BINARY],
+        )->named();
+
+        RetryableTransaction::retryable($this->connection, function () use ($parameters, $upsert): void {
+            if ($parameters['technicalName'] !== null) {
+                $this->connection->executeStatement(
+                    'DELETE FROM theme_runtime_config WHERE technical_name = :technicalName AND theme_id <> :themeId',
+                    ['technicalName' => $parameters['technicalName'], 'themeId' => $parameters['themeId']],
+                    ['themeId' => ParameterType::BINARY],
+                );
+            }
+
+            $this->connection->executeStatement($upsert->sql, $upsert->parameters, $upsert->types);
         });
     }
 
     public function deleteByTechnicalName(string $technicalName): void
     {
         $this->connection->executeStatement(
-            'DELETE FROM `theme_runtime_config` WHERE `technical_name` = :technicalName',
-            ['technicalName' => $technicalName]
+            'DELETE FROM theme_runtime_config WHERE technical_name = :technicalName',
+            ['technicalName' => $technicalName],
         );
     }
 
@@ -114,9 +140,9 @@ class ThemeRuntimeConfigStorage
     {
         return $this->connection->fetchFirstColumn(
             <<<'SQL'
-                SELECT DISTINCT `technical_name`
-                FROM `theme_runtime_config`
-                WHERE `technical_name` IS NOT NULL
+                SELECT DISTINCT technical_name
+                FROM theme_runtime_config
+                WHERE technical_name IS NOT NULL
             SQL,
         );
     }
@@ -128,13 +154,15 @@ class ThemeRuntimeConfigStorage
      */
     public function getCopiesIds(string $themeId): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+
         return $this->connection->fetchFirstColumn(
-            <<<'SQL'
-                SELECT LOWER(HEX(`id`)) AS id
-                FROM `theme`
-                WHERE `parent_theme_id` = :themeId AND `technical_name` IS NULL
-            SQL,
+            'SELECT ' . $dialect->hex('id') . ' AS id
+                FROM theme
+                WHERE parent_theme_id = :themeId AND technical_name IS NULL
+            ',
             ['themeId' => Uuid::fromHexToBytes($themeId)],
+            ['themeId' => ParameterType::BINARY],
         );
     }
 
@@ -145,18 +173,17 @@ class ThemeRuntimeConfigStorage
      */
     public function getChildThemeIds(string $parentThemeId): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $processedThemeIds = [$parentThemeId];
         $childThemeIds = [];
         $pendingParentIds = [$parentThemeId];
 
         while ($pendingParentIds !== []) {
             $directChildren = $this->connection->fetchFirstColumn(
-                <<<'SQL'
-                    SELECT LOWER(HEX(id)) as id FROM theme WHERE parent_theme_id IN (:parentIds)
-                SQL,
+                'SELECT ' . $dialect->hex('id') . ' AS id FROM theme WHERE parent_theme_id IN (:parentIds)',
                 ['parentIds' => array_map(static fn ($id) => Uuid::fromHexToBytes($id), $pendingParentIds)],
                 [
-                    'parentIds' => ArrayParameterType::STRING,
+                    'parentIds' => ArrayParameterType::BINARY,
                 ]
             );
 
@@ -180,14 +207,15 @@ class ThemeRuntimeConfigStorage
 
     public function getThemeTechnicalName(string $themeId): ?string
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $names = $this->connection->fetchAssociative('
-            SELECT theme.technical_name as themeName, parentTheme.technical_name as parentThemeName
+            SELECT theme.technical_name as ' . $dialect->quoteIdentifier('themeName') . ', parentTheme.technical_name as ' . $dialect->quoteIdentifier('parentThemeName') . '
             FROM theme
                 LEFT JOIN theme AS parentTheme ON parentTheme.id = theme.parent_theme_id
             WHERE theme.id = :id
         ', [
             'id' => Uuid::fromHexToBytes($themeId),
-        ]);
+        ], ['id' => ParameterType::BINARY]);
 
         if ($names === false) {
             return null;
@@ -198,11 +226,14 @@ class ThemeRuntimeConfigStorage
 
     public function getThemeIdByTechnicalName(string $technicalName): ?string
     {
-        $themeId = $this->connection->fetchOne('
-            SELECT LOWER(HEX(id)) FROM theme WHERE technical_name = :technicalName
-        ', [
-            'technicalName' => $technicalName,
-        ]);
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $themeId = $this->connection->fetchOne(
+            'SELECT ' . $dialect->hex('id') . ' FROM theme WHERE technical_name = :technicalName
+        ',
+            [
+                'technicalName' => $technicalName,
+            ]
+        );
 
         return $themeId === false ? null : $themeId;
     }
@@ -215,7 +246,8 @@ class ThemeRuntimeConfigStorage
     {
         $technicalName = $this->connection->fetchOne(
             'SELECT technical_name FROM theme WHERE id = :id',
-            ['id' => Uuid::fromHexToBytes($themeId)]
+            ['id' => Uuid::fromHexToBytes($themeId)],
+            ['id' => ParameterType::BINARY],
         );
 
         return $technicalName === false ? null : $technicalName;

@@ -37,6 +37,11 @@
         <testsuite name="database-search">
             <file>tests/integration/Elasticsearch/Admin/ElasticsearchIndexingDatabaseContractTest.php</file>
         </testsuite>
+        <testsuite name="database-ui">
+            <file>tests/integration/Administration/Dashboard/OrderAmountDatabaseContractTest.php</file>
+            <file>tests/integration/Administration/Snippet/SnippetDatabaseContractTest.php</file>
+            <file>tests/integration/Storefront/Theme/ThemeDatabaseContractTest.php</file>
+        </testsuite>
         <testsuite name="database-content">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/ContentSqlContractTest.php</file>
         </testsuite>

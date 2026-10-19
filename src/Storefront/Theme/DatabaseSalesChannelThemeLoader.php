@@ -3,6 +3,8 @@
 namespace Shopware\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
 
@@ -48,11 +50,13 @@ class DatabaseSalesChannelThemeLoader
      */
     private function readFromDB(string $salesChannelId): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $configInheritance = $dialect->jsonExtract(['theme', 'base_config'], ['configInheritance'])->named();
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(theme.id)) AS themeId,
-                    theme.technical_name AS technicalName,
-                    LOWER(HEX(theme.parent_theme_id)) AS parentThemeId,
-                    JSON_EXTRACT(theme.base_config, \'$.configInheritance\') AS configInheritance,
+            'SELECT ' . $dialect->hex(['theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('themeId') . ',
+                    theme.technical_name AS ' . $dialect->quoteIdentifier('technicalName') . ',
+                    ' . $dialect->hex(['theme', 'parent_theme_id']) . ' AS ' . $dialect->quoteIdentifier('parentThemeId') . ',
+                    ' . $configInheritance->sql . ' AS ' . $dialect->quoteIdentifier('configInheritance') . ',
                     theme_sales_channel.sales_channel_id IS NOT NULL AS assigned
             FROM theme
                 LEFT JOIN theme_sales_channel
@@ -60,7 +64,8 @@ class DatabaseSalesChannelThemeLoader
                     AND theme_sales_channel.sales_channel_id = :salesChannelId',
             [
                 'salesChannelId' => Uuid::fromHexToBytes($salesChannelId),
-            ]
+            ] + $configInheritance->parameters,
+            ['salesChannelId' => ParameterType::BINARY] + $configInheritance->types
         );
 
         $themesById = [];

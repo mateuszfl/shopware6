@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Shopware\Storefront\Theme\ConfigLoader;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
@@ -27,15 +29,16 @@ class DatabaseAvailableThemeProvider extends AbstractAvailableThemeProvider
 
     public function load(Context $context, bool $activeOnly): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $qb = $this->connection->createQueryBuilder()
             ->from('theme_sales_channel')
-            ->select('LOWER(HEX(sales_channel_id))', 'LOWER(HEX(theme_id))')
+            ->select($dialect->hex('sales_channel_id'), $dialect->hex('theme_id'))
             ->leftJoin('theme_sales_channel', 'sales_channel', 'sales_channel', 'sales_channel.id = theme_sales_channel.sales_channel_id')
             ->where('sales_channel.type_id = :typeId')
-            ->setParameter('typeId', Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_STOREFRONT));
+            ->setParameter('typeId', Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_STOREFRONT), ParameterType::BINARY);
 
         if ($activeOnly) {
-            $qb->andWhere('sales_channel.active = 1');
+            $qb->andWhere('sales_channel.active = TRUE');
         }
 
         /** @var array<string, string> $keyValue */

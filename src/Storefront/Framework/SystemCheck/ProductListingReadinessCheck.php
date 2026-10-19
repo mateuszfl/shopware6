@@ -4,6 +4,7 @@ namespace Shopware\Storefront\Framework\SystemCheck;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\SystemCheck\BaseCheck;
@@ -115,33 +116,29 @@ class ProductListingReadinessCheck extends BaseCheck
      */
     private function fetchNavigationIds(array $salesChannelIds): array
     {
-        $sql = <<<'SQL'
-            SELECT LOWER(HEX(`sales_channel`.`id`)) AS `sales_channel_id`,
-                   LOWER(HEX(COALESCE(`category_child`.`id`, `category_root`.`id`))) AS `category_id`
-            FROM `category` `category_root`
-            LEFT JOIN `category` `category_child`
-                ON `category_root`.`id` = `category_child`.`parent_id`
-                AND `category_root`.`version_id` = `category_child`.`version_id`
-                AND `category_child`.`active` = 1
-            LEFT JOIN `cms_page` `cms_page_child`
-                ON `category_child`.`cms_page_id` = `cms_page_child`.`id`
-                AND `category_child`.`version_id` = `cms_page_child`.`version_id`
-                AND `cms_page_child`.`type` = 'product_list'
-            LEFT JOIN `cms_page` `cms_page_root`
-                ON `category_root`.`cms_page_id` = `cms_page_root`.`id`
-                AND `category_root`.`version_id` = `cms_page_root`.`version_id`
-                AND `cms_page_root`.`type` = 'product_list'
-            INNER JOIN `sales_channel`
-                ON `sales_channel`.`navigation_category_id` = `category_root`.`id`
-                and `sales_channel`.`navigation_category_version_id` = `category_root`.`version_id`
-            WHERE `category_root`.`active` = 1
-                AND `sales_channel`.`id` IN (:salesChannelIds)
-                AND (
-                    `cms_page_child`.`id` IS NOT NULL
-                    OR `cms_page_root`.`id` IS NOT NULL
-                )
-            GROUP BY `sales_channel`.`id`
-        SQL;
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $sql = 'SELECT ' . $dialect->hex(['sales_channel', 'id']) . ' AS sales_channel_id,
+                   MIN(' . $dialect->hexExpression('COALESCE(category_child.id, category_root.id)') . ') AS category_id
+            FROM category category_root
+            LEFT JOIN category category_child
+                ON category_root.id = category_child.parent_id
+                AND category_root.version_id = category_child.version_id
+                AND category_child.active = TRUE
+            LEFT JOIN cms_page cms_page_child
+                ON category_child.cms_page_id = cms_page_child.id
+                AND category_child.version_id = cms_page_child.version_id
+                AND cms_page_child.type = \'product_list\'
+            LEFT JOIN cms_page cms_page_root
+                ON category_root.cms_page_id = cms_page_root.id
+                AND category_root.version_id = cms_page_root.version_id
+                AND cms_page_root.type = \'product_list\'
+            INNER JOIN sales_channel
+                ON sales_channel.navigation_category_id = category_root.id
+                AND sales_channel.navigation_category_version_id = category_root.version_id
+            WHERE category_root.active = TRUE
+                AND sales_channel.id IN (:salesChannelIds)
+                AND (cms_page_child.id IS NOT NULL OR cms_page_root.id IS NOT NULL)
+            GROUP BY sales_channel.id';
 
         $result = $this->connection->fetchAllAssociative(
             $sql,

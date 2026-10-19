@@ -3,11 +3,14 @@
 namespace Shopware\Storefront\Framework\Routing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\FetchModeHelper;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Storefront\Framework\Routing\Struct\DomainCollection;
 
 /**
@@ -54,23 +57,24 @@ class DomainLoader extends AbstractDomainLoader
     private function fetch(): array
     {
         $query = $this->connection->createQueryBuilder();
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
 
         $query->select(
-            'CONCAT(TRIM(TRAILING \'/\' FROM domain.url), \'/\') `key`',
+            'CONCAT(TRIM(TRAILING \'/\' FROM domain.url), \'/\') AS ' . $dialect->quoteIdentifier('key'),
             'CONCAT(TRIM(TRAILING \'/\' FROM domain.url), \'/\') url',
-            'LOWER(HEX(domain.id)) id',
-            'LOWER(HEX(sales_channel.id)) salesChannelId',
-            'LOWER(HEX(sales_channel.type_id)) typeId',
-            'LOWER(HEX(domain.snippet_set_id)) snippetSetId',
-            'LOWER(HEX(domain.currency_id)) currencyId',
-            'LOWER(HEX(domain.language_id)) languageId',
-            'LOWER(HEX(theme.id)) themeId',
+            $dialect->hex(['domain', 'id']) . ' AS id',
+            $dialect->hex(['sales_channel', 'id']) . ' AS ' . $dialect->quoteIdentifier('salesChannelId'),
+            $dialect->hex(['sales_channel', 'type_id']) . ' AS ' . $dialect->quoteIdentifier('typeId'),
+            $dialect->hex(['domain', 'snippet_set_id']) . ' AS ' . $dialect->quoteIdentifier('snippetSetId'),
+            $dialect->hex(['domain', 'currency_id']) . ' AS ' . $dialect->quoteIdentifier('currencyId'),
+            $dialect->hex(['domain', 'language_id']) . ' AS ' . $dialect->quoteIdentifier('languageId'),
+            $dialect->hex(['theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('themeId'),
             'sales_channel.maintenance maintenance',
             // @deprecated tag:v6.8.0 - remove the COALESCE fallback to the deprecated `maintenance_ip_whitelist` column
-            'COALESCE(sales_channel.maintenance_ip_allowlist, sales_channel.maintenance_ip_whitelist) maintenanceIpAllowlist',
+            'COALESCE(sales_channel.maintenance_ip_allowlist, sales_channel.maintenance_ip_whitelist) AS ' . $dialect->quoteIdentifier('maintenanceIpAllowlist'),
             'snippet_set.iso as locale',
-            'theme.technical_name as themeName',
-            'parentTheme.technical_name as parentThemeName',
+            'theme.technical_name as ' . $dialect->quoteIdentifier('themeName'),
+            'parentTheme.technical_name as ' . $dialect->quoteIdentifier('parentThemeName'),
         );
 
         $query->from('sales_channel');
@@ -79,9 +83,9 @@ class DomainLoader extends AbstractDomainLoader
         $query->leftJoin('sales_channel', 'theme_sales_channel', 'theme_sales_channel', 'sales_channel.id = theme_sales_channel.sales_channel_id');
         $query->leftJoin('theme_sales_channel', 'theme', 'theme', 'theme_sales_channel.theme_id = theme.id');
         $query->leftJoin('theme', 'theme', 'parentTheme', 'theme.parent_theme_id = parentTheme.id');
-        $query->where('sales_channel.type_id = UNHEX(:typeId)');
+        $query->where('sales_channel.type_id = :typeId');
         $query->andWhere('sales_channel.active');
-        $query->setParameter('typeId', Defaults::SALES_CHANNEL_TYPE_STOREFRONT);
+        $query->setParameter('typeId', Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_STOREFRONT), ParameterType::BINARY);
 
         /** @var array<string, Domain> $domains */
         $domains = FetchModeHelper::groupUnique($query->executeQuery()->fetchAllAssociative());

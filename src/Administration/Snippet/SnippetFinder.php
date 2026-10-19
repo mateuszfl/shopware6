@@ -281,7 +281,7 @@ class SnippetFinder implements SnippetFinderInterface
              FROM locale
              INNER JOIN app_administration_snippet ON locale.id = app_administration_snippet.locale_id
              INNER JOIN app ON app_administration_snippet.app_id = app.id
-             WHERE locale.code = :code AND app.active = 1;',
+             WHERE locale.code = :code AND app.active = TRUE;',
             ['code' => $locale]
         );
 

@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Media\Aggregate\MediaFolder\MediaFolderCollection;
@@ -90,6 +91,14 @@ class ThemeLifecycleServiceTest extends TestCase
         $registry->method('getConfigurations')->willReturn(new StorefrontPluginConfigurationCollection());
 
         $connection = static::createStub(Connection::class);
+
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('fetchAllAssociative')->willReturn([]);
 
         return new ThemeLifecycleService(

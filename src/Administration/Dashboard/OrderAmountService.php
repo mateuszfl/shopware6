@@ -3,9 +3,12 @@
 namespace Shopware\Administration\Dashboard;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Checkout\Cart\Price\CashRounding;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionStates;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\SqlFragment;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
@@ -29,32 +32,38 @@ readonly class OrderAmountService
      */
     public function load(Context $context, string $since, bool $paid, string $timezone = 'UTC'): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $query = $this->connection->createQueryBuilder();
-
-        $accessor = '`order`.order_date_time';
-
+        $orderTable = $dialect->quoteIdentifier('order');
+        $orderDate = $orderTable . '.order_date_time';
         // @deprecated tag:v6.8.0 - time zone support always enabled, remove if, but keep content
-        if ($this->timeZoneSupportEnabled || Feature::isActive('v6.8.0.0')) {
-            $accessor = 'IFNULL(CONVERT_TZ(' . $accessor . ', :dbtimezone, :timezone), ' . $accessor . ')';
-
-            $query->setParameter('dbtimezone', '+00:00');
-            $query->setParameter('timezone', $timezone);
-        }
+        $timezoneEnabled = $this->timeZoneSupportEnabled || Feature::isActive('v6.8.0.0');
+        $localDateBucket = $dialect->dateBucket(
+            $orderDate,
+            'day',
+            $timezoneEnabled ? $timezone : null,
+        )->named();
+        $dateBucket = $timezoneEnabled
+            ? new SqlFragment(
+                'COALESCE(' . $localDateBucket->sql . ', ' . $dialect->dateBucket($orderDate, 'day')->sql . ')',
+                $localDateBucket->parameters,
+                $localDateBucket->types,
+            )
+            : $localDateBucket;
 
         $query->select(
-            'DATE_FORMAT(' . $accessor . ', \'%Y-%m-%d\') as `date`',
-            'COUNT(`order`.id) as `count`',
-            'SUM(
-                `order`.amount_total / IFNULL(`order`.currency_factor, currency.factor)
-            ) as `amount`',
+            'CAST(' . $dateBucket->sql . ' AS DATE) AS ' . $dialect->quoteIdentifier('date'),
+            'COUNT(' . $orderTable . '.id) AS ' . $dialect->quoteIdentifier('count'),
+            'SUM(' . $orderTable . '.amount_total / COALESCE(' . $orderTable . '.currency_factor, currency.factor)) AS ' . $dialect->quoteIdentifier('amount'),
         );
+        $query->setParameters($dateBucket->parameters, $dateBucket->types);
 
-        $query->from('`order`');
-        $query->leftJoin('`order`', 'currency', 'currency', '`order`.currency_factor is null AND currency.id = `order`.currency_id');
-        $query->andWhere('`order`.order_date_time >= :since');
-        $query->andWhere('`order`.version_id = :version');
+        $query->from($orderTable);
+        $query->leftJoin($orderTable, 'currency', 'currency', $orderTable . '.currency_factor IS NULL AND currency.id = ' . $orderTable . '.currency_id');
+        $query->andWhere($orderDate . ' >= :since');
+        $query->andWhere($orderTable . '.version_id = :version');
 
-        $query->groupBy('`date`');
+        $query->groupBy($dialect->quoteIdentifier('date'));
 
         if ($paid) {
             $paidId = $this->connection->fetchOne('
@@ -66,14 +75,14 @@ readonly class OrderAmountService
                 'state' => OrderTransactionStates::STATE_PAID,
             ]);
 
-            $query->innerJoin('`order`', 'order_transaction', 'transactions', 'transactions.order_id = `order`.id AND transactions.version_id = `order`.version_id AND transactions.state_id = :paidId');
-            $query->setParameter('paidId', $paidId);
+            $query->innerJoin($orderTable, 'order_transaction', 'transactions', 'transactions.order_id = ' . $orderTable . '.id AND transactions.version_id = ' . $orderTable . '.version_id AND transactions.state_id = :paidId');
+            $query->setParameter('paidId', $paidId, ParameterType::BINARY);
         }
 
         $query->setParameter('since', $since);
-        $query->setParameter('version', Uuid::fromHexToBytes(Defaults::LIVE_VERSION));
+        $query->setParameter('version', Uuid::fromHexToBytes(Defaults::LIVE_VERSION), ParameterType::BINARY);
 
-        $query->orderBy('`date`', 'ASC');
+        $query->orderBy($dialect->quoteIdentifier('date'), 'ASC');
 
         $data = $query->executeQuery()->fetchAllAssociative();
 

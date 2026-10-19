@@ -11,6 +11,7 @@ use Shopware\Core\Content\Media\File\MediaFile;
 use Shopware\Core\Content\Media\MediaCollection;
 use Shopware\Core\Content\Media\MediaException;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityCollection;
@@ -626,9 +627,10 @@ class ThemeLifecycleService
      */
     private function getAllThemesPlain(): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         /** @var list<array{technicalName: string, parentThemeId: string}> $result */
         $result = $this->connection->fetchAllAssociative(
-            'SELECT theme.technical_name as technicalName, LOWER(HEX(theme.id)) as parentThemeId FROM theme'
+            'SELECT theme.technical_name AS ' . $dialect->quoteIdentifier('technicalName') . ', ' . $dialect->hex(['theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('parentThemeId') . ' FROM theme'
         );
 
         return $result;

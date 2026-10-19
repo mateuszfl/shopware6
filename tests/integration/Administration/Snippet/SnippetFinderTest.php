@@ -8,8 +8,11 @@ use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Shopware\Administration\Snippet\AppAdministrationSnippetPersister;
 use Shopware\Administration\Snippet\SnippetFinder;
+use Shopware\Core\Framework\App\AppEntity;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin;
 use Shopware\Core\Framework\Plugin\KernelPluginCollection;
@@ -173,6 +176,56 @@ class SnippetFinderTest extends TestCase
 
         $actualSnippet = $snippets['theme']['label'];
         static::assertSame('<h1>This app</h1> is really <b>safe</b>!)', $actualSnippet);
+    }
+
+    public function testAppSnippetPersisterRoundTripsAndFinderFiltersInactiveApps(): void
+    {
+        $context = Context::createDefaultContext();
+        $appId = $this->createApp();
+        $snippetKey = 'roundTrip_' . Uuid::randomHex();
+        $snippet = json_encode(['databaseContract' => [$snippetKey => 'persisted']], \JSON_THROW_ON_ERROR);
+
+        $app = static::getContainer()->get('app.repository')->search(new Criteria([$appId]), $context)->first();
+        static::assertInstanceOf(AppEntity::class, $app);
+
+        static::getContainer()->get(AppAdministrationSnippetPersister::class)->updateSnippets(
+            $app,
+            ['en-GB' => $snippet],
+            $context,
+        );
+
+        $finder = $this->createSnippetFinder(self::getKernel());
+        static::assertSame('persisted', $finder->findSnippets('en-GB')['databaseContract'][$snippetKey]);
+
+        static::getContainer()->get('app.repository')->update([['id' => $appId, 'active' => false]], $context);
+
+        static::assertArrayNotHasKey($snippetKey, $finder->findSnippets('en-GB')['databaseContract'] ?? []);
+    }
+
+    private function createApp(): string
+    {
+        $id = Uuid::randomHex();
+        static::getContainer()->get('app.repository')->create([
+            [
+                'id' => $id,
+                'name' => 'Database contract app',
+                'active' => true,
+                'appVersion' => '1.0.0',
+                'author' => 'Shopware AG',
+                'label' => ['en-GB' => 'Database contract app'],
+                'path' => 'path',
+                'version' => '1.0.0',
+                'integration' => [
+                    'id' => Uuid::randomHex(),
+                    'label' => 'Database contract app integration',
+                    'accessKey' => Uuid::randomHex(),
+                    'secretAccessKey' => Uuid::randomHex(),
+                ],
+                'aclRole' => ['id' => Uuid::randomHex(), 'name' => 'Database contract app ACL role'],
+            ],
+        ], Context::createDefaultContext());
+
+        return $id;
     }
 
     private function createAppWithMalformedSnippet(): void

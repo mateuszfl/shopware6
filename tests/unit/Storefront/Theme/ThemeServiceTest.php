@@ -5,6 +5,7 @@ namespace Shopware\Tests\Unit\Storefront\Theme;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Driver;
 use Doctrine\DBAL\Exception\ConnectionException;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use League\Flysystem\Filesystem;
 use League\Flysystem\InMemory\InMemoryFilesystemAdapter;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -89,6 +90,8 @@ class ThemeServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->connectionMock = static::createStub(Connection::class);
+        $this->connectionMock->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $this->connectionMock->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $this->storefrontPluginRegistryMock = static::createStub(StorefrontPluginRegistry::class);
         $this->themeRepositoryMock = static::createStub(EntityRepository::class);
         $this->themeSalesChannelRepositoryMock = static::createStub(EntityRepository::class);
@@ -108,6 +111,10 @@ class ThemeServiceTest extends TestCase
         $themeId = Uuid::randomHex();
 
         $connection = $this->createMock(Connection::class);
+
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('transactional')->willReturnCallback(static function (callable $callback): void {
             $callback();
         });
@@ -224,6 +231,8 @@ class ThemeServiceTest extends TestCase
     public function testAssignThemeSkipCompile(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('transactional')->willReturnCallback(static function (callable $callback): void {
             $callback();
         });
@@ -311,6 +320,10 @@ class ThemeServiceTest extends TestCase
         $this->systemConfigMock->method('get')->willReturn(true);
 
         $connection = $this->createMock(Connection::class);
+
+        $connection->method('getParams')->willReturn(['driver' => 'pdo_mysql']);
+
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('transactional')->willReturnCallback(static function (callable $callback): void {
             $callback();
         });

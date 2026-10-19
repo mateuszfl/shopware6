@@ -7,6 +7,7 @@ use League\Flysystem\FilesystemOperator;
 use League\Flysystem\FilesystemReader;
 use League\Flysystem\StorageAttributes;
 use Psr\Clock\ClockInterface;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -70,8 +71,9 @@ class UnusedThemeDirectoryDeleter
      */
     private function getUsedThemePaths(): array
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $salesChannelThemeMappings = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(sales_channel_id)) AS salesChannelId, LOWER(HEX(theme_id)) AS themeId
+            'SELECT ' . $dialect->hex('sales_channel_id') . ' AS ' . $dialect->quoteIdentifier('salesChannelId') . ', ' . $dialect->hex('theme_id') . ' AS ' . $dialect->quoteIdentifier('themeId') . '
              FROM theme_sales_channel'
         );
 

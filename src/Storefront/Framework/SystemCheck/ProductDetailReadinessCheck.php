@@ -3,7 +3,9 @@
 namespace Shopware\Storefront\Framework\SystemCheck;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\SystemCheck\BaseCheck;
 use Shopware\Core\Framework\SystemCheck\Check\Category;
@@ -101,12 +103,12 @@ class ProductDetailReadinessCheck extends BaseCheck
 
     private function fetchActiveProductIdBySalesChannelId(string $salesChannelId): ?string
     {
-        $sql = <<<'SQL'
-            SELECT LOWER(HEX(p.id)) as product_id
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+        $sql = 'SELECT ' . $dialect->hex(['p', 'id']) . ' AS product_id
             FROM product p
             WHERE
                 p.version_id = :versionId
-                AND p.active = 1
+                AND p.active = TRUE
                 AND p.stock > 0
                 AND EXISTS (
                     SELECT 1 FROM product_visibility pv
@@ -115,12 +117,12 @@ class ProductDetailReadinessCheck extends BaseCheck
                         AND pv.sales_channel_id = :salesChannelId
                 )
             ORDER BY p.id
-            LIMIT 1;
-        SQL;
+            LIMIT 1';
 
         return $this->connection->fetchOne(
             $sql,
             ['salesChannelId' => Uuid::fromHexToBytes($salesChannelId), 'versionId' => Uuid::fromHexToBytes(Defaults::LIVE_VERSION)],
+            ['salesChannelId' => ParameterType::BINARY, 'versionId' => ParameterType::BINARY],
         ) ?: null;
     }
 }

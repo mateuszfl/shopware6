@@ -3,7 +3,9 @@
 namespace Shopware\Storefront\Theme;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\App\Lifecycle\AbstractAppLifecycle;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -70,8 +72,9 @@ class ThemeLifecycleHandler
     public function recompileAllActiveThemes(Context $context, ?StorefrontPluginConfigurationCollection $configurationCollection = null): void
     {
         // Recompile all themes as the extension generally extends the storefront
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $mappings = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(sales_channel_id)) as sales_channel_id, LOWER(HEX(theme_id)) as theme_id
+            'SELECT ' . $dialect->hex('sales_channel_id') . ' AS sales_channel_id, ' . $dialect->hex('theme_id') . ' AS theme_id
              FROM theme_sales_channel'
         );
 
@@ -87,8 +90,9 @@ class ThemeLifecycleHandler
 
     public function refreshAllActiveThemeImportMaps(Context $context, ?StorefrontPluginConfigurationCollection $configurationCollection = null): void
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $mappings = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(sales_channel_id)) as sales_channel_id, LOWER(HEX(theme_id)) as theme_id
+            'SELECT ' . $dialect->hex('sales_channel_id') . ' AS sales_channel_id, ' . $dialect->hex('theme_id') . ' AS theme_id
              FROM theme_sales_channel'
         );
 
@@ -182,9 +186,10 @@ class ThemeLifecycleHandler
 
     private function getThemeDataByTechnicalName(string $technicalName): ThemeDependencies
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
         $themeData = $this->connection->fetchAllAssociative(
-            'SELECT LOWER(HEX(theme.id)) as id, LOWER(HEX(childTheme.id)) as dependentId FROM theme
-                LEFT JOIN theme as childTheme ON childTheme.parent_theme_id = theme.id
+            'SELECT ' . $dialect->hex(['theme', 'id']) . ' AS id, ' . $dialect->hex(['child_theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('dependentId') . ' FROM theme
+                LEFT JOIN theme as child_theme ON child_theme.parent_theme_id = theme.id
                 WHERE theme.technical_name = :technicalName',
             ['technicalName' => $technicalName]
         );
@@ -210,20 +215,22 @@ class ThemeLifecycleHandler
         $themeName = $themeId;
 
         try {
+            $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
             /** @var list<array{themeName: string, dthemeName?: string, id: string, dependentId?: string, saleschannelId?: string, saleschannelName?: string, dsaleschannelName?: string, dsaleschannelId?: string}> $themeData */
             $themeData = $this->connection->fetchAllAssociative(
-                'SELECT theme.name as themeName, childTheme.name as dthemeName, LOWER(HEX(theme.id)) as id,
-                LOWER(HEX(childTheme.id)) as dependentId, LOWER(HEX(tsc.sales_channel_id)) as saleschannelId,
-                sc.name as saleschannelName, dsc.name as dsaleschannelName,
-                LOWER(HEX(dtsc.sales_channel_id)) as dsaleschannelId
+                'SELECT theme.name AS ' . $dialect->quoteIdentifier('themeName') . ', child_theme.name AS ' . $dialect->quoteIdentifier('dthemeName') . ', ' . $dialect->hex(['theme', 'id']) . ' AS id,
+                ' . $dialect->hex(['child_theme', 'id']) . ' AS ' . $dialect->quoteIdentifier('dependentId') . ', ' . $dialect->hex(['tsc', 'sales_channel_id']) . ' AS ' . $dialect->quoteIdentifier('saleschannelId') . ',
+                sc.name AS ' . $dialect->quoteIdentifier('saleschannelName') . ', dsc.name AS ' . $dialect->quoteIdentifier('dsaleschannelName') . ',
+                ' . $dialect->hex(['dtsc', 'sales_channel_id']) . ' AS ' . $dialect->quoteIdentifier('dsaleschannelId') . '
                 FROM theme
-                LEFT JOIN theme as childTheme ON childTheme.parent_theme_id = theme.id
+                LEFT JOIN theme as child_theme ON child_theme.parent_theme_id = theme.id
                 LEFT JOIN theme_sales_channel as tsc ON theme.id = tsc.theme_id
                 LEFT JOIN sales_channel_translation as sc ON tsc.sales_channel_id = sc.sales_channel_id AND sc.language_id = :langId
-                LEFT JOIN theme_sales_channel as dtsc ON childTheme.id = dtsc.theme_id
+                LEFT JOIN theme_sales_channel as dtsc ON child_theme.id = dtsc.theme_id
                 LEFT JOIN sales_channel_translation as dsc ON dtsc.sales_channel_id = dsc.sales_channel_id AND dsc.language_id = :langId
                 WHERE theme.id = :id',
-                ['id' => Uuid::fromHexToBytes($themeId), 'langId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)]
+                ['id' => Uuid::fromHexToBytes($themeId), 'langId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)],
+                ['id' => ParameterType::BINARY, 'langId' => ParameterType::BINARY]
             );
 
             $childThemeSalesChannel = [];

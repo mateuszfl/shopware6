@@ -3,6 +3,7 @@
 namespace Shopware\Administration\Controller;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use League\Flysystem\FilesystemException;
 use League\Flysystem\FilesystemOperator;
 use League\OAuth2\Server\Exception\OAuthServerException;
@@ -271,7 +272,11 @@ class AdministrationController extends AbstractController
     )]
     public function resetExcludedSearchTerm(Context $context): JsonResponse
     {
-        $searchConfigId = $this->connection->fetchOne('SELECT id FROM product_search_config WHERE language_id = :language_id', ['language_id' => Uuid::fromHexToBytes($context->getLanguageId())]);
+        $searchConfigId = $this->connection->fetchOne(
+            'SELECT id FROM product_search_config WHERE language_id = :language_id',
+            ['language_id' => Uuid::fromHexToBytes($context->getLanguageId())],
+            ['language_id' => ParameterType::BINARY],
+        );
 
         if ($searchConfigId === false) {
             throw RoutingException::languageNotFound($context->getLanguageId());
@@ -295,11 +300,12 @@ class AdministrationController extends AbstractController
         }
 
         $this->connection->executeStatement(
-            'UPDATE `product_search_config` SET `excluded_terms` = :excludedTerms WHERE `id` = :id',
+            'UPDATE product_search_config SET excluded_terms = :excludedTerms WHERE id = :id',
             [
                 'excludedTerms' => json_encode($defaultExcludedTerm, \JSON_THROW_ON_ERROR),
                 'id' => $searchConfigId,
-            ]
+            ],
+            ['id' => ParameterType::BINARY],
         );
 
         return new JsonResponse([
@@ -411,9 +417,9 @@ class AdministrationController extends AbstractController
     {
         $languageId = $connection->fetchOne(
             '
-            SELECT `language`.id FROM `language`
+            SELECT language.id FROM language
             INNER JOIN locale ON language.translation_code_id = locale.id
-            WHERE `code` = :code',
+            WHERE locale.code = :code',
             ['code' => $isoCode]
         );
 
