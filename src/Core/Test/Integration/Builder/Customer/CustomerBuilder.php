@@ -3,6 +3,8 @@
 namespace Shopware\Core\Test\Integration\Builder\Customer;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Test\TestCaseBase\KernelTestBehaviour;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -176,8 +178,9 @@ class CustomerBuilder
     private function getCountry(): string
     {
         return self::connection()->fetchOne(
-            'SELECT LOWER(HEX(country_id)) FROM sales_channel_country WHERE sales_channel_id = :id LIMIT 1',
-            ['id' => Uuid::fromHexToBytes($this->salesChannelId)]
+            'SELECT ' . (new DatabasePlatformResolver(self::connection()))->dialect()->hex('country_id') . ' FROM sales_channel_country WHERE sales_channel_id = :id LIMIT 1',
+            ['id' => Uuid::fromHexToBytes($this->salesChannelId)],
+            ['id' => ParameterType::BINARY],
         );
     }
 }

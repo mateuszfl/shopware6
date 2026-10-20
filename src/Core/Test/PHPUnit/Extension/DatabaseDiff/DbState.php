@@ -3,6 +3,7 @@
 namespace Shopware\Core\Test\PHPUnit\Extension\DatabaseDiff;
 
 use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -27,13 +28,14 @@ class DbState
 
     public function rememberCurrentDbState(): void
     {
-        $tables = $this->connection->fetchAllAssociative('SHOW TABLES');
+        $tables = (new DatabaseSchema($this->connection))->introspectCurrentSchemaTableNames();
+        $platform = $this->connection->getDatabasePlatform();
 
         $stateResult = [];
-        foreach ($tables as $nested) {
-            $tableName = (string) array_last($nested);
+        foreach ($tables as $table) {
+            $tableName = $table->getUnqualifiedName()->getValue();
 
-            $count = $this->connection->fetchOne('SELECT COUNT(*) FROM `' . $tableName . '`');
+            $count = $this->connection->fetchOne('SELECT COUNT(*) FROM ' . $table->toSQL($platform));
 
             $stateResult[$tableName] = (int) $count;
         }

@@ -8,6 +8,7 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\Newsletter\ScheduledTask\NewsletterRecipientTaskHandler;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\Log\Package;
@@ -66,11 +67,11 @@ class NewsletterRecipientTaskHandlerTest extends TestCase
 
     private function installTestData(\DateTimeImmutable $now): void
     {
-        $salutationSql = file_get_contents(__DIR__ . '/../fixtures/salutation.sql');
+        $salutationSql = file_get_contents(__DIR__ . '/../fixtures/salutation' . ((new DatabaseSchema(static::getContainer()->get(Connection::class)))->isPostgreSQL() ? '.postgresql' : '') . '.sql');
         static::assertIsString($salutationSql);
         static::getContainer()->get(Connection::class)->executeStatement($salutationSql);
 
-        $recipientSql = file_get_contents(__DIR__ . '/../fixtures/recipient.sql');
+        $recipientSql = file_get_contents(__DIR__ . '/../fixtures/recipient' . ((new DatabaseSchema(static::getContainer()->get(Connection::class)))->isPostgreSQL() ? '.postgresql' : '') . '.sql');
         static::assertIsString($recipientSql);
         $recipientSql = str_replace(':now', $now->format(Defaults::STORAGE_DATE_TIME_FORMAT), $recipientSql);
         static::getContainer()->get(Connection::class)->executeStatement($recipientSql);

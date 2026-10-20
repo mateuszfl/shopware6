@@ -6,7 +6,10 @@ namespace Shopware\Tests\Unit\Core;
 
 use Composer\Autoload\ClassLoader;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Result;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Name\Identifier;
+use Doctrine\DBAL\Schema\Name\OptionallyQualifiedName;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
@@ -181,11 +184,13 @@ class TestBootstrapperTest extends TestCase
     {
         $previousKernel = KernelLifecycleAccessor::currentKernel();
 
-        $result = static::createStub(Result::class);
-        $result->method('fetchAllAssociative')->willReturn([]);
-
         $connection = static::createStub(Connection::class);
-        $connection->method('executeQuery')->willReturn($result);
+        $schemaManager = static::createStub(AbstractSchemaManager::class);
+        $schemaManager->method('introspectTableNames')->willReturn([
+            new OptionallyQualifiedName(Identifier::unquoted('plugin'), null),
+        ]);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('createSchemaManager')->willReturn($schemaManager);
 
         $container = static::createStub(ContainerInterface::class);
         $container->method('get')->willReturn($connection);

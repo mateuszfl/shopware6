@@ -3,7 +3,9 @@
 namespace Shopware\Core\Test;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Sync\SyncOperation;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexerRegistry;
@@ -11,6 +13,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Write\EntityWriter;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\EntityWriterInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Write\WriteContext;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Test\Stub\Framework\IdsCollection;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -76,19 +79,25 @@ class FixtureLoader
 
     private function getLocaleIdOfSystemLanguage(): string
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+
         return $this->connection
             ->fetchOne(
-                'SELECT LOWER(HEX(locale_id)) FROM language WHERE id = UNHEX(:systemLanguageId)',
-                ['systemLanguageId' => Defaults::LANGUAGE_SYSTEM]
+                'SELECT ' . $dialect->hex('locale_id') . ' FROM language WHERE id = ?',
+                [Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)],
+                [ParameterType::BINARY],
             );
     }
 
     private function getLocaleIdFromLocaleCode(string $code): string
     {
+        $dialect = (new DatabasePlatformResolver($this->connection))->dialect();
+
         return $this->connection
             ->fetchOne(
-                'SELECT LOWER(HEX(id)) from locale WHERE code = :code',
-                ['code' => $code]
+                'SELECT ' . $dialect->hex('id') . ' from locale WHERE code = ?',
+                [$code],
+                [ParameterType::STRING],
             );
     }
 }

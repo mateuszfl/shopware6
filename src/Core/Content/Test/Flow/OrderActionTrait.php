@@ -12,6 +12,7 @@ use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRuleCollection;
 use Shopware\Core\Checkout\Customer\CustomerCollection;
 use Shopware\Core\Content\Product\Aggregate\ProductVisibility\ProductVisibilityDefinition;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Pricing\CashRoundingConfig;
@@ -257,18 +258,19 @@ trait OrderActionTrait
 
     private function getStateId(string $state, string $machine): string
     {
-        return static::getContainer()->get(Connection::class)
-            ->fetchOne('
-                SELECT LOWER(HEX(state_machine_state.id))
+        $connection = static::getContainer()->get(Connection::class);
+
+        return $connection->fetchOne('
+                SELECT ' . (new DatabasePlatformResolver($connection))->dialect()->hex('state_machine_state.id') . '
                 FROM state_machine_state
                     INNER JOIN  state_machine
                     ON state_machine.id = state_machine_state.state_machine_id
                     AND state_machine.technical_name = :machine
                 WHERE state_machine_state.technical_name = :state
             ', [
-                'state' => $state,
-                'machine' => $machine,
-            ]) ?: '';
+            'state' => $state,
+            'machine' => $machine,
+        ]) ?: '';
     }
 
     private function createCustomField(string $name, string $entity, string $type = CustomFieldTypes::SELECT): string

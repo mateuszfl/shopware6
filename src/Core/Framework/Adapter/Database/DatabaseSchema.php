@@ -42,6 +42,25 @@ final class DatabaseSchema
     }
 
     /**
+     * @return list<OptionallyQualifiedName>
+     */
+    public function introspectCurrentSchemaTableNames(): array
+    {
+        $tables = $this->connection->createSchemaManager()->introspectTableNames();
+        if (!$this->isPostgreSQL()) {
+            return $tables;
+        }
+
+        $currentSchema = (string) $this->connection->fetchOne('SELECT current_schema()');
+
+        return array_values(array_filter(
+            $tables,
+            static fn (OptionallyQualifiedName $table): bool => $table->getQualifier() === null
+                || $table->getQualifier()->getValue() === $currentSchema,
+        ));
+    }
+
+    /**
      * @return non-empty-string
      */
     public static function generatedName(string $name, bool $postgres): string

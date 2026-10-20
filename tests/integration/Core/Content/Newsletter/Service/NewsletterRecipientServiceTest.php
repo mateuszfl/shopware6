@@ -12,6 +12,8 @@ use Shopware\Core\Content\Newsletter\SalesChannel\NewsletterConfirmRoute;
 use Shopware\Core\Content\Newsletter\SalesChannel\NewsletterSubscribeRoute;
 use Shopware\Core\Content\Newsletter\SalesChannel\NewsletterUnsubscribeRoute;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -268,16 +270,16 @@ class NewsletterRecipientServiceTest extends TestCase
     private function getRandomId(string $table): string
     {
         return static::getContainer()->get(Connection::class)
-            ->fetchOne('SELECT LOWER(HEX(id)) FROM ' . $table);
+            ->fetchOne('SELECT ' . (new DatabasePlatformResolver(static::getContainer()->get(Connection::class)))->dialect()->hex('id') . ' FROM ' . $table);
     }
 
     private function installTestData(): void
     {
-        $salutationSql = file_get_contents(__DIR__ . '/../fixtures/salutation.sql');
+        $salutationSql = file_get_contents(__DIR__ . '/../fixtures/salutation' . ((new DatabaseSchema(static::getContainer()->get(Connection::class)))->isPostgreSQL() ? '.postgresql' : '') . '.sql');
         static::assertIsString($salutationSql);
         static::getContainer()->get(Connection::class)->executeStatement($salutationSql);
 
-        $recipientSql = file_get_contents(__DIR__ . '/../fixtures/recipient.sql');
+        $recipientSql = file_get_contents(__DIR__ . '/../fixtures/recipient' . ((new DatabaseSchema(static::getContainer()->get(Connection::class)))->isPostgreSQL() ? '.postgresql' : '') . '.sql');
         static::assertIsString($recipientSql);
         $recipientSql = str_replace(':now', (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), $recipientSql);
         static::getContainer()->get(Connection::class)->executeStatement($recipientSql);

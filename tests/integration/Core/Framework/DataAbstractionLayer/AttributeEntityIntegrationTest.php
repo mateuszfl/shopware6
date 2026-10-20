@@ -11,6 +11,7 @@ use Shopware\Core\Checkout\Cart\Tax\Struct\CalculatedTaxCollection;
 use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRuleCollection;
 use Shopware\Core\Checkout\Order\OrderStates;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\AttributeEntityCompiler;
 use Shopware\Core\Framework\DataAbstractionLayer\AttributeEntityDefinition;
@@ -62,7 +63,7 @@ class AttributeEntityIntegrationTest extends TestCase
         $connection = static::getContainer()->get(Connection::class);
         $connection->commit();
 
-        $sql = file_get_contents(__DIR__ . '/fixture/schema.sql');
+        $sql = file_get_contents(__DIR__ . '/fixture/schema' . ((new DatabaseSchema($connection))->isPostgreSQL() ? '.postgresql' : '') . '.sql');
         static::assertIsString($sql);
         try {
             $connection->executeStatement($sql);

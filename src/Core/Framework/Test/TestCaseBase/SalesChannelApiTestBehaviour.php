@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\After;
 use Shopware\Core\Checkout\Cart\CartRuleLoader;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Api\Util\AccessKeyHelper;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
@@ -303,7 +304,8 @@ trait SalesChannelApiTestBehaviour
 
     private function getRandomId(string $table): string
     {
-        return (string) static::getContainer()->get(Connection::class)
-            ->fetchOne('SELECT LOWER(HEX(id)) FROM ' . $table);
+        $connection = static::getContainer()->get(Connection::class);
+
+        return (string) $connection->fetchOne('SELECT ' . (new DatabasePlatformResolver($connection))->dialect()->hex('id') . ' FROM ' . $table);
     }
 }

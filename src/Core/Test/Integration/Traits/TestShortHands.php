@@ -10,6 +10,7 @@ use Shopware\Core\Checkout\Cart\Price\Struct\CalculatedPrice;
 use Shopware\Core\Checkout\Cart\SalesChannel\CartService;
 use Shopware\Core\Checkout\Order\Aggregate\OrderLineItem\OrderLineItemEntity;
 use Shopware\Core\Content\Flow\Events\FlowSendMailActionEvent;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\AndFilter;
@@ -144,8 +145,8 @@ trait TestShortHands
 
     protected function mailListener(\Closure $closure): mixed
     {
-        $mapping = static::getContainer()->get(Connection::class)
-            ->fetchAllKeyValue('SELECT LOWER(HEX(id)), technical_name FROM mail_template_type');
+        $connection = static::getContainer()->get(Connection::class);
+        $mapping = $connection->fetchAllKeyValue('SELECT ' . (new DatabasePlatformResolver($connection))->dialect()->hex('id') . ', technical_name FROM mail_template_type');
 
         $listener = new MailEventListener($mapping);
 

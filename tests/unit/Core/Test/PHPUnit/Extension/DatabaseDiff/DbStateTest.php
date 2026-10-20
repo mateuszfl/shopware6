@@ -3,6 +3,10 @@
 namespace Shopware\Tests\Unit\Core\Test\PHPUnit\Extension\DatabaseDiff;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Name\OptionallyQualifiedName;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -18,19 +22,30 @@ class DbStateTest extends TestCase
 {
     private Connection&MockObject $connection;
 
+    /**
+     * @var AbstractSchemaManager<AbstractPlatform>&MockObject
+     */
+    private AbstractSchemaManager&MockObject $schemaManager;
+
     protected function setUp(): void
     {
         $this->connection = $this->createMock(Connection::class);
+        $this->schemaManager = $this->createMock(AbstractSchemaManager::class);
+        $this->connection->method('createSchemaManager')->willReturn($this->schemaManager);
+        $this->connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
     }
 
     public function testRememberCurrentDbState(): void
     {
         $dbState = new DbState($this->connection);
 
-        $this->connection
+        $this->schemaManager
             ->expects($this->once())
-            ->method('fetchAllAssociative')
-            ->willReturn([['table1'], ['table2']]);
+            ->method('introspectTableNames')
+            ->willReturn([
+                OptionallyQualifiedName::unquoted('table1'),
+                OptionallyQualifiedName::unquoted('table2'),
+            ]);
 
         $this->connection
             ->expects($this->exactly(2))
@@ -48,10 +63,13 @@ class DbStateTest extends TestCase
 
         $dbState->tableCounts = ['table1' => 10, 'table2' => 20];
 
-        $this->connection
+        $this->schemaManager
             ->expects($this->once())
-            ->method('fetchAllAssociative')
-            ->willReturn([['table1'], ['table3']]);
+            ->method('introspectTableNames')
+            ->willReturn([
+                OptionallyQualifiedName::unquoted('table1'),
+                OptionallyQualifiedName::unquoted('table3'),
+            ]);
 
         $this->connection
             ->expects($this->exactly(2))

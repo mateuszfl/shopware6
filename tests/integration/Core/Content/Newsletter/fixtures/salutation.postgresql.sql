@@ -1,0 +1,6 @@
+
+INSERT INTO "salutation" ("id", "salutation_key", "created_at", "updated_at") VALUES
+(decode('ad165c1faac14059832b6258ac0a7339', 'hex'), 'unitTest', '2019-04-03 15:27:31.949', NULL);
+
+INSERT INTO "salutation_translation" ("salutation_id", "language_id", "display_name", "letter_name", "created_at", "updated_at") VALUES
+(decode('ad165c1faac14059832b6258ac0a7339', 'hex'), (SELECT id FROM language LIMIT 1), 'unitTest', 'unitTest', '2019-04-03 15:27:31.948', NULL);

@@ -5,6 +5,7 @@ namespace Shopware\Core;
 use Composer\Autoload\ClassLoader;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\DevOps\StaticAnalyze\StaticAnalyzeKernel;
+use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Adapter\Kernel\KernelFactory;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Plugin\KernelPluginLoader\DbalKernelPluginLoader;
@@ -442,9 +443,13 @@ class TestBootstrapper
     {
         try {
             $connection = $this->getKernelContainer()->get(Connection::class);
-            $connection->executeQuery('SELECT 1 FROM `plugin` LIMIT 1')->fetchAllAssociative();
+            foreach ((new DatabaseSchema($connection))->introspectCurrentSchemaTableNames() as $table) {
+                if ($table->getUnqualifiedName()->getValue() === 'plugin') {
+                    return true;
+                }
+            }
 
-            return true;
+            return false;
         } catch (\Throwable) {
             return false;
         }
