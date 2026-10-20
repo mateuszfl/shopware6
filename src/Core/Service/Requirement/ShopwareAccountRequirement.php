@@ -33,7 +33,8 @@ class ShopwareAccountRequirement implements ServiceRequirement
     public function isSatisfied(): bool
     {
         return (bool) $this->connection->fetchOne(
-            'SELECT 1 FROM `user` WHERE `store_token` IS NOT NULL LIMIT 1'
+            'SELECT 1 FROM ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('user')
+            . ' WHERE ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('store_token') . ' IS NOT NULL LIMIT 1'
         );
     }
 

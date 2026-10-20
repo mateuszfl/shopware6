@@ -13,6 +13,7 @@
     <testsuites>
         <testsuite name="database-contract">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/DatabaseContractTest.php</file>
+            <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/SharedRuntimeSqlContractTest.php</file>
         </testsuite>
         <testsuite name="database-dal-reader">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/EntityReaderContractTest.php</file>

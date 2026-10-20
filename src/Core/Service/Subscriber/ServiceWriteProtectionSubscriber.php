@@ -103,11 +103,22 @@ readonly class ServiceWriteProtectionSubscriber implements EventSubscriberInterf
     {
         $ids = array_map(static fn (WriteCommand $command): string => $command->getPrimaryKey()['id'], $commands);
 
-        return $this->connection->fetchFirstColumn(
-            'SELECT `id` FROM `app` WHERE `id` IN (:ids) AND `self_managed` = 1',
+        $ids = $this->connection->fetchFirstColumn(
+            'SELECT ' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('id') . ' FROM '
+            . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('app') . ' WHERE '
+            . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('id') . ' IN (:ids) AND '
+            . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('self_managed') . ' = 1',
             ['ids' => $ids],
             ['ids' => ArrayParameterType::BINARY]
         );
+
+        return array_map(static function (mixed $id): string {
+            if (!\is_resource($id)) {
+                return (string) $id;
+            }
+
+            return (string) stream_get_contents($id);
+        }, $ids);
     }
 
     private function buildViolation(WriteCommand $command): ConstraintViolation

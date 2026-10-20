@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Search;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\Deprecation\BCChange\ClassMoved;
@@ -38,8 +39,8 @@ class SearchConfigLoader
             $config = $this->connection->fetchAllAssociative(
                 'SELECT
 product_search_config.and_logic,
-LOWER(product_search_config.excluded_terms) as `excluded_terms`,
-product_search_config.`min_search_length`,
+LOWER(product_search_config.excluded_terms) as excluded_terms,
+product_search_config.min_search_length,
 product_search_config_field.field,
 product_search_config_field.tokenize,
 product_search_config_field.ranking,
@@ -54,6 +55,7 @@ WHERE product_search_config.language_id = :languageId AND product_search_config_
                 ],
                 [
                     'excludedFields' => ArrayParameterType::STRING,
+                    'languageId' => ParameterType::BINARY,
                 ]
             );
 

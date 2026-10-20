@@ -2,8 +2,10 @@
 
 namespace Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures;
 
+use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Logging\Middleware;
 use Doctrine\DBAL\Tools\DsnParser;
 
 /**
@@ -23,10 +25,19 @@ final class ContractConnectionFactory
             throw new \RuntimeException($environmentVariable . ' must point at a disposable *_test database');
         }
 
-        return DriverManager::getConnection((new DsnParser([
+        $params = (new DsnParser([
             'mysql' => 'pdo_mysql',
             'postgres' => 'pdo_pgsql',
             'postgresql' => 'pdo_pgsql',
-        ]))->parse($url));
+        ]))->parse($url);
+        $queryLog = getenv('DATABASE_CONTRACT_QUERY_LOG');
+        if (\is_string($queryLog) && $queryLog !== '') {
+            $configuration = new Configuration();
+            $configuration->setMiddlewares([new Middleware(new DatabaseContractQueryLogger($queryLog))]);
+
+            return DriverManager::getConnection($params, $configuration);
+        }
+
+        return DriverManager::getConnection($params);
     }
 }

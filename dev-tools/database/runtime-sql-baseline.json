@@ -1,0 +1,394 @@
+[
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 48,
+    "sha256": "7368eff495dbbc25fa1e0020c0349ddf2ea8f8ace9d0c2b0cd074c6f53eb14d7",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:48; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 57,
+    "sha256": "c8b101a3f03c2d8b263187b80280c12fbea97befa92d5e1131922b5bdca0de44",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:57; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 75,
+    "sha256": "92b9f410fc7fbef245379cf220a140268df1d7ee1f73c2829e558901940bec24",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:75; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 89,
+    "sha256": "0538646adf6b6731bf7c5b450370cfe31e33259fae52c02f77fb0a02324088eb",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:89; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 96,
+    "sha256": "b34337c28203b6a98fc60587732fdc022dee1d9c1665ce8f8947947af692ba4d",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:96; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 96,
+    "sha256": "66be48afc7ad6af25baa689bfa969c4a37041c2403619004f8f12875778ec68c",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:96; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/IndexingSql.php",
+    "line": 118,
+    "sha256": "3c9e444c865f5cfd096a47421d3bf01258c7bfdd9b8111035349d8087cac0278",
+    "owner": "012",
+    "classification": "dialect_helper_mysql_branch",
+    "reason": "MySQL expression returned by the shared IndexingSql platform branch at src/Core/Framework/Adapter/Database/IndexingSql.php:118; PostgreSQL implementation is a separate method branch; task 012 tests exercise both."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/DatabaseConnectionFactory.php",
+    "line": 126,
+    "sha256": "1d3c48761ebeb346b33d70c58487051f88ba840722046dd6a98e788cb9a933d6",
+    "owner": "014",
+    "classification": "explicit_mysql_session_setup",
+    "reason": "MySQL-only session initialization at src/Core/Framework/Adapter/Database/DatabaseConnectionFactory.php:126 is selected by the MySQL driver branch; PostgreSQL uses its own initialization."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php",
+    "line": 52,
+    "sha256": "f37d37f3e934051f931f586c64bef46a416a22dca6390bc43297a7b77ee93c74",
+    "owner": "014",
+    "classification": "maintenance_mysql_branch",
+    "reason": "Intentional MySQL maintenance/setup branch at src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php:52; PostgreSQL has a separate platform path, and this is not a shared-runtime portability claim."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php",
+    "line": 56,
+    "sha256": "348cd67ea34e80621610c14cf2802b3d2d19ec7da78be4ef83096c3002758e1b",
+    "owner": "014",
+    "classification": "maintenance_mysql_branch",
+    "reason": "Intentional MySQL maintenance/setup branch at src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php:56; PostgreSQL has a separate platform path, and this is not a shared-runtime portability claim."
+  },
+  {
+    "path": "src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php",
+    "line": 63,
+    "sha256": "a85894773f639e0a921d4f2661d9755fdc1844735d6a6b459cd8aba7c6e0ddf4",
+    "owner": "014",
+    "classification": "maintenance_mysql_branch",
+    "reason": "Intentional MySQL maintenance/setup branch at src/Core/Framework/Adapter/Database/DatabaseFunctionInstaller.php:63; PostgreSQL has a separate platform path, and this is not a shared-runtime portability claim."
+  },
+  {
+    "path": "src/Core/Framework/DataAbstractionLayer/Dbal/SqlHelper.php",
+    "line": 44,
+    "sha256": "8ffac51a2d1ec05219efa3bef473555d80133dcf408ca2fc4781049265a288a5",
+    "owner": "008",
+    "classification": "mysql_json_helper_branch",
+    "reason": "MySQL JSON_OBJECT/GROUP_CONCAT expression returned from the MySQL branch at src/Core/Framework/DataAbstractionLayer/Dbal/SqlHelper.php:44; PostgreSQL helper construction is separate (task 008)."
+  },
+  {
+    "path": "src/Core/Framework/DataAbstractionLayer/Dbal/SqlHelper.php",
+    "line": 75,
+    "sha256": "c177a79b49b0440f4ca15a33955ead1c850f279efc4b7896bfa815b75693e0b8",
+    "owner": "008",
+    "classification": "mysql_json_helper_branch",
+    "reason": "MySQL JSON_OBJECT/GROUP_CONCAT expression returned from the MySQL branch at src/Core/Framework/DataAbstractionLayer/Dbal/SqlHelper.php:75; PostgreSQL helper construction is separate (task 008)."
+  },
+  {
+    "path": "src/Core/Framework/DataAbstractionLayer/Doctrine/MultiInsertQueryQueue.php",
+    "line": 152,
+    "sha256": "15901ec3166d98f3147babf0fc41119b6a5cb80f8ea3822ef101aae7b5ceac2a",
+    "owner": "009",
+    "classification": "engine_specific_insert_prefix",
+    "reason": "MySQL INSERT IGNORE/REPLACE prefix returned by the queue platform branch at src/Core/Framework/DataAbstractionLayer/Doctrine/MultiInsertQueryQueue.php:152; PostgreSQL insertion path is separate under task 009."
+  },
+  {
+    "path": "src/Core/Framework/DataAbstractionLayer/Doctrine/MultiInsertQueryQueue.php",
+    "line": 152,
+    "sha256": "3c9e444c865f5cfd096a47421d3bf01258c7bfdd9b8111035349d8087cac0278",
+    "owner": "009",
+    "classification": "engine_specific_insert_prefix",
+    "reason": "MySQL INSERT IGNORE/REPLACE prefix returned by the queue platform branch at src/Core/Framework/DataAbstractionLayer/Doctrine/MultiInsertQueryQueue.php:152; PostgreSQL insertion path is separate under task 009."
+  },
+  {
+    "path": "src/Core/Checkout/Promotion/DataAbstractionLayer/PromotionExclusionUpdater.php",
+    "line": 142,
+    "sha256": "bdf5906df0febf1a845868c300c99e96224840c8d7f87774b87159c8cbb42967",
+    "owner": "014",
+    "classification": "mysql_json_update_branch",
+    "reason": "MySQL JSON_* update fragment at src/Core/Checkout/Promotion/DataAbstractionLayer/PromotionExclusionUpdater.php:142 is emitted by the MySQL branch; PostgreSQL update uses PostgreSQL JSON operators (task 014)."
+  },
+  {
+    "path": "src/Core/Checkout/Promotion/DataAbstractionLayer/PromotionExclusionUpdater.php",
+    "line": 168,
+    "sha256": "be4de48e387057ccf1745bac90739f4cdcd2d0187619f0c2fb2bf50e630bac74",
+    "owner": "014",
+    "classification": "mysql_json_update_branch",
+    "reason": "MySQL JSON_* update fragment at src/Core/Checkout/Promotion/DataAbstractionLayer/PromotionExclusionUpdater.php:168 is emitted by the MySQL branch; PostgreSQL update uses PostgreSQL JSON operators (task 014)."
+  },
+  {
+    "path": "src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php",
+    "line": 96,
+    "sha256": "505ca7679a6db3e243dfa96e2a29e9bbd8067bf7dde624cd2bde93d33c22ebc1",
+    "owner": "015",
+    "classification": "mysql_foreign_key_toggle",
+    "reason": "FOREIGN_KEY_CHECKS session manipulation at src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php:96 is a MySQL-only branch; PostgreSQL performs no such toggle (task 015)."
+  },
+  {
+    "path": "src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php",
+    "line": 97,
+    "sha256": "7a1427ab7c23928bd2ecfe167f75e0061ac144898913d85d460a8bb93fedd776",
+    "owner": "015",
+    "classification": "mysql_foreign_key_toggle",
+    "reason": "FOREIGN_KEY_CHECKS session manipulation at src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php:97 is a MySQL-only branch; PostgreSQL performs no such toggle (task 015)."
+  },
+  {
+    "path": "src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php",
+    "line": 112,
+    "sha256": "cac1085c134961762b78a2e0490c7687a1992074a7fa2bfbf9fd93ef9b1abe38",
+    "owner": "015",
+    "classification": "mysql_foreign_key_toggle",
+    "reason": "FOREIGN_KEY_CHECKS session manipulation at src/Core/System/CustomEntity/Schema/CustomEntitySchemaUpdater.php:112 is a MySQL-only branch; PostgreSQL performs no such toggle (task 015)."
+  },
+  {
+    "path": "src/Core/System/NumberRange/ValueGenerator/Pattern/IncrementStorage/IncrementSqlStorage.php",
+    "line": 54,
+    "sha256": "d76aa7db2e61764e7d8eb20dc028cb74d0d2d234320be58822c750be3090d0c0",
+    "owner": "015",
+    "classification": "mysql_upsert_branch",
+    "reason": "MySQL ON DUPLICATE KEY/REPLACE statement at src/Core/System/NumberRange/ValueGenerator/Pattern/IncrementStorage/IncrementSqlStorage.php:54 is selected inside the engine-specific branch; PostgreSQL has its own statement (task 015)."
+  },
+  {
+    "path": "src/Core/System/SalesChannel/Context/SalesChannelContextPersister.php",
+    "line": 99,
+    "sha256": "0610cf512d8d8cb643448bf4b47301a9e9e4f97239e939fb70685c012291036d",
+    "owner": "015",
+    "classification": "mysql_upsert_branch",
+    "reason": "MySQL ON DUPLICATE KEY/REPLACE statement at src/Core/System/SalesChannel/Context/SalesChannelContextPersister.php:99 is selected inside the engine-specific branch; PostgreSQL has its own statement (task 015)."
+  },
+  {
+    "path": "src/Core/System/SalesChannel/Context/SalesChannelContextPersister.php",
+    "line": 118,
+    "sha256": "4bc26604ab620daffbbfbe1f64fdb452645064d63737a0a8fe9a69ce1d8cf707",
+    "owner": "015",
+    "classification": "mysql_upsert_branch",
+    "reason": "MySQL ON DUPLICATE KEY/REPLACE statement at src/Core/System/SalesChannel/Context/SalesChannelContextPersister.php:118 is selected inside the engine-specific branch; PostgreSQL has its own statement (task 015)."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/SetupDatabaseAdapter.php",
+    "line": 49,
+    "sha256": "0911281e30125ba385272b96dee2f5e947201513bb6a06be34aa19b36958341c",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/SetupDatabaseAdapter.php:49 uses MySQL SHOW TABLES/information_schema; no PostgreSQL create/drop implementation exists today. Task 022/032 must provide and execute that path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/SetupDatabaseAdapter.php",
+    "line": 58,
+    "sha256": "0911281e30125ba385272b96dee2f5e947201513bb6a06be34aa19b36958341c",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/SetupDatabaseAdapter.php:58 uses MySQL SHOW TABLES/information_schema; no PostgreSQL create/drop implementation exists today. Task 022/032 must provide and execute that path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 165,
+    "sha256": "026392add50a05fc8d8e01176355f416f9130c21700dc028359202603e3aeabc",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:165 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 198,
+    "sha256": "e8bf81ed6c1a5c7d3dc7aade9e9cc64e1bffd4b9e7d84fe15da196bbaacccf92",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:198 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 208,
+    "sha256": "8952b159932c0125c1674f65c6c0c9d6bfcf66b5bc0dba9b44064f9f28d9e442",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:208 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 306,
+    "sha256": "1441f4691c14dc0b917a4b81bd2e6cb5e31cc0041631a09dea55ec56d07610bb",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:306 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 333,
+    "sha256": "b0065f387456191bd0d22256fc6073df734c08eee97b8b2b05c81b0c0c8dbb72",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:333 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 341,
+    "sha256": "6cfad23d883810b1252bd4754e6b946848134b6e53b417a320a57f197695a51f",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:341 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 349,
+    "sha256": "6caeb4ff584b26580118b36e82f1f701e9fb0ba1da925aaab4d395992a2f0d78",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:349 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 362,
+    "sha256": "9e916882ae25ffaeb61f10a45d4fca1fffa5263e024361566bfaded1f991a15c",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:362 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 421,
+    "sha256": "bf058fd33da0bccdb95b0702ade2df6ef7e53df6c4c0c5ce8607f5986ba0c48c",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:421 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Maintenance/System/Service/ShopConfigurator.php",
+    "line": 432,
+    "sha256": "c7108322f0f28304a66f3c795e2fe4ea79209070080b77b69a08994fc15c3594",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Maintenance/System/Service/ShopConfigurator.php:432 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Database/BlueGreenDeploymentService.php",
+    "line": 42,
+    "sha256": "c6b7a846068aa315db46a8d28ed18e36ab6b403886288761ceb2581c8188748a",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Database/BlueGreenDeploymentService.php:42 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Database/BlueGreenDeploymentService.php",
+    "line": 51,
+    "sha256": "e1f4aad5650ca6784b13d53bd5d1b631db3f4502e38751295a3d445f206e9db5",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Database/BlueGreenDeploymentService.php:51 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 98,
+    "sha256": "3dbba2054ad207444ee6e47846119c95da8062499c1409239c5a66a3f9698069",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:98 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 125,
+    "sha256": "a4b96290ed740f451f8e9bb5df0da3dfdfc3fb8bdba30e72a620bbf44d96b568",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:125 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 133,
+    "sha256": "63ea1f152db030d380d867558d504c15c56fa50f85a9ded5d7ba56731dff0672",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:133 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 169,
+    "sha256": "3668dbbb26123d3ca96f1b2e6365aec5524e37fdd8fe1f51a724352b4d0493e5",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:169 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 212,
+    "sha256": "2566bda41cb27d48986b91acc9ad391b69d06c818b536126569b34e0dfdb34c9",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:212 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 217,
+    "sha256": "445df7e02f3f7784a22b56fbe0f7b7d96e40f0df5793c1c18a83c4abb2bac8d1",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:217 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 223,
+    "sha256": "6f91305fe1e93897b3711a085cd45591cf958ec42033025dcacee1ecfb51d49e",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:223 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 269,
+    "sha256": "be4cb2e17852a56ce4a0af75612e651a1f5d56dfd231598b4a63482b3a064eb6",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:269 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Core/Installer/Configuration/ShopConfigurationService.php",
+    "line": 288,
+    "sha256": "c4a80b97f88351f11274537521aee615fee60b3b5bca921ea7f8ed117897bc7c",
+    "owner": "022",
+    "classification": "deferred_task_022",
+    "reason": "Pending installation contract: src/Core/Installer/Configuration/ShopConfigurationService.php:288 uses MySQL-specific SQL (e.g. backtick identifier, UNHEX/NOW, or trigger DDL); task 022 and final installation 032 must port and execute this path."
+  },
+  {
+    "path": "src/Elasticsearch/Admin/Indexer/OrderAdminSearchIndexer.php",
+    "line": 245,
+    "sha256": "40905629331e9accbaa8984cd4c05168b20a4db008c84bc1337d6e6242c2be54",
+    "owner": "017",
+    "classification": "engine_specific_index_query",
+    "reason": "MySQL JSON/query expression at src/Elasticsearch/Admin/Indexer/OrderAdminSearchIndexer.php:245 is returned only by the corresponding dialect query builder; PostgreSQL query is separately built under task 017."
+  },
+  {
+    "path": "src/Elasticsearch/Product/ElasticsearchProductDefinition.php",
+    "line": 371,
+    "sha256": "eb5f1bca63bc88dd763c51108305d21f37fb17fa9cae13383f336e59e397c285",
+    "owner": "017",
+    "classification": "engine_specific_index_query",
+    "reason": "MySQL JSON/query expression at src/Elasticsearch/Product/ElasticsearchProductDefinition.php:371 is returned only by the corresponding dialect query builder; PostgreSQL query is separately built under task 017."
+  },
+  {
+    "path": "src/Elasticsearch/Product/ElasticsearchProductDefinition.php",
+    "line": 373,
+    "sha256": "93d525607f5d876a6eca59c873ae5a72764d75a38c4e64b7a4c52d3400574232",
+    "owner": "017",
+    "classification": "engine_specific_index_query",
+    "reason": "MySQL JSON/query expression at src/Elasticsearch/Product/ElasticsearchProductDefinition.php:373 is returned only by the corresponding dialect query builder; PostgreSQL query is separately built under task 017."
+  }
+]
