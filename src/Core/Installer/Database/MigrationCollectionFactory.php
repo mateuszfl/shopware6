@@ -43,6 +43,7 @@ class MigrationCollectionFactory
             $this->createMigrationSource('V6_5'),
             $this->createMigrationSource('V6_6'),
             $this->createMigrationSource('V6_7'),
+            $this->createMigrationSource('V6_8'),
         ];
     }
 

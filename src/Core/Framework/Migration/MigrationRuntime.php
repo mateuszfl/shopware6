@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Migration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Framework\Log\Package;
@@ -15,7 +16,8 @@ class MigrationRuntime
      */
     public function __construct(
         private readonly Connection $connection,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly MigrationVariantRegistry $variants = new MigrationVariantRegistry(),
     ) {
     }
 
@@ -26,30 +28,7 @@ class MigrationRuntime
     {
         $migrations = $this->getExecutableMigrations($source, $until, $limit);
 
-        $this->setDefaultStorageEngine();
-
-        foreach ($migrations as $migration) {
-            if (!class_exists($migration)) {
-                $this->logger->notice(\sprintf('Migration "%s" does not exist. Ignoring it', $migration));
-
-                continue;
-            }
-
-            $migration = new $migration();
-
-            try {
-                $migration->update($this->connection);
-            } catch (\Exception $e) {
-                $this->logError($migration, $e->getMessage());
-
-                $this->enrichException($e);
-
-                throw $e;
-            }
-
-            $this->setExecuted($migration);
-            yield $migration::class;
-        }
+        yield from $this->execute($migrations, false);
     }
 
     /**
@@ -57,30 +36,15 @@ class MigrationRuntime
      */
     public function migrateDestructive(MigrationSource $source, ?int $until = null, ?int $limit = null): \Generator
     {
-        $migrations = $this->getExecutableDestructiveMigrations($source, $until, $limit);
+        yield from $this->execute($this->getExecutableDestructiveMigrations($source, $until, $limit), true);
+    }
 
-        $this->setDefaultStorageEngine();
-
-        foreach ($migrations as $migration) {
-            if (!class_exists($migration)) {
-                $this->logger->notice(\sprintf('Migration "%s" does not exist. Ignoring it', $migration));
-
-                continue;
-            }
-
-            $migration = new $migration();
-
-            try {
-                $migration->updateDestructive($this->connection);
-            } catch (\Exception $e) {
-                $this->logError($migration, $e->getMessage());
-
-                throw $e;
-            }
-
-            $this->setExecutedDestructive($migration);
-            yield $migration::class;
-        }
+    /**
+     * @internal
+     */
+    public function isVariant(string $class): bool
+    {
+        return $this->variants->isVariant($class);
     }
 
     /**
@@ -89,7 +53,7 @@ class MigrationRuntime
     public function getExecutableMigrations(MigrationSource $source, ?int $until = null, ?int $limit = null): array
     {
         return $this->getExecutableMigrationsBaseQuery($source, $until, $limit)
-            ->andWhere('`update` IS NULL')
+            ->andWhere($this->quote('update') . ' IS NULL')
             ->executeQuery()
             ->fetchFirstColumn();
     }
@@ -100,35 +64,98 @@ class MigrationRuntime
     public function getExecutableDestructiveMigrations(MigrationSource $source, ?int $until = null, ?int $limit = null): array
     {
         return $this->getExecutableMigrationsBaseQuery($source, $until, $limit)
-            ->andWhere('`update` IS NOT NULL')
-            ->andWhere('`update_destructive` IS NULL')
+            ->andWhere($this->quote('update') . ' IS NOT NULL')
+            ->andWhere($this->quote('update_destructive') . ' IS NULL')
             ->executeQuery()
             ->fetchFirstColumn();
     }
 
     public function getTotalMigrationCount(MigrationSource $source, ?int $until = null, ?int $limit = null): int
     {
-        return (int) $this->getExecutableMigrationsBaseQuery($source, $until, $limit)
-            ->select('COUNT(*)')
+        return \count($this->getExecutableMigrationsBaseQuery($source, $until, $limit)
             ->executeQuery()
-            ->fetchOne();
+            ->fetchFirstColumn());
     }
 
     protected function setDefaultStorageEngine(): void
     {
-        $this->connection->executeStatement('SET default_storage_engine=InnoDB');
+        if (!$this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            $this->connection->executeStatement('SET default_storage_engine=InnoDB');
+        }
+    }
+
+    /**
+     * @param array<class-string<MigrationStep>> $migrations
+     *
+     * @return \Generator<class-string<MigrationStep>>
+     */
+    private function execute(array $migrations, bool $destructive): \Generator
+    {
+        $postgresql = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
+        // A failed step must be rolled back before its error can be persisted. Do not own a caller's transaction.
+        if ($postgresql && $this->connection->isTransactionActive()) {
+            throw MigrationException::logicError('PostgreSQL migrations require a connection without an active transaction.');
+        }
+
+        $steps = [];
+        foreach ($migrations as $logicalClass) {
+            if ($postgresql) {
+                $timestamp = (int) $this->connection->fetchOne(
+                    'SELECT creation_timestamp FROM migration WHERE class = ?',
+                    [$logicalClass]
+                );
+                $steps[$logicalClass] = $this->variants->resolve($logicalClass, $timestamp);
+            } elseif (class_exists($logicalClass)) {
+                $steps[$logicalClass] = new $logicalClass();
+            } else {
+                $this->logger->notice(\sprintf('Migration "%s" does not exist. Ignoring it', $logicalClass));
+            }
+        }
+
+        $this->setDefaultStorageEngine();
+        foreach ($steps as $logicalClass => $migration) {
+            try {
+                if ($postgresql) {
+                    $this->connection->beginTransaction();
+                }
+                if ($destructive) {
+                    $migration->updateDestructive($this->connection);
+                } else {
+                    $migration->update($this->connection);
+                }
+                if ($postgresql && $this->connection->getTransactionNestingLevel() !== 1) {
+                    throw MigrationException::logicError('Migration changed its transaction boundary: ' . $logicalClass);
+                }
+                $this->setExecuted($logicalClass, $destructive);
+                if ($postgresql) {
+                    $this->connection->commit();
+                }
+            } catch (\Throwable $e) {
+                if ($postgresql) {
+                    while ($this->connection->isTransactionActive()) {
+                        $this->connection->rollBack();
+                    }
+                }
+                $this->logError($logicalClass, $migration, $e->getMessage());
+                if (!$destructive && $e instanceof \Exception) {
+                    $this->enrichException($e);
+                }
+
+                throw $e;
+            }
+
+            yield $logicalClass;
+        }
     }
 
     private function getExecutableMigrationsBaseQuery(MigrationSource $source, ?int $until = null, ?int $limit = null): QueryBuilder
     {
         $query = $this->connection->createQueryBuilder()
-            ->select('`class`')
-            ->from('migration')
-            ->where('`class` REGEXP :pattern')
-            ->orderBy('`creation_timestamp`', 'ASC');
+            ->select($this->quote('class'))
+            ->from('migration');
 
         if ($until !== null) {
-            $query->andWhere('`creation_timestamp` <= :timestamp');
+            $query->andWhere('creation_timestamp <= :timestamp');
             $query->setParameter('timestamp', $until);
         }
 
@@ -136,46 +163,64 @@ class MigrationRuntime
             $query->setMaxResults($limit);
         }
 
-        $query->setParameter('pattern', $source->getNamespacePattern());
+        // Match one class level, including Unicode names, without engine-specific regex encodings.
+        $namespaces = [];
+        $sourceOrder = [];
+        $index = 0;
+        $column = $this->quote('class');
+        foreach ($source->getNamespaceGroups() as $rank => $group) {
+            $matches = [];
+            foreach ($group as $namespace) {
+                $prefix = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $namespace . '\\');
+                $match = '(' . $column . ' LIKE :namespace' . $index . ' ESCAPE \'!\' AND '
+                    . $column . ' NOT LIKE :nested' . $index . ' ESCAPE \'!\')';
+                $namespaces[] = $match;
+                $matches[] = $match;
+                $query->setParameter('namespace' . $index, $prefix . '%');
+                $query->setParameter('nested' . $index, $prefix . '%\\%');
+                ++$index;
+            }
+            $sourceOrder[] = 'WHEN (' . implode(' OR ', $matches) . ') THEN ' . $rank;
+        }
+        $query->andWhere($namespaces === [] ? '1 = 0' : '(' . implode(' OR ', $namespaces) . ')');
+        if ($sourceOrder !== []) {
+            $query->orderBy('CASE ' . implode(' ', $sourceOrder) . ' END', 'ASC');
+        }
+        $query->addOrderBy('creation_timestamp', 'ASC')->addOrderBy($column, 'ASC');
 
         return $query;
     }
 
-    private function logError(MigrationStep $migration, string $message): void
+    /**
+     * @param class-string<MigrationStep> $logicalClass
+     */
+    private function logError(string $logicalClass, MigrationStep $migration, string $message): void
     {
-        $this->connection->update(
-            'migration',
-            [
-                '`message`' => mb_convert_encoding($message, 'UTF-8', 'ISO-8859-1'),
-            ],
-            [
-                '`class`' => $migration::class,
-            ]
-        );
+        $this->connection->update('migration', [
+            $this->quote('message') => mb_convert_encoding($message, 'UTF-8', 'UTF-8'),
+        ], [$this->quote('class') => $logicalClass]);
 
-        $this->logger->error('Migration: "' . $migration::class . '" failed: "' . $message . '"');
+        $platform = $this->connection->getDatabasePlatform()::class;
+        $this->logger->error('Migration: "' . $logicalClass . '" (' . $migration::class . ', ' . $platform . ') failed: "' . $message . '"');
     }
 
-    private function setExecutedDestructive(MigrationStep $migrationStep): void
+    /**
+     * @param class-string<MigrationStep> $logicalClass
+     */
+    private function setExecuted(string $logicalClass, bool $destructive): void
     {
+        $column = $destructive ? 'update_destructive' : 'update';
+        $now = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform ? '(clock_timestamp() AT TIME ZONE \'UTC\')' : 'NOW(6)';
         $this->connection->executeStatement(
-            'UPDATE `migration`
-               SET `message` = NULL,
-                   `update_destructive` = NOW(6)
-             WHERE `class` = :class',
-            ['class' => $migrationStep::class]
+            'UPDATE migration SET ' . $this->quote('message') . ' = NULL, ' . $this->quote($column) . ' = ' . $now
+            . ' WHERE ' . $this->quote('class') . ' = :class',
+            ['class' => $logicalClass]
         );
     }
 
-    private function setExecuted(MigrationStep $migrationStep): void
+    private function quote(string $identifier): string
     {
-        $this->connection->executeStatement(
-            'UPDATE `migration`
-               SET `message` = NULL,
-                   `update` = NOW(6)
-             WHERE `class` = :class',
-            ['class' => $migrationStep::class]
-        );
+        return $this->connection->getDatabasePlatform()->quoteSingleIdentifier($identifier);
     }
 
     private function enrichException(\Exception $e): void

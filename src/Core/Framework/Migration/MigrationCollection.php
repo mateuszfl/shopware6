@@ -181,7 +181,7 @@ class MigrationCollection
                     throw MigrationException::invalidMigrationClass($className, $path);
                 }
 
-                if (!is_subclass_of($className, MigrationStep::class)) {
+                if (!is_subclass_of($className, MigrationStep::class) || $this->migrationRuntime->isVariant($className)) {
                     continue;
                 }
 

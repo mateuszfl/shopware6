@@ -56,6 +56,36 @@ class MigrationSource
         return $sources;
     }
 
+    /**
+     * Each nested source keeps its execution position. Directories belonging to one
+     * source (Core, Administration, Storefront) share a timestamp order.
+     *
+     * @internal
+     *
+     * @return list<list<string>>
+     */
+    public function getNamespaceGroups(): array
+    {
+        $groups = [];
+        $direct = [];
+        foreach ($this->sources as $source) {
+            if ($source instanceof self) {
+                if ($direct !== []) {
+                    $groups[] = $direct;
+                    $direct = [];
+                }
+                array_push($groups, ...$source->getNamespaceGroups());
+            } else {
+                $direct[] = $source;
+            }
+        }
+        if ($direct !== []) {
+            $groups[] = $direct;
+        }
+
+        return $groups;
+    }
+
     public function getNamespacePattern(): string
     {
         $patterns = [];

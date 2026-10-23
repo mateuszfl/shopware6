@@ -34,6 +34,17 @@ use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKi
 #[CoversClass(MigrationSource::class)]
 class MigrationSourceTest extends TestCase
 {
+    public function testNestedSourcesKeepGroupsAndDirectBundleNamespacesShareOrder(): void
+    {
+        $version = new MigrationSource('core.V6_3', ['/core' => 'Core\\V6_3', '/storefront' => 'Storefront\\V6_3']);
+        $legacy = new MigrationSource('core', ['/legacy' => 'Legacy']);
+        $source = new MigrationSource('all', [$version, $legacy]);
+
+        static::assertSame([['Core\\V6_3', 'Storefront\\V6_3'], ['Legacy']], $source->getNamespaceGroups());
+        static::assertSame([], (new MigrationSource('empty'))->getNamespaceGroups());
+        static::assertSame([['Direct'], ['Legacy']], (new MigrationSource('mixed', ['/direct' => 'Direct', $legacy]))->getNamespaceGroups());
+    }
+
     #[TestDox('core.V6_3 namespace pattern: $_dataName')]
     #[DataProvider('provideCoreRegexDataV6_3')]
     public function testCoreRegexV63(string $subject, bool $shouldMatch): void

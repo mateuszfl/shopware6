@@ -27,5 +27,8 @@ class MigrationCollectionFactoryTest extends TestCase
         static::assertArrayHasKey('core.V6_3', $loader->collectAll());
         static::assertArrayHasKey('core.V6_4', $loader->collectAll());
         static::assertArrayHasKey('core.V6_5', $loader->collectAll());
+        static::assertArrayHasKey('core.V6_6', $loader->collectAll());
+        static::assertArrayHasKey('core.V6_7', $loader->collectAll());
+        static::assertArrayHasKey('core.V6_8', $loader->collectAll());
     }
 }

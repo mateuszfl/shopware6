@@ -19,7 +19,7 @@ class MigrationInfo
     {
         try {
             $firstMigrationDate = $this->connection->fetchOne(
-                'SELECT MIN(`update`) FROM `migration` WHERE `update` IS NOT NULL'
+                'SELECT MIN(' . $this->connection->getDatabasePlatform()->quoteSingleIdentifier('update') . ') FROM migration'
             );
         } catch (\Throwable) {
             return null;

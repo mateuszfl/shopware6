@@ -11,6 +11,9 @@
         <server name="TESTS_RUNNING" value="1"/>
     </php>
     <testsuites>
+        <testsuite name="database-migrations">
+            <file>tests/integration/Core/Framework/Migration/MigrationPlatformContractTest.php</file>
+        </testsuite>
         <testsuite name="database-contract">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/DatabaseContractTest.php</file>
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/SharedRuntimeSqlContractTest.php</file>

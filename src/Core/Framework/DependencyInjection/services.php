@@ -81,6 +81,7 @@ use Shopware\Core\Framework\Migration\MigrationCollectionLoader;
 use Shopware\Core\Framework\Migration\MigrationInfo;
 use Shopware\Core\Framework\Migration\MigrationRuntime;
 use Shopware\Core\Framework\Migration\MigrationSource;
+use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 use Shopware\Core\Framework\Plugin\KernelPluginCollection;
 use Shopware\Core\Framework\Routing\Annotation\CriteriaValueResolver;
 use Shopware\Core\Framework\Routing\ApiRequestContextResolver;
@@ -288,10 +289,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ])
         ->tag('shopware.migration_source');
 
+    $services->set(MigrationVariantRegistry::class);
+
     $services->set(MigrationRuntime::class)
         ->args([
             service(Connection::class),
             service('logger'),
+            service(MigrationVariantRegistry::class),
         ]);
 
     $services->set(MigrationCollectionLoader::class)

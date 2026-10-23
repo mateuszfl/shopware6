@@ -2,6 +2,10 @@
 
 ## Core
 
+### Explicit PostgreSQL migration variants
+
+PostgreSQL migrations now require an explicit implementation registered against the original class and creation timestamp. Unsupported plugin migrations fail before any selected step executes. History and progress retain the original migration identity. PostgreSQL variants must use the runtime transaction boundary and run outside caller transactions. MySQL/MariaDB continue to execute their original classes. Historical PostgreSQL migration ports and the installer schema remain pending; see [the migration runtime contract](dev-tools/database/MIGRATION_RUNTIME_CONTRACT.md).
+
 ### Database selectors for Framework storage
 
 Increment pools and delayed cache invalidation accept the neutral `database` storage selector. Existing `mysql` configuration and service/class names remain supported, and the defaults are unchanged. See [the Framework SQL contract](dev-tools/database/FRAMEWORK_SQL_CONTRACT.md) for the aliases and database validation boundary.
