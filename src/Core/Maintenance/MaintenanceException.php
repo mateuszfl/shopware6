@@ -22,6 +22,7 @@ class MaintenanceException extends HttpException
     final public const MAINTENANCE_MIGRATION_INVALID_VERSION_SELECTION_MODE = 'MAINTENANCE__MIGRATION_INVALID_VERSION_SELECTION_MODE';
     final public const MAINTENANCE_ENVIRONMENT_VARIABLE_NOT_DEFINED = 'MAINTENANCE__ENVIRONMENT_VARIABLE_NOT_DEFINED';
     final public const MAINTENANCE_ENVIRONMENT_VARIABLE_NOT_VALID = 'MAINTENANCE__ENVIRONMENT_VARIABLE_NOT_VALID';
+    final public const MAINTENANCE_DB_DRIVER_NOT_SUPPORTED = 'MAINTENANCE__DB_DRIVER_NOT_SUPPORTED';
     final public const MAINTENANCE_DB_CONNECTION_PARAMETER_MISSING = 'MAINTENANCE__DB_CONNECTION_PARAMETER_MISSING';
     final public const MAINTENANCE_DB_VERSION_SELECT_FAILED = 'MAINTENANCE__DB_VERSION_SELECT_FAILED';
     final public const MAINTENANCE_SHOP_CONFIGURATION_NOT_VALID = 'MAINTENANCE__SHOP_CONFIGURATION_NOT_VALID';
@@ -30,6 +31,16 @@ class MaintenanceException extends HttpException
     final public const MAINTENANCE_USER_PASSWORD_TOO_SHORT = 'MAINTENANCE__USER_PASSWORD_TOO_SHORT';
     final public const MAINTENANCE_COULD_NOT_READ_FILE = 'MAINTENANCE__COULD_NOT_READ_FILE';
     final public const MAINTENANCE_COULD_NOT_CREATE_DIRECTORY = 'MAINTENANCE__COULD_NOT_CREATE_DIRECTORY';
+
+    public static function unsupportedDatabaseDriver(string $driver): self
+    {
+        return new self(
+            Response::HTTP_BAD_REQUEST,
+            self::MAINTENANCE_DB_DRIVER_NOT_SUPPORTED,
+            'Unsupported database driver "{{ driver }}". Use pdo_mysql or pdo_pgsql.',
+            ['driver' => $driver]
+        );
+    }
 
     public static function consoleApplicationNotFound(): self
     {

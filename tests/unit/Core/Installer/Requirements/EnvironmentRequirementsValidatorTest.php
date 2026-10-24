@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Test\TestCaseBase\EnvTestBehaviour;
 use Shopware\Core\Installer\Requirements\EnvironmentRequirementsValidator;
 use Shopware\Core\Installer\Requirements\Struct\RequirementCheck;
 use Shopware\Core\Installer\Requirements\Struct\RequirementsCheckCollection;
@@ -25,6 +26,8 @@ use Shopware\Core\Installer\Requirements\Struct\SystemCheck;
 #[CoversClass(EnvironmentRequirementsValidator::class)]
 class EnvironmentRequirementsValidatorTest extends TestCase
 {
+    use EnvTestBehaviour;
+
     /**
      * @param array<string, string|false> $composerOverrides
      * @param array<string, Link> $requires
@@ -62,6 +65,27 @@ class EnvironmentRequirementsValidatorTest extends TestCase
         $checks = new RequirementsCheckCollection();
 
         static::assertEquals($expectedChecks, $validator->validateRequirements($checks)->getElements());
+    }
+
+    #[DataProvider('postgresExtensionProvider')]
+    public function testConfiguredPostgreSqlRequiresItsPdoExtension(bool $available): void
+    {
+        $this->setEnvVars(['DATABASE_URL' => 'postgresql://user@localhost/shop']);
+        $package = new RootPackage('shopware/platform', '1.0.0', '1.0.0');
+        $repositoryManager = static::createStub(RepositoryManager::class);
+        $repositoryManager->method('getLocalRepository')->willReturn(new InstalledArrayRepository([$package]));
+        $composer = static::createStub(Composer::class);
+        $composer->method('getRepositoryManager')->willReturn($repositoryManager);
+        $validator = new EnvironmentRequirementsValidator($composer, new PlatformRepository([], ['ext-pdo_pgsql' => $available ? '8.5.0' : false]));
+        $checks = $validator->validateRequirements(new RequirementsCheckCollection());
+        static::assertSame(!$available, $checks->hasSystemError());
+        static::assertEquals([new SystemCheck('ext-pdo_pgsql', $available ? RequirementCheck::STATUS_SUCCESS : RequirementCheck::STATUS_ERROR, '*', $available ? '8.5.0' : '-')], $checks->getElements());
+    }
+
+    public static function postgresExtensionProvider(): \Generator
+    {
+        yield 'driver installed' => [true];
+        yield 'driver missing' => [false];
     }
 
     public static function composerRequirementsProvider(): \Generator

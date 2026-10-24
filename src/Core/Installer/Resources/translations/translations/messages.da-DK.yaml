@@ -85,6 +85,7 @@ shopware.installer:
     license_agreement_error: 'Accepter venligst vores almindelige forretningsbetingelser'
     license_agreement_checkbox: 'Jeg accepterer de almindelige forretningsbetingelser'
     database-configuration_header: 'Konfigurer databasen'
+    database-configuration_field_driver: 'Databasesystem'
     database-configuration_field_host: 'Server:'
     database-configuration_advanced_settings: 'Avancerede indstillinger'
     database-configuration_field_port: 'Port:'
@@ -103,7 +104,7 @@ shopware.installer:
     database-configuration_fetch_error: 'Der opstod en fejl under hentning af databaseoplysninger'
     database-configuration_access_denied: 'Adgang nægtet, legitimationsoplysninger er forkerte'
     database-configuration_host_not_found: 'Kunne ikke oprette forbindelse til databaseserveren'
-    database-configuration_invalid_requirements: 'Shopware 6 kræver mindst MySQL 8.0.22 eller MariaDB 10.11'
+    database-configuration_invalid_requirements: 'Shopware 6 kræver mindst MySQL 8.0.22 eller MariaDB 10.11 / PostgreSQL 18.6'
     database-configuration_refresh_databases: 'Opdater databaser'
     database-import_header: Installation
     database-import_skip_import: 'Spring over'

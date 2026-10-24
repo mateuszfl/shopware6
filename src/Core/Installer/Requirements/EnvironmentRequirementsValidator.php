@@ -8,6 +8,8 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Installer\Requirements\Struct\RequirementCheck;
 use Shopware\Core\Installer\Requirements\Struct\RequirementsCheckCollection;
 use Shopware\Core\Installer\Requirements\Struct\SystemCheck;
+use Shopware\Core\Maintenance\MaintenanceException;
+use Shopware\Core\Maintenance\System\Struct\DatabaseConnectionInformation;
 
 /**
  * @internal
@@ -67,6 +69,21 @@ class EnvironmentRequirementsValidator implements RequirementsValidatorInterface
                 RequirementCheck::STATUS_ERROR,
                 $link->getConstraint()->getPrettyString(),
                 $extension->getPrettyVersion()
+            ));
+        }
+
+        try {
+            $driver = DatabaseConnectionInformation::fromEnv()->getDriver();
+        } catch (MaintenanceException) {
+            $driver = 'pdo_mysql';
+        }
+        if ($driver === 'pdo_pgsql') {
+            $extension = $this->systemEnvironment->findPackage('ext-pdo_pgsql', '*');
+            $checks->add(new SystemCheck(
+                'ext-pdo_pgsql',
+                $extension ? RequirementCheck::STATUS_SUCCESS : RequirementCheck::STATUS_ERROR,
+                '*',
+                $extension?->getPrettyVersion() ?? '-'
             ));
         }
 

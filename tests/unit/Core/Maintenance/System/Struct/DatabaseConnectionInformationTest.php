@@ -239,6 +239,73 @@ class DatabaseConnectionInformationTest extends TestCase
         static::assertSame($expectedDsn, $dsn);
     }
 
+    public function testPostgreSqlDsnPreservesTlsQueryIpv6AndEncodedCredentials(): void
+    {
+        $dsn = 'postgresql://user%40name:secret%3F@[::1]:5433/shop%20name?sslmode=verify-full&sslrootcert=%2Fca.pem&sslcert=%2Fclient.pem&sslkey=%2Fkey.pem&application_name=installer';
+        $information = DatabaseConnectionInformation::fromDsn($dsn);
+        static::assertSame($dsn, $information->asDsn());
+        $parameters = $information->toDBALParameters();
+        static::assertSame('::1', $parameters['host'] ?? null);
+        static::assertSame('user@name', $parameters['user'] ?? null);
+        static::assertSame('secret?', $parameters['password'] ?? null);
+        static::assertSame('shop name', $parameters['dbname'] ?? null);
+        static::assertSame('pdo_pgsql', $parameters['driver'] ?? null);
+        static::assertSame('verify-full', $parameters['sslmode'] ?? null);
+        static::assertSame('/ca.pem', $parameters['sslrootcert'] ?? null);
+        static::assertSame('/client.pem', $parameters['sslcert'] ?? null);
+        static::assertSame('/key.pem', $parameters['sslkey'] ?? null);
+        static::assertSame('installer', $parameters['application_name'] ?? null);
+        static::assertSame('postgres', $information->toDBALParameters(true)['dbname'] ?? null);
+    }
+
+    public function testEnvironmentTlsOverridesDsnOptionsWithoutLosingOtherOptions(): void
+    {
+        $this->setEnvVars([
+            'DATABASE_URL' => 'postgresql://user@host/db?sslmode=disable&application_name=installer',
+            'DATABASE_SSL_CA' => '/trusted-ca.pem',
+            'DATABASE_SSL_CERT' => '/client.pem',
+            'DATABASE_SSL_KEY' => '/key.pem',
+            'DATABASE_SSL_DONT_VERIFY_SERVER_CERT' => 'false',
+        ]);
+        $information = DatabaseConnectionInformation::fromEnv();
+        $parameters = $information->toDBALParameters();
+        static::assertSame(5432, $parameters['port'] ?? null);
+        static::assertSame('verify-full', $parameters['sslmode'] ?? null);
+        static::assertSame('/trusted-ca.pem', $parameters['sslrootcert'] ?? null);
+        static::assertSame('installer', $parameters['application_name'] ?? null);
+        static::assertFalse($information->getSslDontVerifyServerCert());
+        static::assertArrayNotHasKey(Mysql::ATTR_SSL_CA, $parameters['driverOptions'] ?? []);
+    }
+
+    public function testPostgreSqlFormDefaultsAndExplicitInsecureTls(): void
+    {
+        $information = (new DatabaseConnectionInformation())->assign([
+            'driver' => 'pdo_pgsql', 'hostname' => 'localhost', 'username' => 'user', 'databaseName' => 'shop',
+            'sslDontVerifyServerCert' => '1',
+        ]);
+        static::assertSame(5432, $information->getPort());
+        static::assertSame('require', $information->toDBALParameters()['sslmode'] ?? null);
+        static::assertSame('postgresql://user@localhost:5432/shop', $information->asDsn());
+        $information->validate();
+    }
+
+    public function testFormQueryOptionsCannotOverrideConnectionIdentityOrWrapper(): void
+    {
+        $information = (new DatabaseConnectionInformation())->assign([
+            'driver' => 'pdo_pgsql', 'hostname' => 'localhost', 'username' => 'user', 'databaseName' => 'shop',
+            'dsnParameters' => ['dbname' => 'other', 'wrapperClass' => 'OtherConnection', 'sslmode' => 'require'],
+        ]);
+        static::assertSame(['sslmode' => 'require'], $information->getDsnParameters());
+        static::assertSame('shop', $information->toDBALParameters()['dbname'] ?? null);
+        static::assertArrayNotHasKey('wrapperClass', $information->toDBALParameters());
+    }
+
+    public function testUnsupportedDriverIsRejected(): void
+    {
+        $this->expectExceptionObject(MaintenanceException::unsupportedDatabaseDriver('pdo_sqlite'));
+        (new DatabaseConnectionInformation())->assign(['driver' => 'pdo_sqlite']);
+    }
+
     public static function dsnProvider(): \Generator
     {
         yield 'with database' => [

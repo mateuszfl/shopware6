@@ -3,6 +3,7 @@
 namespace Shopware\Core\Maintenance\User\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\PasswordField;
@@ -56,12 +57,17 @@ class UserProvisioner
             'username' => $username,
             'password' => password_hash($password, \PASSWORD_BCRYPT),
             'locale_id' => $additionalData['localeId'] ?? $this->getLocaleOfSystemLanguage(),
-            'active' => true,
-            'admin' => $additionalData['admin'] ?? true,
+            'active' => 1,
+            'admin' => (int) ($additionalData['admin'] ?? true),
             'created_at' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
         ];
 
-        $this->connection->insert('user', $userPayload);
+        $this->connection->insert($this->connection->quoteSingleIdentifier('user'), $userPayload, [
+            'id' => ParameterType::BINARY,
+            'locale_id' => ParameterType::BINARY,
+            'active' => ParameterType::INTEGER,
+            'admin' => ParameterType::INTEGER,
+        ]);
 
         return $password;
     }
@@ -71,24 +77,26 @@ class UserProvisioner
         $builder = $this->connection->createQueryBuilder();
 
         return $builder->select('1')
-            ->from('user')
+            ->from($this->connection->quoteSingleIdentifier('user'))
             ->where('username = :username')
             ->setParameter('username', $username)
             ->executeQuery()
-            ->rowCount() > 0;
+            ->fetchOne() !== false;
     }
 
     private function getLocaleOfSystemLanguage(): string
     {
         $builder = $this->connection->createQueryBuilder();
 
-        return (string) $builder->select('locale.id')
+        $id = $builder->select('locale.id')
                 ->from('language', 'language')
                 ->innerJoin('language', 'locale', 'locale', 'language.locale_id = locale.id')
                 ->where('language.id = :id')
-                ->setParameter('id', Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM))
+                ->setParameter('id', Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), ParameterType::BINARY)
                 ->executeQuery()
                 ->fetchOne();
+
+        return Uuid::fromHexToBytes(Uuid::fromBytesToHex($id));
     }
 
     private function getAdminPasswordMinLength(): int

@@ -50,8 +50,9 @@ class DatabaseConfigurationController extends InstallerController
                 // check connection
                 $connection = $this->connectionFactory->getConnection($connectionInfo);
             } catch (DriverException $e) {
-                // Unknown database https://dev.mysql.com/doc/mysql-errors/8.4/en/server-error-reference.html#error_er_bad_db_error
-                if ($e->getCode() !== 1049) {
+                // PDO PostgreSQL reports connection failures (including a missing database) as 08006.
+                // The authenticated maintenance connection checks existence before creating anything.
+                if ($e->getCode() !== 1049 && !($connectionInfo->getDriver() === 'pdo_pgsql' && \in_array($e->getSQLState(), ['3D000', '08006'], true))) {
                     throw $e;
                 }
 
@@ -100,7 +101,7 @@ class DatabaseConfigurationController extends InstallerController
             return new JsonResponse([
                 'error' => match (true) {
                     $e instanceof DatabaseSetupException => $this->translator->trans('shopware.installer.database-configuration_invalid_requirements'),
-                    preg_match('/SQLSTATE\[HY000] \[1045]/', $e->getMessage()) === 1 => $this->translator->trans('shopware.installer.database-configuration_access_denied'),
+                    ($e instanceof DriverException && \in_array($e->getSQLState(), ['28P01', '28000'], true)) || preg_match('/SQLSTATE\[HY000] \[1045]/', $e->getMessage()) === 1 => $this->translator->trans('shopware.installer.database-configuration_access_denied'),
                     preg_match('/SQLSTATE\[HY000] \[2002]/', $e->getMessage()) === 1 => $this->translator->trans('shopware.installer.database-configuration_host_not_found'),
                     default => $e->getMessage(),
                 },
@@ -108,12 +109,18 @@ class DatabaseConfigurationController extends InstallerController
         }
 
         // No need for listing the following schemas
-        $ignoredSchemas = ['information_schema', 'performance_schema', 'sys', 'mysql'];
+        $ignoredSchemas = $connectionInfo->getDriver() === 'pdo_pgsql'
+            ? ['postgres', 'template0', 'template1']
+            : ['information_schema', 'performance_schema', 'sys', 'mysql'];
         $databaseNames = $this->setupDatabaseAdapter->getExistingDatabases($connection, $ignoredSchemas);
 
         $result = [];
         foreach ($databaseNames as $databaseName) {
-            $result[$databaseName] = $this->setupDatabaseAdapter->getTableCount($connection, $databaseName) > 0;
+            try {
+                $result[$databaseName] = $this->setupDatabaseAdapter->getTableCount($connection, $databaseName) > 0;
+            } catch (DriverException) {
+                continue;
+            }
         }
 
         return new JsonResponse($result);

@@ -14,6 +14,7 @@ use Shopware\Core\Installer\Finish\SystemLocker;
 use Shopware\Core\Maintenance\System\Command\SystemInstallCommand;
 use Shopware\Core\Maintenance\System\Service\DatabaseConnectionFactory;
 use Shopware\Core\Maintenance\System\Service\SetupDatabaseAdapter;
+use Shopware\Core\Maintenance\System\Struct\DatabaseConnectionInformation;
 use Symfony\Component\Clock\NativeClock;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
@@ -24,6 +25,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\ApplicationTester;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -69,6 +71,35 @@ class SystemInstallCommandTest extends TestCase
 
         static::assertSame(Command::FAILURE, $result);
         static::assertStringContainsString('install.lock already exists', $output->fetch());
+    }
+
+    public function testInitializationReconnectsToTargetBeforeImportingSchema(): void
+    {
+        $this->setEnvVars(['DATABASE_URL' => 'postgresql://user@localhost/new_shop']);
+        $admin = $this->createMock(Connection::class);
+        $admin->expects($this->once())->method('close');
+        $target = static::createStub(Connection::class);
+        $factory = $this->createMock(DatabaseConnectionFactory::class);
+        $calls = [];
+        $factory->expects($this->exactly(2))->method('getConnection')->willReturnCallback(
+            static function (DatabaseConnectionInformation $information, bool $withoutDatabase = false) use ($admin, $target, &$calls): Connection {
+                $calls[] = [$information->getDatabaseName(), $withoutDatabase];
+
+                return $withoutDatabase ? $admin : $target;
+            }
+        );
+        $adapter = $this->createMock(SetupDatabaseAdapter::class);
+        $adapter->expects($this->once())->method('createDatabase')->with($admin, 'new_shop');
+        $adapter->expects($this->once())->method('initializeShopwareDb')->with($target)->willReturn(true);
+        $application = static::createStub(Application::class);
+        $application->method('has')->willReturn(false);
+        $application->method('doRun')->willReturn(Command::FAILURE);
+        $command = new SystemInstallCommand(__DIR__, $adapter, $factory, static::createStub(CacheClearer::class), static::createStub(SystemLocker::class), new NativeClock(), new EventDispatcher());
+        $command->setApplication($application);
+        $tester = new CommandTester($command);
+        static::assertSame(Command::FAILURE, $tester->execute(['--create-database' => true]));
+        static::assertSame([['new_shop', true], ['new_shop', false]], $calls);
+        static::assertFileDoesNotExist(__DIR__ . '/install.lock');
     }
 
     public function testDefaultInstallFlow(): void

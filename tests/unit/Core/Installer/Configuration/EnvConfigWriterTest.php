@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Unit\Core\Installer\Configuration;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Installer\Configuration\EnvConfigWriter;
@@ -22,18 +23,12 @@ class EnvConfigWriterTest extends TestCase
         unlink(__DIR__ . '/_fixtures/public/.htaccess');
     }
 
-    public function testWriteConfig(): void
+    #[DataProvider('databaseDsnProvider')]
+    public function testWriteConfig(string $dsn): void
     {
         $writer = new EnvConfigWriter(__DIR__ . '/_fixtures');
 
-        $info = new DatabaseConnectionInformation();
-        $info->assign([
-            'hostname' => 'localhost',
-            'port' => 3306,
-            'username' => 'root',
-            'password' => 'root',
-            'databaseName' => 'shopware',
-        ]);
+        $info = DatabaseConnectionInformation::fromDsn($dsn);
 
         $writer->writeConfig($info, [
             'name' => 'test',
@@ -60,6 +55,12 @@ class EnvConfigWriterTest extends TestCase
 
         static::assertFileExists(__DIR__ . '/_fixtures/public/.htaccess');
         static::assertFileEquals(__DIR__ . '/_fixtures/public/.htaccess.dist', __DIR__ . '/_fixtures/public/.htaccess');
+    }
+
+    public static function databaseDsnProvider(): \Generator
+    {
+        yield 'MySQL default settings' => ['mysql://root:root@localhost:3306/shopware'];
+        yield 'PostgreSQL TLS query options' => ['postgresql://user%40name:secret%3F@[::1]:5432/shop%20name?sslmode=verify-full&sslrootcert=%2Fca.pem'];
     }
 
     public function testWriteWithSSLConfig(): void

@@ -4,12 +4,12 @@ namespace Shopware\Tests\Unit\Core\Installer\Controller;
 
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Test\TestCaseBase\EnvTestBehaviour;
 use Shopware\Core\Installer\Controller\DatabaseConfigurationController;
-use Shopware\Core\Installer\Controller\InstallerController;
 use Shopware\Core\Installer\Database\BlueGreenDeploymentService;
 use Shopware\Core\Maintenance\MaintenanceException;
 use Shopware\Core\Maintenance\System\Service\DatabaseConnectionFactory;
@@ -30,7 +30,6 @@ use Twig\Environment;
  */
 #[Package('framework')]
 #[CoversClass(DatabaseConfigurationController::class)]
-#[CoversClass(InstallerController::class)]
 class DatabaseConfigurationControllerTest extends TestCase
 {
     use EnvTestBehaviour;
@@ -222,7 +221,8 @@ class DatabaseConfigurationControllerTest extends TestCase
         static::assertTrue($session->has(DatabaseConnectionInformation::class));
     }
 
-    public function testDatabaseGetConfigurationRoutePostWithNonExistingDB(): void
+    #[DataProvider('missingDatabaseProvider')]
+    public function testDatabaseGetConfigurationRoutePostWithNonExistingDB(string $driver, int $code, ?string $state): void
     {
         $this->translator->expects($this->never())->method('trans');
 
@@ -232,7 +232,7 @@ class DatabaseConfigurationControllerTest extends TestCase
         $this->connectionFactory->expects($this->exactly(3))
             ->method('getConnection')
             ->willReturnOnConsecutiveCalls(
-                static::throwException(new DummyDoctrineException(1049)),
+                static::throwException(new DummyDoctrineException($code, sqlState: $state)),
                 $connectionWithoutDb,
                 $connection
             );
@@ -256,7 +256,7 @@ class DatabaseConfigurationControllerTest extends TestCase
             ->with('installer.database-import', [], UrlGeneratorInterface::ABSOLUTE_PATH)
             ->willReturn('/installer/database-import');
 
-        $request = Request::create('/installer/database-configuration', 'POST', ['databaseName' => 'test']);
+        $request = Request::create('/installer/database-configuration', 'POST', ['databaseName' => 'test', 'driver' => $driver]);
         $session = new Session(new MockArraySessionStorage());
         $request->setSession($session);
 
@@ -265,6 +265,13 @@ class DatabaseConfigurationControllerTest extends TestCase
         static::assertSame('/installer/database-import', $response->getTargetUrl());
 
         static::assertTrue($session->has(DatabaseConnectionInformation::class));
+    }
+
+    public static function missingDatabaseProvider(): \Generator
+    {
+        yield 'MySQL unknown database' => ['pdo_mysql', 1049, null];
+        yield 'PostgreSQL invalid catalog' => ['pdo_pgsql', 7, '3D000'];
+        yield 'PDO PostgreSQL connection failure' => ['pdo_pgsql', 7, '08006'];
     }
 
     public function testDatabaseGetConfigurationRoutePostWithUnexpectedException(): void
@@ -387,14 +394,18 @@ class DatabaseConfigurationControllerTest extends TestCase
         static::assertSame('{"error":"translated error"}', $response->getContent());
     }
 
-    public function testDatabaseInformationRoute(): void
+    /**
+     * @param list<string> $ignoredDatabases
+     */
+    #[DataProvider('databaseListProvider')]
+    public function testDatabaseInformationRoute(string $driver, array $ignoredDatabases): void
     {
         $this->translator->expects($this->never())->method('trans');
         $this->blueGreenDeploymentService->expects($this->never())->method('setEnvironmentVariable');
         $this->router->expects($this->never())->method('generate');
         $this->twig->expects($this->never())->method('render');
 
-        $request = Request::create('/installer/database-information', 'POST');
+        $request = Request::create('/installer/database-information', 'POST', ['driver' => $driver]);
 
         $connection = static::createStub(Connection::class);
 
@@ -404,7 +415,7 @@ class DatabaseConfigurationControllerTest extends TestCase
 
         $this->setupDatabaseAdapter->expects($this->once())
             ->method('getExistingDatabases')
-            ->with($connection, ['information_schema', 'performance_schema', 'sys', 'mysql'])
+            ->with($connection, $ignoredDatabases)
             ->willReturn(['empty-db', 'used-db']);
 
         $this->setupDatabaseAdapter->expects($this->exactly(2))
@@ -418,5 +429,11 @@ class DatabaseConfigurationControllerTest extends TestCase
             'empty-db' => false,
             'used-db' => true,
         ], json_decode($response->getContent(), true, 512, \JSON_THROW_ON_ERROR));
+    }
+
+    public static function databaseListProvider(): \Generator
+    {
+        yield 'MySQL metadata schemas' => ['pdo_mysql', ['information_schema', 'performance_schema', 'sys', 'mysql']];
+        yield 'PostgreSQL maintenance databases' => ['pdo_pgsql', ['postgres', 'template0', 'template1']];
     }
 }

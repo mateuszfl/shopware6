@@ -168,3 +168,6 @@ The topology establishes database infrastructure only. Application routing,
 HTTP and Messenger lifecycle, and the long-running R01–R11 matrix belong to
 later tasks. This local setup does not change a released Shopware contract, so
 it needs no `RELEASE_INFO` or `UPGRADE` entry.
+
+The standalone [installer contract](INSTALLER_CONTRACT.md) validates database
+creation, platform bootstrap and configuration SQL on disposable databases.

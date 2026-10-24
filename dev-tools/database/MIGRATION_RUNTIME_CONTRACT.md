@@ -61,7 +61,8 @@ Set `DATABASE_CONTRACT_URL` to the appropriate isolated database. Optional
 `DATABASE_CONTRACT_QUERY_LOG` captures the executed SQL. The tests create and drop
 only their own `migration` and `migration_contract_event` tables and reject a
 pre-existing table before mutation. PostgreSQL-only routing/transaction tests are
-explicitly skipped on MySQL. Real plugin installation hooks, full installer schema,
+explicitly skipped on MySQL. The installer now selects its plugin/migration bootstrap schema by platform; see
+[installer validation](INSTALLER_CONTRACT.md). Real plugin installation hooks,
 historical ports, seed parity and full update/install matrices remain separate
 acceptance work; the plugin contract covers the migration collection lifecycle
 shared by those hooks.

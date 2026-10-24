@@ -20,6 +20,17 @@
             <p>{{ "shopware.installer.database-configuration_info"|trans }}</p>
 
             <p>
+                <label for="driver">{{ "shopware.installer.database-configuration_field_driver"|trans }}</label>
+                <select name="driver" id="driver" onchange="document.getElementById('port').value = this.value === 'pdo_pgsql' ? '5432' : '3306';">
+                    <option value="pdo_mysql" {% if connectionInfo.driver == 'pdo_mysql' %}selected{% endif %}>MySQL / MariaDB</option>
+                    <option value="pdo_pgsql" {% if connectionInfo.driver == 'pdo_pgsql' %}selected{% endif %}>PostgreSQL</option>
+                </select>
+            </p>
+            {% for name, value in connectionInfo.dsnParameters %}
+                <input type="hidden" name="dsnParameters[{{ name }}]" value="{{ value }}" />
+            {% endfor %}
+
+            <p>
                 <label for="hostname">{{ "shopware.installer.database-configuration_field_host"|trans }}</label>
                 <input type="text" value="{{ connectionInfo.hostname|default('localhost') }}" name="hostname" id="hostname" required="required" />
             </p>

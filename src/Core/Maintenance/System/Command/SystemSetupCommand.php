@@ -4,13 +4,12 @@ namespace Shopware\Core\Maintenance\System\Command;
 
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\DriverManager;
-use Doctrine\DBAL\Tools\DsnParser;
-use Pdo\Mysql;
 use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\Random;
 use Shopware\Core\Maintenance\MaintenanceException;
+use Shopware\Core\Maintenance\System\Struct\DatabaseConnectionInformation;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -47,6 +46,7 @@ class SystemSetupCommand extends Command
         $this
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force setup and recreate everything')
             ->addOption('no-check-db-connection', null, InputOption::VALUE_NONE, 'dont check db connection')
+            ->addOption('database-driver', null, InputOption::VALUE_REQUIRED, 'Database driver: pdo_mysql or pdo_pgsql', 'pdo_mysql')
             ->addOption('database-url', null, InputOption::VALUE_OPTIONAL, 'Database dsn', $this->getDefault('DATABASE_URL', ''))
             ->addOption('database-ssl-ca', null, InputOption::VALUE_OPTIONAL, 'Database SSL CA path', $this->getDefault('DATABASE_SSL_CA', ''))
             ->addOption('database-ssl-cert', null, InputOption::VALUE_OPTIONAL, 'Database SSL Cert path', $this->getDefault('DATABASE_SSL_CERT', ''))
@@ -187,47 +187,36 @@ class SystemSetupCommand extends Command
         $dbUser = $io->ask('Database user', 'app', $emptyValidation);
         $dbPass = $io->askHidden('Database password') ?: '';
         $dbHost = $io->ask('Database host', 'localhost', $emptyValidation);
-        $dbPort = $io->ask('Database port', '3306', $emptyValidation);
+        $dbPort = $io->ask('Database port', $input->getOption('database-driver') === 'pdo_pgsql' ? '5432' : '3306', $emptyValidation);
         $dbName = $io->ask('Database name', 'shopware', $emptyValidation);
         $dbSslCa = $io->ask('Database SSL CA Path', '');
         $dbSslCert = $io->ask('Database SSL Cert Path', '');
         $dbSslKey = $io->ask('Database SSL Key Path', '');
         $dbSslDontVerify = $io->askQuestion(new ConfirmationQuestion('Skip verification of the database server\'s SSL certificate?', false));
 
-        $dsnWithoutDb = \sprintf(
-            'mysql://%s:%s@%s:%d',
-            (string) $dbUser,
-            rawurlencode((string) $dbPass),
-            (string) $dbHost,
-            (int) $dbPort
-        );
-        $dsn = $dsnWithoutDb . '/' . $dbName;
-
-        $dsnParser = new DsnParser(['mysql' => 'pdo_mysql']);
-        $params = $dsnParser->parse($dsnWithoutDb);
-
-        $params = array_merge([
-            'charset' => 'utf8mb4',
-            'driver' => 'pdo_mysql',
-        ], $params); // adding parameters that are not in the DSN
-
+        $information = (new DatabaseConnectionInformation())->assign([
+            'driver' => $input->getOption('database-driver'),
+            'hostname' => (string) $dbHost,
+            'port' => (int) $dbPort,
+            'username' => (string) $dbUser,
+            'password' => (string) $dbPass,
+            'databaseName' => (string) $dbName,
+            'sslCaPath' => $dbSslCa ?: null,
+            'sslCertPath' => $dbSslCert ?: null,
+            'sslCertKeyPath' => $dbSslKey ?: null,
+            'sslDontVerifyServerCert' => $dbSslDontVerify,
+        ]);
+        $params = $information->toDBALParameters(true);
         if ($dbSslCa) {
-            $params['driverOptions'][Mysql::ATTR_SSL_CA] = $dbSslCa;
             $env['DATABASE_SSL_CA'] = $dbSslCa;
         }
-
         if ($dbSslCert) {
-            $params['driverOptions'][Mysql::ATTR_SSL_CERT] = $dbSslCert;
             $env['DATABASE_SSL_CERT'] = $dbSslCert;
         }
-
         if ($dbSslKey) {
-            $params['driverOptions'][Mysql::ATTR_SSL_KEY] = $dbSslKey;
             $env['DATABASE_SSL_KEY'] = $dbSslKey;
         }
-
-        if ($dbSslDontVerify && \defined('\Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT')) {
-            $params['driverOptions'][Mysql::ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        if ($dbSslDontVerify) {
             $env['DATABASE_SSL_DONT_VERIFY_SERVER_CERT'] = '1';
         }
 
@@ -238,7 +227,7 @@ class SystemSetupCommand extends Command
             $connection->executeStatement('SELECT 1');
         }
 
-        $env['DATABASE_URL'] = $dsn;
+        $env['DATABASE_URL'] = $information->asDsn();
 
         return $env;
     }

@@ -11,9 +11,15 @@ class DummyDoctrineException extends DriverException
 {
     public function __construct(
         int $errorCode,
-        string $message = ''
+        string $message = '',
+        private readonly ?string $sqlState = null
     ) {
         $this->code = $errorCode;
         $this->message = $message;
+    }
+
+    public function getSQLState(): ?string
+    {
+        return $this->sqlState;
     }
 }

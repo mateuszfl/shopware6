@@ -3,9 +3,11 @@
 namespace Shopware\Core\Maintenance\System\Service;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\RetryableTransaction;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -69,7 +71,7 @@ class ShopConfigurator
             INNER JOIN country_state ON country_state.id = country_state_translation.country_state_id
             WHERE country_state_translation.language_id = :languageId', [
                 'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM),
-            ]);
+            ], ['languageId' => ParameterType::BINARY]);
 
             if ($defaultCountryStateTranslations !== []) {
                 $correctDeTranslations = [
@@ -117,7 +119,8 @@ class ShopConfigurator
     {
         $currentCurrencyIso = $this->connection->fetchOne(
             'SELECT iso_code FROM currency WHERE id = :currencyId',
-            ['currencyId' => Uuid::fromHexToBytes(Defaults::CURRENCY)]
+            ['currencyId' => Uuid::fromHexToBytes(Defaults::CURRENCY)],
+            ['currencyId' => ParameterType::BINARY]
         );
 
         if (!$currentCurrencyIso) {
@@ -140,19 +143,18 @@ class ShopConfigurator
             StatementHelper::executeStatement($stmt, [
                 'newId' => Uuid::randomBytes(),
                 'oldId' => Uuid::fromHexToBytes(Defaults::CURRENCY),
-            ]);
+            ], ['newId' => ParameterType::BINARY, 'oldId' => ParameterType::BINARY]);
 
             // change id to DEFAULT
             StatementHelper::executeStatement($stmt, [
                 'newId' => Uuid::fromHexToBytes(Defaults::CURRENCY),
                 'oldId' => $newDefaultCurrencyId,
-            ]);
+            ], ['newId' => ParameterType::BINARY, 'oldId' => ParameterType::BINARY]);
 
+            $factor = $conn->fetchOne('SELECT 1 / factor FROM currency WHERE iso_code = :newDefault', ['newDefault' => $currencyCode]);
             $conn->executeStatement(
-                'SET @fixFactor = (SELECT 1/factor FROM currency WHERE iso_code = :newDefault);
-                 UPDATE currency
-                 SET factor = IF(iso_code = :newDefault, 1, factor * @fixFactor);',
-                ['newDefault' => $currencyCode]
+                'UPDATE currency SET factor = CASE WHEN iso_code = :newDefault THEN 1 ELSE factor * :factor END',
+                ['newDefault' => $currencyCode, 'factor' => $factor]
             );
         });
     }
@@ -162,13 +164,13 @@ class ShopConfigurator
      */
     private function addMissingCountryStates(array $defaultTranslations): void
     {
-        $missingTranslations = $this->connection->fetchAllKeyValue('
-            SELECT id, short_code FROM `country_state`
+        $missingTranslations = $this->connection->fetchAllAssociative('
+            SELECT id, short_code FROM country_state
             WHERE id NOT IN (
                 SELECT country_state_id FROM country_state_translation WHERE language_id = :languageId GROUP BY country_state_id
             )', [
             'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM),
-        ]);
+        ], ['languageId' => ParameterType::BINARY]);
 
         if ($missingTranslations === []) {
             return;
@@ -176,7 +178,9 @@ class ShopConfigurator
 
         $storageDate = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
 
-        foreach ($missingTranslations as $stateId => $shortCode) {
+        foreach ($missingTranslations as $translation) {
+            $stateId = Uuid::fromHexToBytes(Uuid::fromBytesToHex($translation['id']));
+            $shortCode = $translation['short_code'];
             if (!\array_key_exists($shortCode, $defaultTranslations)) {
                 continue;
             }
@@ -186,7 +190,7 @@ class ShopConfigurator
                 'country_state_id' => $stateId,
                 'name' => $defaultTranslations[$shortCode],
                 'created_at' => $storageDate,
-            ]);
+            ], ['language_id' => ParameterType::BINARY, 'country_state_id' => ParameterType::BINARY]);
         }
     }
 
@@ -196,26 +200,27 @@ class ShopConfigurator
 
         // Fetch id for config key, as the unique key on config_key and salesChannelId will not work when salesChannelId is null
         $id = $this->connection->fetchOne('
-            SELECT `id`
-            FROM `system_config`
-            WHERE `configuration_key` = :key AND `sales_channel_id` IS NULL
+            SELECT id
+            FROM system_config
+            WHERE configuration_key = :key AND sales_channel_id IS NULL
         ', ['key' => $key]);
 
-        if (!$id) {
+        $exists = (bool) $id;
+        if (!$exists) {
             $id = Uuid::randomBytes();
         }
 
-        $this->connection->executeStatement('
-            INSERT INTO `system_config` (`id`, `configuration_key`, `configuration_value`, `sales_channel_id`, `created_at`)
-            VALUES (:id, :key, :value, NULL, NOW())
-            ON DUPLICATE KEY UPDATE
-                `configuration_value` = :value,
-                `updated_at` = NOW()
-        ', [
+        $id = Uuid::fromHexToBytes(Uuid::fromBytesToHex($id));
+        $now = $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT);
+        $query = (new DatabasePlatformResolver($this->connection))->dialect()->upsert('system_config', [
             'id' => $id,
-            'key' => $key,
-            'value' => $value,
-        ]);
+            'configuration_key' => $key,
+            'configuration_value' => $value,
+            'sales_channel_id' => null,
+            'created_at' => $now,
+            'updated_at' => $exists ? $now : null,
+        ], ['id'], ['configuration_value', 'updated_at'], ['id' => ParameterType::BINARY]);
+        $this->connection->executeStatement($query->sql, $query->parameters, $query->types);
     }
 
     /**
@@ -243,9 +248,9 @@ class ShopConfigurator
             $stmt = $connection->prepare(
                 'UPDATE locale SET code = :code WHERE id = :locale_id'
             );
-            StatementHelper::executeStatement($stmt, ['code' => 'x-' . $locale . '_tmp', 'locale_id' => $currentLocaleId]);
-            StatementHelper::executeStatement($stmt, ['code' => $currentLocaleData['code'], 'locale_id' => $newDefaultLocaleId]);
-            StatementHelper::executeStatement($stmt, ['code' => $locale, 'locale_id' => $currentLocaleId]);
+            StatementHelper::executeStatement($stmt, ['code' => 'x-' . $locale . '_tmp', 'locale_id' => $currentLocaleId], ['locale_id' => ParameterType::BINARY]);
+            StatementHelper::executeStatement($stmt, ['code' => $currentLocaleData['code'], 'locale_id' => $newDefaultLocaleId], ['locale_id' => ParameterType::BINARY]);
+            StatementHelper::executeStatement($stmt, ['code' => $locale, 'locale_id' => $currentLocaleId], ['locale_id' => ParameterType::BINARY]);
 
             // swap locale_translation.{name,territory}
             $setTrans = $connection->prepare(
@@ -259,31 +264,31 @@ class ShopConfigurator
 
             foreach ($currentTrans as $trans) {
                 $trans['locale_id'] = $newDefaultLocaleId;
-                StatementHelper::executeStatement($setTrans, $trans);
+                StatementHelper::executeStatement($setTrans, $trans, ['locale_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
             foreach ($newDefTrans as $trans) {
                 $trans['locale_id'] = $currentLocaleId;
-                StatementHelper::executeStatement($setTrans, $trans);
+                StatementHelper::executeStatement($setTrans, $trans, ['locale_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
 
             $updLang = $connection->prepare('UPDATE language SET name = :name WHERE id = :languageId');
 
             // new default language does not exist -> just set to name
             if (!$newDefaultLanguageId) {
-                StatementHelper::executeStatement($updLang, ['name' => $name, 'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)]);
+                StatementHelper::executeStatement($updLang, ['name' => $name, 'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], ['languageId' => ParameterType::BINARY]);
 
                 return;
             }
 
             $langName = $connection->prepare('SELECT name FROM language WHERE id = :languageId');
 
-            $current = StatementHelper::executeQuery($langName, ['languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)])->fetchOne();
+            $current = StatementHelper::executeQuery($langName, ['languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], ['languageId' => ParameterType::BINARY])->fetchOne();
 
-            $new = StatementHelper::executeQuery($langName, ['languageId' => $newDefaultLanguageId])->fetchOne();
+            $new = StatementHelper::executeQuery($langName, ['languageId' => $newDefaultLanguageId], ['languageId' => ParameterType::BINARY])->fetchOne();
 
             // swap name
-            StatementHelper::executeStatement($updLang, ['name' => $new, 'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)]);
-            StatementHelper::executeStatement($updLang, ['name' => $current, 'languageId' => $newDefaultLanguageId]);
+            StatementHelper::executeStatement($updLang, ['name' => $new, 'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], ['languageId' => ParameterType::BINARY]);
+            StatementHelper::executeStatement($updLang, ['name' => $current, 'languageId' => $newDefaultLanguageId], ['languageId' => ParameterType::BINARY]);
         });
     }
 
@@ -292,23 +297,32 @@ class ShopConfigurator
      */
     private function getLocaleTranslations(string $localeId): array
     {
-        return $this->connection->fetchAllAssociative(
+        $rows = $this->connection->fetchAllAssociative(
             'SELECT locale_id, language_id, name, territory
              FROM locale_translation
              WHERE locale_id = :localeId',
-            ['localeId' => $localeId]
+            ['localeId' => $localeId],
+            ['localeId' => ParameterType::BINARY]
         );
+        foreach ($rows as &$row) {
+            $row['locale_id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['locale_id']));
+            $row['language_id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($row['language_id']));
+        }
+
+        return $rows;
     }
 
     private function getLanguageId(string $iso): ?string
     {
-        return $this->connection->fetchOne(
+        $id = $this->connection->fetchOne(
             'SELECT language.id
-             FROM `language`
+             FROM language
              INNER JOIN locale ON locale.id = language.translation_code_id
              WHERE LOWER(locale.code) = LOWER(:iso)',
             ['iso' => $iso]
-        ) ?: null;
+        );
+
+        return $id ? Uuid::fromHexToBytes(Uuid::fromBytesToHex($id)) : null;
     }
 
     private function getLocaleId(string $iso): string
@@ -322,7 +336,7 @@ class ShopConfigurator
             throw MaintenanceException::shopConfigurationNotValid(\sprintf('Locale with iso-code "%s" not found', $iso));
         }
 
-        return $id;
+        return Uuid::fromHexToBytes(Uuid::fromBytesToHex($id));
     }
 
     private function createNewLanguageEntry(string $iso): string
@@ -332,7 +346,7 @@ class ShopConfigurator
         $localeId = $this->connection->fetchOne(
             '
             SELECT locale.id
-            FROM `locale`
+            FROM locale
             WHERE LOWER(locale.code) = LOWER(:iso)',
             ['iso' => $iso]
         );
@@ -340,18 +354,23 @@ class ShopConfigurator
         $englishId = $this->connection->fetchOne(
             '
             SELECT language.id
-            FROM `language`
-            WHERE LOWER(language.name) = LOWER("english")'
+            FROM language
+            WHERE LOWER(language.name) = LOWER(:name)',
+            ['name' => 'english']
         );
+
+        $localeId = Uuid::fromHexToBytes(Uuid::fromBytesToHex($localeId));
+        $englishId = Uuid::fromHexToBytes(Uuid::fromBytesToHex($englishId));
 
         // Always use the English name since we don't have the name in the language itself
         $name = $this->connection->fetchOne(
             '
             SELECT locale_translation.name
-            FROM `locale_translation`
+            FROM locale_translation
             WHERE locale_id = :localeId
             AND language_id = :languageId',
-            ['localeId' => $localeId, 'languageId' => $englishId]
+            ['localeId' => $localeId, 'languageId' => $englishId],
+            ['localeId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]
         );
 
         if (!$name) {
@@ -360,11 +379,12 @@ class ShopConfigurator
 
         $this->connection->executeStatement(
             '
-            INSERT INTO `language`
+            INSERT INTO language
             (id, name, locale_id, translation_code_id, created_at)
             VALUES
             (:id, :name, :localeId, :localeId, NOW())',
-            ['id' => $id, 'name' => $name, 'localeId' => $localeId]
+            ['id' => $id, 'name' => $name, 'localeId' => $localeId],
+            ['id' => ParameterType::BINARY, 'localeId' => ParameterType::BINARY]
         );
 
         return $id;
@@ -383,22 +403,24 @@ class ShopConfigurator
             StatementHelper::executeStatement($stmt, [
                 'newId' => Uuid::randomBytes(),
                 'oldId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM),
-            ]);
+            ], ['newId' => ParameterType::BINARY, 'oldId' => ParameterType::BINARY]);
 
             // change id to DEFAULT
             StatementHelper::executeStatement($stmt, [
                 'newId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM),
                 'oldId' => $newLanguageId,
-            ]);
+            ], ['newId' => ParameterType::BINARY, 'oldId' => ParameterType::BINARY]);
         });
     }
 
     private function getCurrencyId(string $currencyName): ?string
     {
-        return $this->connection->fetchOne(
+        $id = $this->connection->fetchOne(
             'SELECT id FROM currency WHERE LOWER(iso_code) = LOWER(:currency)',
             ['currency' => $currencyName]
-        ) ?: null;
+        );
+
+        return $id ? Uuid::fromHexToBytes(Uuid::fromBytesToHex($id)) : null;
     }
 
     private function createNewCurrency(string $currencyCode): string
@@ -419,9 +441,9 @@ class ShopConfigurator
         ];
 
         $this->connection->executeStatement('
-            INSERT INTO `currency` (`id`, `iso_code`, `factor`, `symbol`, `position`, `item_rounding`, `total_rounding`, `created_at`)
+            INSERT INTO currency (id, iso_code, factor, symbol, position, item_rounding, total_rounding, created_at)
             VALUES (:id, :currency, 1, :symbol, 1, :rounding, :rounding, NOW())
-        ', ['id' => $id, 'currency' => $currencyCode, 'symbol' => Currencies::getSymbol($currencyCode), 'rounding' => json_encode($rounding, \JSON_THROW_ON_ERROR)]);
+        ', ['id' => $id, 'currency' => $currencyCode, 'symbol' => Currencies::getSymbol($currencyCode), 'rounding' => json_encode($rounding, \JSON_THROW_ON_ERROR)], ['id' => ParameterType::BINARY]);
 
         $locale = $this->getCurrentSystemLocale();
         if ($locale) {
@@ -430,14 +452,14 @@ class ShopConfigurator
             $locale = 'en_GB';
         }
         $this->connection->executeStatement('
-            INSERT INTO `currency_translation` (`currency_id`, `language_id`, `short_name`, `name`, `created_at`)
+            INSERT INTO currency_translation (currency_id, language_id, short_name, name, created_at)
             VALUES (:currencyId, :languageId, :currency, :name, NOW())
         ', [
             'currencyId' => $id,
             'languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM),
             'currency' => $currencyCode,
             'name' => Currencies::getName($currencyCode, $locale),
-        ]);
+        ], ['currencyId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]);
 
         return $id;
     }
@@ -447,12 +469,19 @@ class ShopConfigurator
      */
     private function getCurrentSystemLocale(): ?array
     {
-        return $this->connection->fetchAssociative(
+        $locale = $this->connection->fetchAssociative(
             'SELECT locale.id, locale.code
              FROM language
              INNER JOIN locale ON translation_code_id = locale.id
              WHERE language.id = :languageId',
-            ['languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)]
-        ) ?: null;
+            ['languageId' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)],
+            ['languageId' => ParameterType::BINARY]
+        );
+        if ($locale === false) {
+            return null;
+        }
+        $locale['id'] = Uuid::fromHexToBytes(Uuid::fromBytesToHex($locale['id']));
+
+        return $locale;
     }
 }

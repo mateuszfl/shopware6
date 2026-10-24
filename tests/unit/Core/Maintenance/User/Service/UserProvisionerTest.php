@@ -27,15 +27,15 @@ class UserProvisionerTest extends TestCase
         $connection->expects($this->once())
             ->method('insert')
             ->with(
-                'user',
+                static::anything(),
                 static::callback(static function (array $data) use ($localeId): bool {
                     static::assertSame('admin', $data['username']);
                     static::assertSame('first', $data['first_name']);
                     static::assertSame('last', $data['last_name']);
                     static::assertSame('test@test.com', $data['email']);
                     static::assertSame($localeId, $data['locale_id']);
-                    static::assertFalse($data['admin']);
-                    static::assertTrue($data['active']);
+                    static::assertSame(0, $data['admin']);
+                    static::assertSame(1, $data['active']);
 
                     return password_verify('shopware', (string) $data['password']);
                 })

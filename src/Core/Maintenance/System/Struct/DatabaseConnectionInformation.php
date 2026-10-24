@@ -3,6 +3,7 @@
 namespace Shopware\Core\Maintenance\System\Struct;
 
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Tools\DsnParser;
 use Pdo\Mysql;
 use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -17,6 +18,8 @@ use Shopware\Core\Maintenance\MaintenanceException;
 #[Package('framework')]
 class DatabaseConnectionInformation extends Struct
 {
+    private const DSN_PARAMETERS = ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'sslcrl', 'application_name', 'gssencmode', 'serverVersion'];
+
     /**
      * @var 'pdo_mysql'|'pdo_pgsql'
      */
@@ -40,15 +43,31 @@ class DatabaseConnectionInformation extends Struct
 
     protected ?bool $sslDontVerifyServerCert = null;
 
+    /**
+     * @var Params
+     */
+    protected array $dsnParameters = [];
+
     public function assign(#[\SensitiveParameter] array $options): DatabaseConnectionInformation
     {
+        if (isset($options['driver']) && !\in_array($options['driver'], ['pdo_mysql', 'pdo_pgsql'], true)) {
+            throw MaintenanceException::unsupportedDatabaseDriver((string) $options['driver']);
+        }
+        if (isset($options['driver']) && !isset($options['port'])) {
+            $options['port'] = $options['driver'] === 'pdo_pgsql' ? 5432 : 3306;
+        }
+
+        if (isset($options['dsnParameters'])) {
+            $options['dsnParameters'] = array_intersect_key($options['dsnParameters'], array_flip(self::DSN_PARAMETERS));
+        }
+
         // We pass request values directly to the assign method,
         // so we need to cast them to the correct type first
         if (isset($options['port'])) {
             $options['port'] = (int) $options['port'];
         }
         if (isset($options['sslDontVerifyServerCert'])) {
-            $options['sslDontVerifyServerCert'] = (bool) $options['sslDontVerifyServerCert'];
+            $options['sslDontVerifyServerCert'] = filter_var($options['sslDontVerifyServerCert'], \FILTER_VALIDATE_BOOLEAN);
         }
 
         parent::assign($options);
@@ -63,6 +82,16 @@ class DatabaseConnectionInformation extends Struct
             throw MaintenanceException::environmentVariableNotDefined('DATABASE_URL');
         }
 
+        return self::fromDsn($dsn)->assign([
+            'sslCaPath' => EnvironmentHelper::getVariable('DATABASE_SSL_CA'),
+            'sslCertPath' => EnvironmentHelper::getVariable('DATABASE_SSL_CERT'),
+            'sslCertKeyPath' => EnvironmentHelper::getVariable('DATABASE_SSL_KEY'),
+            'sslDontVerifyServerCert' => EnvironmentHelper::getVariable('DATABASE_SSL_DONT_VERIFY_SERVER_CERT'),
+        ]);
+    }
+
+    public static function fromDsn(#[\SensitiveParameter] string $dsn): self
+    {
         $params = parse_url($dsn);
         if ($params === false) {
             throw MaintenanceException::environmentVariableNotValid('DATABASE_URL', $dsn, 'Not a valid DSN');
@@ -90,15 +119,12 @@ class DatabaseConnectionInformation extends Struct
 
         return (new self())->assign([
             'driver' => $driver,
-            'hostname' => $params['host'],
+            'hostname' => trim($params['host'], '[]'),
             'port' => (int) ($params['port'] ?? ($driver === 'pdo_pgsql' ? 5432 : 3306)),
             'username' => $params['user'] ?? null,
             'password' => $params['pass'] ?? null,
             'databaseName' => $dbName,
-            'sslCaPath' => EnvironmentHelper::getVariable('DATABASE_SSL_CA'),
-            'sslCertPath' => EnvironmentHelper::getVariable('DATABASE_SSL_CERT'),
-            'sslCertKeyPath' => EnvironmentHelper::getVariable('DATABASE_SSL_KEY'),
-            'sslDontVerifyServerCert' => EnvironmentHelper::getVariable('DATABASE_SSL_DONT_VERIFY_SERVER_CERT'),
+            'dsnParameters' => array_intersect_key((new DsnParser())->parse($dsn), array_flip(self::DSN_PARAMETERS)),
         ]);
     }
 
@@ -116,6 +142,8 @@ class DatabaseConnectionInformation extends Struct
                 \PDO::ATTR_STRINGIFY_FETCHES => true,
             ],
         ];
+
+        $parameters = array_merge($this->dsnParameters, $parameters);
 
         if (!$withoutDatabaseName) {
             $parameters['dbname'] = $this->databaseName;
@@ -173,16 +201,28 @@ class DatabaseConnectionInformation extends Struct
         $dsn = \sprintf(
             '%s://%s%s:%d',
             $this->driver === 'pdo_pgsql' ? 'postgresql' : 'mysql',
-            $this->username ? ($this->username . ($this->password ? ':' . rawurlencode($this->password) : '') . '@') : '',
-            $this->hostname,
+            $this->username !== null && $this->username !== '' ? (rawurlencode($this->username) . ($this->password !== null && $this->password !== '' ? ':' . rawurlencode($this->password) : '') . '@') : '',
+            str_contains($this->hostname, ':') ? '[' . trim($this->hostname, '[]') . ']' : $this->hostname,
             $this->port
         );
 
         if (!$withoutDatabaseName) {
-            $dsn .= '/' . $this->databaseName;
+            $dsn .= '/' . rawurlencode($this->databaseName);
+        }
+
+        if ($this->dsnParameters !== []) {
+            $dsn .= '?' . http_build_query($this->dsnParameters, '', '&', \PHP_QUERY_RFC3986);
         }
 
         return $dsn;
+    }
+
+    /**
+     * @return Params
+     */
+    public function getDsnParameters(): array
+    {
+        return $this->dsnParameters;
     }
 
     public function getDatabaseName(): string

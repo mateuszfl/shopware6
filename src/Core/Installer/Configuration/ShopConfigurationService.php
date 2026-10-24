@@ -4,6 +4,7 @@ namespace Shopware\Core\Installer\Configuration;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Shopware\Core\Defaults;
@@ -83,7 +84,7 @@ class ShopConfigurationService
      */
     private function createSalesChannel(string $newId, array $shop, Connection $connection): void
     {
-        $typeId = Defaults::SALES_CHANNEL_TYPE_STOREFRONT;
+        $typeId = Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_STOREFRONT);
 
         $paymentMethod = $this->getFirstActivePaymentMethodId($connection);
         $shippingMethod = $this->getFirstActiveShippingMethodId($connection);
@@ -102,7 +103,7 @@ class ShopConfigurationService
                 shipping_method_id, country_id, customer_group_id, created_at
             ) VALUES (
                 ?,
-                UNHEX(?), ?, ?, UNHEX(?),
+                ?, ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?
             )',
@@ -110,7 +111,7 @@ class ShopConfigurationService
                 $newId,
                 $typeId,
                 AccessKeyHelper::generateAccessKey('sales-channel'),
-                $this->getRootCategoryId($connection), Defaults::LIVE_VERSION,
+                $this->getRootCategoryId($connection), Uuid::fromHexToBytes(Defaults::LIVE_VERSION),
                 $languageId,
                 $currencyId,
                 $paymentMethod,
@@ -118,45 +119,52 @@ class ShopConfigurationService
                 $countryId,
                 $this->getCustomerGroupId($connection),
                 $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
+            ],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY, 3 => ParameterType::BINARY, 4 => ParameterType::BINARY, 5 => ParameterType::BINARY, 6 => ParameterType::BINARY, 7 => ParameterType::BINARY, 8 => ParameterType::BINARY, 9 => ParameterType::BINARY, 10 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
-            'INSERT INTO sales_channel_translation (sales_channel_id, language_id, `name`, created_at)
-             VALUES (?, UNHEX(?), ?, ?)',
+            'INSERT INTO sales_channel_translation (sales_channel_id, language_id, name, created_at)
+             VALUES (?, ?, ?, ?)',
             [
-                $newId, Defaults::LANGUAGE_SYSTEM, $shop['name'], $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
+                $newId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), $shop['name'], $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
             'INSERT INTO sales_channel_language (sales_channel_id, language_id)
-             VALUES (?, UNHEX(?))',
-            [$newId, Defaults::LANGUAGE_SYSTEM]
+             VALUES (?, ?)',
+            [$newId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
             'INSERT INTO sales_channel_currency (sales_channel_id, currency_id)
              VALUES (?, ?)',
-            [$newId, $currencyId]
+            [$newId, $currencyId],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
             'INSERT INTO sales_channel_payment_method (sales_channel_id, payment_method_id)
              VALUES (?, ?)',
-            [$newId, $paymentMethod]
+            [$newId, $paymentMethod],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
             'INSERT INTO sales_channel_shipping_method (sales_channel_id, shipping_method_id)
              VALUES (?, ?)',
-            [$newId, $shippingMethod]
+            [$newId, $shippingMethod],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $connection->executeStatement(
             'INSERT INTO sales_channel_country (sales_channel_id, country_id)
              VALUES (?, ?)',
-            [$newId, $countryId]
+            [$newId, $countryId],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         $this->addAdditionalCurrenciesToSalesChannel($shop, $newId, $connection);
@@ -165,8 +173,7 @@ class ShopConfigurationService
 
     private function getRootCategoryId(Connection $connection): string
     {
-        return $connection
-            ->fetchOne('SELECT id FROM category WHERE `active` = 1 AND parent_id IS NULL');
+        return $this->readId($connection->fetchOne('SELECT id FROM category WHERE active = 1 AND parent_id IS NULL'));
     }
 
     /**
@@ -194,7 +201,7 @@ SQL;
             'currencyId' => $currencyId,
             'snippetSetId' => $snippetSetId,
             'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        ], ['id' => ParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY, 'currencyId' => ParameterType::BINARY, 'snippetSetId' => ParameterType::BINARY]);
 
         StatementHelper::executeStatement($insertSalesChannel, [
             'id' => Uuid::randomBytes(),
@@ -204,28 +211,30 @@ SQL;
             'currencyId' => $currencyId,
             'snippetSetId' => $snippetSetId,
             'createdAt' => $this->clock->now()->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-        ]);
+        ], ['id' => ParameterType::BINARY, 'salesChannelId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY, 'currencyId' => ParameterType::BINARY, 'snippetSetId' => ParameterType::BINARY]);
     }
 
     private function getFirstActiveShippingMethodId(Connection $connection): string
     {
-        return $connection->fetchOne('SELECT id FROM shipping_method WHERE `active` = 1 ORDER BY position');
+        return $this->readId($connection->fetchOne('SELECT id FROM shipping_method WHERE active = 1 ORDER BY position'));
     }
 
     private function getFirstActivePaymentMethodId(Connection $connection): string
     {
-        return $connection->fetchOne('SELECT id FROM payment_method WHERE `active` = 1 ORDER BY position');
+        return $this->readId($connection->fetchOne('SELECT id FROM payment_method WHERE active = 1 ORDER BY position'));
     }
 
     private function getLanguageId(string $iso, Connection $connection): ?string
     {
-        return $connection->fetchOne(
+        $id = $connection->fetchOne(
             'SELECT language.id
-             FROM `language`
+             FROM language
              INNER JOIN locale ON locale.id = language.translation_code_id
              WHERE LOWER(locale.code) = LOWER(?)',
             [$iso]
-        ) ?: null;
+        );
+
+        return $id ? $this->readId($id) : null;
     }
 
     private function getCurrencyId(string $currencyName, Connection $connection): string
@@ -235,30 +244,32 @@ SQL;
             [$currencyName]
         );
 
-        if (!\is_string($fetchCurrencyId) || $fetchCurrencyId === '') {
+        if (!$fetchCurrencyId) {
             throw InstallerException::currencyNotFound($currencyName);
         }
 
-        return $fetchCurrencyId;
+        return $this->readId($fetchCurrencyId);
     }
 
     private function getSnippetSet(string $iso, Connection $connection): ?string
     {
-        return $connection->fetchOne(
+        $id = $connection->fetchOne(
             'SELECT id FROM snippet_set WHERE LOWER(iso) = LOWER(:iso)',
             ['iso' => $iso]
-        ) ?: null;
+        );
+
+        return $id ? $this->readId($id) : null;
     }
 
     private function getCountryId(string $iso, Connection $connection): string
     {
         $fetchCountryId = $connection->fetchOne('SELECT id FROM country WHERE LOWER(iso3) = LOWER(?)', [$iso]);
 
-        if (!\is_string($fetchCountryId) || $fetchCountryId === '') {
+        if (!$fetchCountryId) {
             throw InstallerException::countryNotFound($iso);
         }
 
-        return $fetchCountryId;
+        return $this->readId($fetchCountryId);
     }
 
     /**
@@ -266,7 +277,11 @@ SQL;
      */
     private function getIdOfSalesChannelViaTypeId(string $typeId, Connection $connection): string
     {
-        return $connection->fetchOne('SELECT id FROM sales_channel WHERE type_id = UNHEX(?)', [$typeId]);
+        return $this->readId($connection->fetchOne(
+            'SELECT id FROM sales_channel WHERE type_id = ?',
+            [Uuid::fromHexToBytes($typeId)],
+            [ParameterType::BINARY]
+        ));
     }
 
     /**
@@ -280,13 +295,15 @@ SQL;
         $defaultCurrencyId = $this->getCurrencyId($shop['currency'], $connection);
         $connection->executeStatement(
             'UPDATE sales_channel SET currency_id = ? WHERE id = ?',
-            [$defaultCurrencyId, $idOfHeadlessSalesChannel]
+            [$defaultCurrencyId, $idOfHeadlessSalesChannel],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         // remove all currencies from the headless sales channel, except the default currency
         $connection->executeStatement(
-            'DELETE FROM sales_channel_currency WHERE sales_channel_id = ? AND currency_id != UNHEX(?)',
-            [$idOfHeadlessSalesChannel, $defaultCurrencyId]
+            'DELETE FROM sales_channel_currency WHERE sales_channel_id = ? AND currency_id != ?',
+            [$idOfHeadlessSalesChannel, $defaultCurrencyId],
+            [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
         );
 
         if ($shop['additionalCurrencies'] === null) {
@@ -305,7 +322,8 @@ SQL;
                 // add additional currencies
                 $connection->executeStatement(
                     'INSERT INTO sales_channel_currency (sales_channel_id, currency_id) VALUES (?, ?)',
-                    [$currentSalesChannelId, $currencyId]
+                    [$currentSalesChannelId, $currencyId],
+                    [0 => ParameterType::BINARY, 1 => ParameterType::BINARY]
                 );
             }
         }
@@ -319,7 +337,8 @@ SQL;
         // change default currency for dummy sales channel domain to the default currency to avoid foreign key constraints
         $connection->executeStatement(
             'UPDATE sales_channel_domain SET currency_id = :currencyId',
-            ['currencyId' => $this->getCurrencyId($shop['currency'], $connection)]
+            ['currencyId' => $this->getCurrencyId($shop['currency'], $connection)],
+            ['currencyId' => ParameterType::BINARY]
         );
 
         // remove all currencies except the default currency when no additional currency is selected
@@ -347,8 +366,16 @@ SQL;
         $connection->executeStatement('DELETE FROM sales_channel_currency');
     }
 
+    /**
+     * @param string|resource $id
+     */
+    private function readId(mixed $id): string
+    {
+        return Uuid::fromHexToBytes(Uuid::fromBytesToHex($id));
+    }
+
     private function getCustomerGroupId(Connection $connection): string
     {
-        return $connection->fetchOne('SELECT customer_group_id FROM sales_channel');
+        return $this->readId($connection->fetchOne('SELECT customer_group_id FROM sales_channel'));
     }
 }

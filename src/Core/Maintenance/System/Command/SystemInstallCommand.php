@@ -242,7 +242,9 @@ class SystemInstallCommand extends Command
             $output->writeln('Created database `' . $databaseConnectionInformation->getDatabaseName() . '`');
         }
 
-        $importedBaseSchema = $this->setupDatabaseAdapter->initializeShopwareDb($connection, $databaseConnectionInformation->getDatabaseName());
+        $connection->close();
+        $connection = $this->databaseConnectionFactory->getConnection($databaseConnectionInformation);
+        $importedBaseSchema = $this->setupDatabaseAdapter->initializeShopwareDb($connection);
 
         if ($importedBaseSchema) {
             $output->writeln('Imported base schema.sql');

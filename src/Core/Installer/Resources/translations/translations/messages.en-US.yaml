@@ -336,6 +336,7 @@ shopware.installer:
     license_agreement_error: 'Please accept our GTC.'
     license_agreement_checkbox: 'I agree to the General Terms and Conditions of Business (GTC)'
     database-configuration_header: 'Configure database'
+    database-configuration_field_driver: 'Database engine'
     database-configuration_field_host: 'Server:'
     database-configuration_advanced_settings: 'Advanced settings'
     database-configuration_field_port: 'Port:'
@@ -354,7 +355,7 @@ shopware.installer:
     database-configuration_fetch_error: 'An error occurred while fetching the database information'
     database-configuration_access_denied: 'Access denied, credentials are incorrect'
     database-configuration_host_not_found: 'Could not connect to database server'
-    database-configuration_invalid_requirements: 'Shopware 6 requires at least MySQL 8.0.22 or MariaDB 10.11'
+    database-configuration_invalid_requirements: 'Shopware 6 requires at least MySQL 8.0.22, MariaDB 10.11 or PostgreSQL 18.6'
     database-configuration_refresh_databases: 'Refresh Databases'
     database-import_header: Installation
     database-import_skip_import: Skip

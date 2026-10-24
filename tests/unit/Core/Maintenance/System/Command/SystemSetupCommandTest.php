@@ -85,6 +85,29 @@ class SystemSetupCommandTest extends TestCase
         ], $env);
     }
 
+    public function testInteractivePostgreSqlUsesSharedDsnEncodingAndDefaultPort(): void
+    {
+        $tester = $this->getApplicationTester();
+        $tester->setInputs(['prod', 'https://example.com', 'yes', 'user@name', 'secret?', '::1', '', 'shop name', '', '', '', 'no', 'yes']);
+        $tester->run(['command' => 'system:setup', '--database-driver' => 'pdo_pgsql', '--no-check-db-connection' => true]);
+        $tester->assertCommandIsSuccessful();
+        $contents = file_get_contents(__DIR__ . '/.env');
+        static::assertIsString($contents);
+        $env = (new Dotenv())->parse($contents);
+        static::assertSame('postgresql://user%40name:secret%3F@[::1]:5432/shop%20name', $env['DATABASE_URL']);
+    }
+
+    public function testNonInteractivePostgreSqlKeepsTlsDsn(): void
+    {
+        $dsn = 'postgresql://user@db/shop?sslmode=verify-full&sslrootcert=%2Fca.pem';
+        $tester = $this->getApplicationTester();
+        $tester->run(['command' => 'system:setup', '--database-url' => $dsn], ['interactive' => false]);
+        $tester->assertCommandIsSuccessful();
+        $contents = file_get_contents(__DIR__ . '/.env');
+        static::assertIsString($contents);
+        static::assertSame($dsn, (new Dotenv())->parse($contents)['DATABASE_URL']);
+    }
+
     /**
      * @deprecated tag:v6.8.0 - Will be removed without replacement
      */

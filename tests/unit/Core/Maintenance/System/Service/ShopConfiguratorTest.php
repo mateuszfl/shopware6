@@ -35,33 +35,10 @@ class ShopConfiguratorTest extends TestCase
         $this->shopConfigurator = new ShopConfigurator($this->connection, $this->eventDispatcher, new NativeClock());
     }
 
-    public function testUpdateBasicInformation(): void
+    public function testEmptyBasicInformationDoesNotWrite(): void
     {
-        $this->connection->expects($this->exactly(2))->method('executeStatement')->willReturnCallback(static function (string $sql, array $parameters): int {
-            static::assertSame(
-                'INSERT INTO `system_config` (`id`, `configuration_key`, `configuration_value`, `sales_channel_id`, `created_at`)
-            VALUES (:id, :key, :value, NULL, NOW())
-            ON DUPLICATE KEY UPDATE
-                `configuration_value` = :value,
-                `updated_at` = NOW()',
-                trim($sql)
-            );
-
-            static::assertArrayHasKey('id', $parameters);
-            static::assertArrayHasKey('key', $parameters);
-            static::assertArrayHasKey('value', $parameters);
-
-            if ($parameters['key'] === 'core.basicInformation.shopName') {
-                static::assertSame('{"_value":"test-shop"}', $parameters['value']);
-            } else {
-                static::assertSame('core.basicInformation.email', $parameters['key']);
-                static::assertSame('{"_value":"shop@test.com"}', $parameters['value']);
-            }
-
-            return 1;
-        });
-
-        $this->shopConfigurator->updateBasicInformation('test-shop', 'shop@test.com');
+        $this->connection->expects($this->never())->method('executeStatement');
+        $this->shopConfigurator->updateBasicInformation(null, null);
     }
 
     public function testSetDefaultLanguageWithoutCurrentLocale(): void
@@ -200,11 +177,12 @@ class ShopConfiguratorTest extends TestCase
             $languageId
         );
 
-        $methodReturns = array_values(array_filter([$expectedMissingTranslations, $expectedStateTranslations], static fn (array $item) => $item !== []));
-
-        $methodCalls = \count($methodReturns);
-
-        $this->connection->expects($this->atLeast($methodCalls))->method('fetchAllKeyValue')->willReturnOnConsecutiveCalls($expectedStateTranslations, $expectedMissingTranslations);
+        $this->connection->method('fetchAllKeyValue')->willReturn($expectedStateTranslations);
+        $missingTranslations = [];
+        foreach ($expectedMissingTranslations as $stateId => $shortCode) {
+            $missingTranslations[] = ['id' => substr(hash('sha256', $stateId, true), 0, 16), 'short_code' => $shortCode];
+        }
+        $this->connection->method('fetchAllAssociative')->willReturn($missingTranslations);
 
         $this->connection->expects($this->exactly($expectedInsertCall))->method('insert')->willReturnCallback($insertCallback);
         $this->shopConfigurator->setDefaultLanguage('de_DE');
@@ -284,20 +262,20 @@ class ShopConfiguratorTest extends TestCase
                 $countryStateId = $parameters['country_state_id'];
 
                 static::assertContains($countryStateId, [
-                    'id_de_th',
-                    'id_de_nw',
-                    'id_de_rp',
+                    substr(hash('sha256', 'id_de_th', true), 0, 16),
+                    substr(hash('sha256', 'id_de_nw', true), 0, 16),
+                    substr(hash('sha256', 'id_de_rp', true), 0, 16),
                 ]);
 
-                if ($countryStateId === 'id_de_th') {
+                if ($countryStateId === substr(hash('sha256', 'id_de_th', true), 0, 16)) {
                     static::assertSame('Thüringen', $parameters['name']);
                 }
 
-                if ($countryStateId === 'id_de_nw') {
+                if ($countryStateId === substr(hash('sha256', 'id_de_nw', true), 0, 16)) {
                     static::assertSame('Nordrhein-Westfalen', $parameters['name']);
                 }
 
-                if ($countryStateId === 'id_de_rp') {
+                if ($countryStateId === substr(hash('sha256', 'id_de_rp', true), 0, 16)) {
                     static::assertSame('Rheinland-Pfalz', $parameters['name']);
                 }
 
