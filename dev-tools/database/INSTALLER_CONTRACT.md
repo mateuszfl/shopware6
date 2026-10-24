@@ -29,8 +29,8 @@ its original `schema.sql`.
 Use a PostgreSQL URL with a database name, for example
 `postgresql://user:password@localhost:5433/shop?sslmode=verify-full&sslrootcert=%2Fetc%2Fdatabase%2Fca.pem`.
 Credentials and database names are URL encoded, and IPv6 hosts use square brackets.
-The `postgres`, `postgresql`, `pgsql`, `pdo-pgsql` and `pdo_pgsql` schemes select the
-same PDO driver and default to port 5432. The web form selects the database engine;
+The `postgres`, `postgresql`, `pgsql` and `pdo-pgsql` URL schemes select the
+`pdo_pgsql` driver and default to port 5432. The web form selects the database engine;
 changing it resets the port to its default. Interactive CLI setup selects it with:
 
 ```sh
