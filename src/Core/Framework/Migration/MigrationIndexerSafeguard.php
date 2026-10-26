@@ -283,7 +283,7 @@ final class MigrationIndexerSafeguard
 
         // Form B: raw SQL INSERT/DELETE/REPLACE — no column introspection needed.
         if (preg_match_all(
-            '/\b(INSERT\s+INTO|DELETE\s+FROM|REPLACE\s+INTO)\s+`?([a-z_]+)`?/i',
+            '/\b(INSERT\s+INTO|DELETE\s+FROM|REPLACE\s+INTO)\s+[\x60"]?([a-z_]+)[\x60"]?/i',
             $source,
             $matches,
             \PREG_SET_ORDER
@@ -298,7 +298,7 @@ final class MigrationIndexerSafeguard
 
         // Form C: raw SQL UPDATE with SET clause parsing.
         if (preg_match_all(
-            '/\bUPDATE\s+`?([a-z_]+)`?\s+SET\s+(.+?)(?:\s+WHERE\b|\s+ORDER\s+BY\b|\s+LIMIT\b|\s*;|\s*$)/is',
+            '/\bUPDATE\s+[\x60"]?([a-z_]+)[\x60"]?\s+SET\s+(.+?)(?:\s+WHERE\b|\s+ORDER\s+BY\b|\s+LIMIT\b|\s*;|\s*$)/is',
             $source,
             $matches,
             \PREG_SET_ORDER
@@ -335,7 +335,7 @@ final class MigrationIndexerSafeguard
         // expressions like IF(x = 1, ...); anchor matches to start-of-string
         // or comma. The optional `table.` prefix handles qualified
         // identifiers like `payment_method`.`technical_name`.
-        $pattern = '/(?:^|,)\s*(?:`?[a-z_][a-z0-9_]*`?\s*\.\s*)?`?([a-z_][a-z0-9_]*)`?\s*=/i';
+        $pattern = '/(?:^|,)\s*(?:[\x60"]?[a-z_][a-z0-9_]*[\x60"]?\s*\.\s*)?[\x60"]?([a-z_][a-z0-9_]*)[\x60"]?\s*=/i';
         if (!preg_match_all($pattern, $setClause, $m)) {
             return null;
         }

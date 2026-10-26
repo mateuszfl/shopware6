@@ -3,6 +3,7 @@
 namespace Shopware\Core\Migration\Traits;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationException;
@@ -44,8 +45,8 @@ class StateMachineMigrationImporter
     {
         $id = $this->connection->fetchOne(
             '
-            SELECT `id`
-            FROM `state_machine`
+            SELECT id
+            FROM state_machine
             WHERE technical_name = :technicalName
             ',
             ['technicalName' => $stateMachineMigration->getTechnicalName()],
@@ -63,7 +64,8 @@ class StateMachineMigrationImporter
                 'id' => $id,
                 'technical_name' => $stateMachineMigration->getTechnicalName(),
                 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]
+            ],
+            ['id' => ParameterType::BINARY]
         );
 
         $this->importTranslation(
@@ -116,7 +118,8 @@ class StateMachineMigrationImporter
                     'state_machine_id' => Uuid::fromHexToBytes($stateMachineId),
                     'technical_name' => $technicalName,
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['id' => ParameterType::BINARY, 'state_machine_id' => ParameterType::BINARY]
             );
 
             $this->importTranslation(
@@ -172,19 +175,20 @@ class StateMachineMigrationImporter
 
             $id = $this->connection->fetchOne(
                 '
-                SELECT `id`
-                FROM `state_machine_transition`
-                WHERE `state_machine_id` = :stateMachineId
-                AND `action_name` = :actionName
-                AND `from_state_id` = :fromStateId
-                AND `to_state_id` = :toStateId
+                SELECT id
+                FROM state_machine_transition
+                WHERE state_machine_id = :stateMachineId
+                AND action_name = :actionName
+                AND from_state_id = :fromStateId
+                AND to_state_id = :toStateId
                 ',
                 [
                     'stateMachineId' => Uuid::fromHexToBytes($stateMachineId),
                     'actionName' => $actionName,
                     'fromStateId' => Uuid::fromHexToBytes($fromStateId),
                     'toStateId' => Uuid::fromHexToBytes($toStateId),
-                ]
+                ],
+                ['stateMachineId' => ParameterType::BINARY, 'fromStateId' => ParameterType::BINARY, 'toStateId' => ParameterType::BINARY]
             );
 
             if ($id) {
@@ -203,7 +207,8 @@ class StateMachineMigrationImporter
                     'from_state_id' => Uuid::fromHexToBytes($fromStateId),
                     'to_state_id' => Uuid::fromHexToBytes($toStateId),
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['id' => ParameterType::BINARY, 'state_machine_id' => ParameterType::BINARY, 'from_state_id' => ParameterType::BINARY, 'to_state_id' => ParameterType::BINARY]
             );
 
             $inserted[] = [
@@ -234,7 +239,8 @@ class StateMachineMigrationImporter
         $this->connection->update(
             StateMachineDefinition::ENTITY_NAME,
             ['initial_state_id' => Uuid::fromHexToBytes($id)],
-            ['id' => Uuid::fromHexToBytes($stateMachineId)]
+            ['id' => Uuid::fromHexToBytes($stateMachineId)],
+            ['initial_state_id' => ParameterType::BINARY, 'id' => ParameterType::BINARY]
         );
 
         return $id;
@@ -244,15 +250,16 @@ class StateMachineMigrationImporter
     {
         $id = $this->connection->fetchOne(
             '
-            SELECT `id`
-            FROM `state_machine_state`
-            WHERE `state_machine_id` = :stateMachineId
-            AND `technical_name` = :technicalName
+            SELECT id
+            FROM state_machine_state
+            WHERE state_machine_id = :stateMachineId
+            AND technical_name = :technicalName
             ',
             [
                 'stateMachineId' => Uuid::fromHexToBytes($stateMachineId),
                 'technicalName' => $technicalName,
-            ]
+            ],
+            ['stateMachineId' => ParameterType::BINARY]
         );
 
         if (!$id) {

@@ -146,6 +146,12 @@ class MigrationIndexerSafeguardTest extends TestCase
             'expectedViolations' => [self::fixtureMigrationNamespace('UnparseableSetClause', 'V6_90', 'Migration1000000001UnparseableSet')],
             'indexedColumnsByTable' => [self::TABLE => ['watched_column']],
         ];
+        yield 'PostgreSQL quoted update is parsed and protected by the indexed column allow-list' => [
+            'scenario' => 'PostgreSQLQuoted',
+            'enforcedVersions' => ['V6_90'],
+            'expectedViolations' => [self::fixtureMigrationNamespace('PostgreSQLQuoted', 'V6_90', 'Migration1000000001QuotedUpdate')],
+            'indexedColumnsByTable' => [self::TABLE => ['watched_column']],
+        ];
     }
 
     /**

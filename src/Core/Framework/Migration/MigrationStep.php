@@ -6,6 +6,8 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ConnectionException;
 use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Exception\TableNotFoundException;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Shopware\Core\Defaults;
 use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Deprecation\BCChange\ExceptionChange;
@@ -53,7 +55,14 @@ abstract class MigrationStep
     public function removeTrigger(Connection $connection, string $name): void
     {
         try {
-            $connection->executeStatement(\sprintf('DROP TRIGGER IF EXISTS %s', $name));
+            if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+                $tables = $connection->fetchFirstColumn('SELECT quote_ident(n.nspname) || \'.\' || quote_ident(c.relname) FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_namespace n ON n.oid = c.relnamespace WHERE t.tgname = ? AND NOT t.tgisinternal AND n.nspname = current_schema()', [$name]);
+                foreach ($tables as $table) {
+                    $connection->executeStatement('DROP TRIGGER IF EXISTS ' . $connection->getDatabasePlatform()->quoteSingleIdentifier($name) . ' ON ' . $table);
+                }
+            } else {
+                $connection->executeStatement('DROP TRIGGER IF EXISTS ' . $connection->getDatabasePlatform()->quoteSingleIdentifier($name));
+            }
         } catch (Exception) {
         }
     }
@@ -61,6 +70,47 @@ abstract class MigrationStep
     public function isInstallation(): bool
     {
         return (bool) EnvironmentHelper::getVariable(self::INSTALL_ENVIRONMENT_VARIABLE, false);
+    }
+
+    /**
+     * Create a PostgreSQL trigger function used by a migration trigger. The function body is a
+     * trusted migration definition, just like the SQL passed to createTrigger().
+     */
+    protected function createTriggerFunction(Connection $connection, string $name, string $body): void
+    {
+        if (!$connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            throw MigrationException::invalidArgument('Trigger functions are only supported on PostgreSQL.');
+        }
+
+        if ((int) EnvironmentHelper::getVariable('BLUE_GREEN_DEPLOYMENT', false) === 0) {
+            return;
+        }
+
+        $quotedName = $connection->getDatabasePlatform()->quoteSingleIdentifier($name);
+        $delimiter = '$shopware_' . bin2hex(random_bytes(8)) . '$';
+        $connection->transactional(static function (Connection $connection) use ($quotedName, $delimiter, $body): void {
+            $connection->executeStatement('CREATE FUNCTION ' . $quotedName . '() RETURNS trigger LANGUAGE plpgsql AS ' . $delimiter . $body . $delimiter);
+            $connection->executeStatement('COMMENT ON FUNCTION ' . $quotedName . '() IS \'shopware:migration-trigger\'');
+        });
+    }
+
+    /**
+     * Drop only functions created by createTriggerFunction().
+     */
+    protected function dropTriggerFunctionIfExists(Connection $connection, string $name): bool
+    {
+        if (!$connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            return false;
+        }
+
+        $owned = $connection->fetchOne('SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = ? AND p.pronargs = 0 AND n.nspname = current_schema() AND obj_description(p.oid, \'pg_proc\') = \'shopware:migration-trigger\'', [$name]);
+        if ($owned === false) {
+            return false;
+        }
+
+        $connection->executeStatement('DROP FUNCTION ' . $connection->getDatabasePlatform()->quoteSingleIdentifier($name) . '()');
+
+        return true;
     }
 
     /**
@@ -90,7 +140,7 @@ abstract class MigrationStep
     #[ExceptionChange(version: 'v6.8.0', newExceptions: [], description: 'Will no longer throw TableNotFoundException for a missing table but return false.')]
     protected function indexExists(Connection $connection, string $table, string $index): bool
     {
-        if (Feature::isActive('v6.8.0.0')) {
+        if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform || Feature::isActive('v6.8.0.0')) {
             return TableHelper::indexExists($connection, $table, $index);
         }
 
@@ -113,15 +163,30 @@ abstract class MigrationStep
 
     protected function dropTableIfExists(Connection $connection, string $table): void
     {
-        $sql = \sprintf('DROP TABLE IF EXISTS `%s`', $table);
+        $sql = $connection->getDatabasePlatform() instanceof PostgreSQLPlatform
+            ? 'DROP TABLE IF EXISTS ' . $connection->getDatabasePlatform()->quoteSingleIdentifier($table)
+            : \sprintf('DROP TABLE IF EXISTS `%s`', $table);
         $connection->executeStatement($sql);
     }
 
     /**
+     * @param non-empty-string $table
+     *
      * @return bool - Returns true when the column has really been deleted
      */
     protected function dropColumnIfExists(Connection $connection, string $table, string $columnName): bool
     {
+        if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            if (!TableHelper::columnExists($connection, $table, $columnName)) {
+                return false;
+            }
+
+            $quote = $connection->getDatabasePlatform()->quoteSingleIdentifier(...);
+            NonStandardFkGuard::executeDdl($connection, 'ALTER TABLE ' . $quote($table) . ' DROP COLUMN ' . $quote($columnName));
+
+            return true;
+        }
+
         try {
             NonStandardFkGuard::executeDdl($connection, \sprintf('ALTER TABLE `%s` DROP COLUMN `%s`', $table, $columnName));
         } catch (\Throwable $e) {
@@ -141,10 +206,23 @@ abstract class MigrationStep
     }
 
     /**
+     * @param non-empty-string $table
+     *
      * @return bool - Returns true when the foreign key has really been deleted
      */
     protected function dropForeignKeyIfExists(Connection $connection, string $table, string $foreignKeyName): bool
     {
+        if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            if (!TableHelper::foreignKeyExists($connection, $table, $foreignKeyName)) {
+                return false;
+            }
+
+            $quote = $connection->getDatabasePlatform()->quoteSingleIdentifier(...);
+            NonStandardFkGuard::executeDdl($connection, 'ALTER TABLE ' . $quote($table) . ' DROP CONSTRAINT ' . $quote($foreignKeyName));
+
+            return true;
+        }
+
         $sql = \sprintf('ALTER TABLE `%s` DROP FOREIGN KEY `%s`', $table, $foreignKeyName);
 
         try {
@@ -166,10 +244,27 @@ abstract class MigrationStep
     }
 
     /**
+     * @param non-empty-string $table
+     *
      * @return bool - Returns true when the index has really been deleted
      */
     protected function dropIndexIfExists(Connection $connection, string $table, string $indexName): bool
     {
+        if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            if (!TableHelper::indexExists($connection, $table, $indexName)) {
+                return false;
+            }
+
+            $schema = $connection->fetchOne('SELECT current_schema()');
+            if (!\is_string($schema) || $schema === '') {
+                return false;
+            }
+            $platform = $connection->getDatabasePlatform();
+            NonStandardFkGuard::executeDdl($connection, 'DROP INDEX ' . $platform->quoteSingleIdentifier($schema) . '.' . $platform->quoteSingleIdentifier($indexName));
+
+            return true;
+        }
+
         $sql = \sprintf('ALTER TABLE `%s` DROP INDEX `%s`', $table, $indexName);
 
         try {
@@ -199,12 +294,20 @@ abstract class MigrationStep
      */
     protected function addAdditionalPrivileges(Connection $connection, array $privileges): void
     {
-        $roles = $connection->iterateAssociative('SELECT * from `acl_role`');
+        $roles = $connection->iterateAssociative('SELECT * from acl_role');
 
         try {
             $connection->beginTransaction();
 
             foreach ($roles as $role) {
+                if (\is_resource($role['id'])) {
+                    $binaryId = stream_get_contents($role['id']);
+                    if ($binaryId === false) {
+                        throw MigrationException::migrationError('Unable to read ACL role identifier while updating privileges.');
+                    }
+                    $role['id'] = $binaryId;
+                }
+
                 $currentPrivileges = \json_decode((string) $role['privileges'], true, 512, \JSON_THROW_ON_ERROR);
                 $newPrivileges = $this->fixRolePrivileges($privileges, $currentPrivileges);
 
@@ -215,7 +318,7 @@ abstract class MigrationStep
                 $role['privileges'] = \json_encode($newPrivileges, \JSON_THROW_ON_ERROR);
                 $role['updated_at'] = (new \DateTimeImmutable())->format(Defaults::STORAGE_DATE_FORMAT);
 
-                $connection->update('acl_role', $role, ['id' => $role['id']]);
+                $connection->update('acl_role', $role, ['id' => $role['id']], ['id' => ParameterType::BINARY]);
             }
 
             $connection->commit();

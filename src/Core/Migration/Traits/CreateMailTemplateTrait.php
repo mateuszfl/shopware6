@@ -3,7 +3,9 @@
 namespace Shopware\Core\Migration\Traits;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Migration\MigrationDatabaseHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Migration\Structs\MailCreationState;
 use Shopware\Core\Migration\Structs\MailTemplateCreateStruct;
@@ -55,7 +57,8 @@ trait CreateMailTemplateTrait
                     'technical_name' => $mailTemplateType->getTechnicalName(),
                     'available_entities' => \json_encode($mailTemplateType->getAvailableEntities(), \JSON_THROW_ON_ERROR),
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['id' => ParameterType::BINARY]
             );
         }
 
@@ -71,7 +74,8 @@ trait CreateMailTemplateTrait
                     'name' => $mailTemplateType->getEnName(),
                     'language_id' => $languageByteId,
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['mail_template_type_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]
             );
         }
 
@@ -87,7 +91,8 @@ trait CreateMailTemplateTrait
                     'name' => $mailTemplateType->getDeName(),
                     'language_id' => $languageByteId,
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['mail_template_type_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]
             );
         }
     }
@@ -111,9 +116,10 @@ trait CreateMailTemplateTrait
                 [
                     'id' => $mailCreationState->getMailTemplateByteId(),
                     'mail_template_type_id' => $mailCreationState->getMailTemplateTypeByteId(),
-                    'system_default' => $mailCreateStruct->isSystemDefault(),
+                    'system_default' => (int) $mailCreateStruct->isSystemDefault(),
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['id' => ParameterType::BINARY, 'mail_template_type_id' => ParameterType::BINARY]
             );
         }
 
@@ -133,7 +139,8 @@ trait CreateMailTemplateTrait
                     'content_html' => $mailCreateStruct->getEnHtml(),
                     'content_plain' => $mailCreateStruct->getEnPlain(),
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]
             );
         }
 
@@ -153,7 +160,8 @@ trait CreateMailTemplateTrait
                     'content_html' => $mailCreateStruct->getDeHtml(),
                     'content_plain' => $mailCreateStruct->getDePlain(),
                     'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-                ]
+                ],
+                ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]
             );
         }
     }
@@ -161,7 +169,7 @@ trait CreateMailTemplateTrait
     private function getMailTemplateTypeId(Connection $connection, string $technicalName): ?string
     {
         $result = $connection->fetchOne(
-            'SELECT `id` FROM `mail_template_type` WHERE `technical_name` = :technicalName',
+            'SELECT id FROM mail_template_type WHERE technical_name = :technicalName',
             ['technicalName' => $technicalName]
         );
 
@@ -169,14 +177,15 @@ trait CreateMailTemplateTrait
             return null;
         }
 
-        return $result;
+        return MigrationDatabaseHelper::normalizeBinaryId($result);
     }
 
     private function hasTemplateTypeTranslation(Connection $connection, string $mailTemplateTypeByteId, string $languageByteId): bool
     {
         return (bool) $connection->fetchOne(
-            'SELECT 1 FROM `mail_template_type_translation` WHERE `mail_template_type_id` = :mailTemplateTypeId AND `language_id` = :languageId',
-            ['mailTemplateTypeId' => $mailTemplateTypeByteId, 'languageId' => $languageByteId]
+            'SELECT 1 FROM mail_template_type_translation WHERE mail_template_type_id = :mailTemplateTypeId AND language_id = :languageId',
+            ['mailTemplateTypeId' => $mailTemplateTypeByteId, 'languageId' => $languageByteId],
+            ['mailTemplateTypeId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]
         );
     }
 
@@ -184,28 +193,30 @@ trait CreateMailTemplateTrait
     {
         $result = $connection->fetchOne(
             <<<'SQL'
-SELECT `id`
-FROM `mail_template`
-WHERE `mail_template_type_id` = :mailTemplateTypeId
-    AND `system_default` = 1
-ORDER BY `created_at` ASC, `id` ASC
+SELECT id
+FROM mail_template
+WHERE mail_template_type_id = :mailTemplateTypeId
+    AND system_default = 1
+ORDER BY created_at ASC, id ASC
 LIMIT 1
 SQL,
-            ['mailTemplateTypeId' => $mailTemplateTypeByteId]
+            ['mailTemplateTypeId' => $mailTemplateTypeByteId],
+            ['mailTemplateTypeId' => ParameterType::BINARY]
         );
 
         if ($result === false) {
             return null;
         }
 
-        return $result;
+        return MigrationDatabaseHelper::normalizeBinaryId($result);
     }
 
     private function hasMailTemplateTranslation(Connection $connection, string $mailTemplateByteId, string $languageByteId): bool
     {
         return (bool) $connection->fetchOne(
-            'SELECT `mail_template_id` FROM `mail_template_translation` WHERE `mail_template_id` = :mailTemplateId AND `language_id` = :languageId',
-            ['mailTemplateId' => $mailTemplateByteId, 'languageId' => $languageByteId]
+            'SELECT mail_template_id FROM mail_template_translation WHERE mail_template_id = :mailTemplateId AND language_id = :languageId',
+            ['mailTemplateId' => $mailTemplateByteId, 'languageId' => $languageByteId],
+            ['mailTemplateId' => ParameterType::BINARY, 'languageId' => ParameterType::BINARY]
         );
     }
 
@@ -219,23 +230,24 @@ SQL,
         $languageIds = $connection->fetchFirstColumn(
             \sprintf(
                 <<<'SQL'
-SELECT `language`.`id`
-FROM `language`
-INNER JOIN `locale` ON `locale`.`id` = `language`.`locale_id`
-WHERE LOWER(`locale`.`code`) %s :localePrefix
-ORDER BY `language`.`created_at` ASC, `language`.`id` ASC
+SELECT %1$s.id
+FROM %1$s
+INNER JOIN locale ON locale.id = %1$s.locale_id
+WHERE LOWER(locale.code) %2$s :localePrefix
+ORDER BY %1$s.created_at ASC, %1$s.id ASC
 SQL,
+                $connection->getDatabasePlatform()->quoteSingleIdentifier('language'),
                 $operator
             ),
             ['localePrefix' => $localePrefix . '-%']
         );
         $languageByteIds = [];
         foreach ($languageIds as $languageId) {
-            if (!\is_string($languageId)) {
+            if (!\is_string($languageId) && !\is_resource($languageId)) {
                 continue;
             }
 
-            $languageByteIds[] = $languageId;
+            $languageByteIds[] = MigrationDatabaseHelper::normalizeBinaryId($languageId);
         }
 
         return $languageByteIds;

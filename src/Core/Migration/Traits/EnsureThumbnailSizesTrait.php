@@ -3,9 +3,11 @@
 namespace Shopware\Core\Migration\Traits;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Migration\MigrationDatabaseHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 #[Package('framework')]
@@ -14,17 +16,21 @@ trait EnsureThumbnailSizesTrait
     /**
      * @param list<array{width: int, height: int}> $thumbnailSizes
      *
-     * @return string[]
+     * @return list<string>
      */
     final protected function ensureThumbnailSizes(array $thumbnailSizes, Connection $connection): array
     {
-        /** @var list<array{id: string, width: string, height: string}> $allSizes */
+        /** @var list<array{id: string|resource, width: string, height: string}> $allSizes */
         $allSizes = $connection->fetchAllAssociative(
-            'SELECT `id`, `width`, `height` FROM `media_thumbnail_size`'
+            'SELECT id, width, height FROM media_thumbnail_size'
         );
+        foreach ($allSizes as &$size) {
+            $size['id'] = MigrationDatabaseHelper::normalizeBinaryId($size['id']);
+        }
+        unset($size);
 
         $insertStatement = $connection->prepare('
-                INSERT INTO `media_thumbnail_size` (`id`, `width`, `height`, created_at)
+                INSERT INTO media_thumbnail_size (id, width, height, created_at)
                 VALUES (:id, :width, :height, :createdAt)
             ');
 
@@ -35,7 +41,8 @@ trait EnsureThumbnailSizesTrait
             });
 
             if ($result !== []) {
-                $sizes[] = reset($result)['id'];
+                $id = reset($result)['id'];
+                $sizes[] = $id;
 
                 continue;
             }
@@ -46,7 +53,7 @@ trait EnsureThumbnailSizesTrait
                 'width' => $thumbnailSize['width'],
                 'height' => $thumbnailSize['height'],
                 'createdAt' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
-            ]);
+            ], ['id' => ParameterType::BINARY]);
 
             $sizes[] = $id;
         }

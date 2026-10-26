@@ -215,21 +215,33 @@ class ExampleStep extends MigrationStep
     {
     }
 
+    /**
+     * @param non-empty-string $table
+     */
     public function doDropTableIfExists(Connection $connection, string $table): void
     {
         $this->dropTableIfExists($connection, $table);
     }
 
+    /**
+     * @param non-empty-string $table
+     */
     public function doDropForeignKeyIfExists(Connection $connection, string $table, string $column): bool
     {
         return $this->dropForeignKeyIfExists($connection, $table, $column);
     }
 
+    /**
+     * @param non-empty-string $table
+     */
     public function doDropIndexIfExists(Connection $connection, string $table, string $index): bool
     {
         return $this->dropIndexIfExists($connection, $table, $index);
     }
 
+    /**
+     * @param non-empty-string $table
+     */
     public function doDropColumnIfExists(Connection $connection, string $table, string $column): bool
     {
         return $this->dropColumnIfExists($connection, $table, $column);

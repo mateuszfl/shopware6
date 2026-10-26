@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Shopware\Tests\Unit\Core\Framework\Migration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint\ReferentialAction;
 use Doctrine\DBAL\Schema\Index;
@@ -65,6 +66,7 @@ class MakeVersionableMigrationHelperTest extends TestCase
     private function createConnection(): Connection
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->expects($this->once())->method('fetchAllAssociative')->willReturn([
             [
                 'TABLE_NAME' => 'unit_translation',

@@ -7,6 +7,9 @@ use Shopware\Core\Framework\Migration\MigrationStep;
 
 /**
  * @internal
+ *
+ * Register a PostgreSQL implementation in MigrationVariantRegistry. Register this
+ * migration class itself only after verifying that its SQL is portable.
  */
 class Migration%%timestamp%%%%name%% extends MigrationStep
 {

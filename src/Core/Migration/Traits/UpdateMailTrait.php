@@ -4,8 +4,10 @@ namespace Shopware\Core\Migration\Traits;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Migration\MigrationDatabaseHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 #[Package('framework')]
@@ -50,7 +52,8 @@ trait UpdateMailTrait
                     'template' => $translation['mail_template_id'],
                     'html' => $update->getDeHtml(),
                     'plain' => $update->getDePlain(),
-                ]
+                ],
+                ['language_id' => ParameterType::BINARY, 'template' => ParameterType::BINARY]
             );
         }
     }
@@ -79,7 +82,8 @@ trait UpdateMailTrait
                     'template' => $translation['mail_template_id'],
                     'html' => $update->getEnHtml(),
                     'plain' => $update->getEnPlain(),
-                ]
+                ],
+                ['language_id' => ParameterType::BINARY, 'template' => ParameterType::BINARY]
             );
         }
     }
@@ -107,7 +111,8 @@ trait UpdateMailTrait
                     'language_id' => $translation['language_id'],
                     'template' => $translation['mail_template_id'],
                     'subject' => $update->getEnSubject(),
-                ]
+                ],
+                ['language_id' => ParameterType::BINARY, 'template' => ParameterType::BINARY]
             );
         }
     }
@@ -134,7 +139,8 @@ trait UpdateMailTrait
                     'language_id' => $translation['language_id'],
                     'template' => $translation['mail_template_id'],
                     'subject' => $update->getDeSubject(),
-                ]
+                ],
+                ['language_id' => ParameterType::BINARY, 'template' => ParameterType::BINARY]
             );
         }
     }
@@ -146,8 +152,7 @@ trait UpdateMailTrait
      */
     private function getTranslationIds(Connection $connection, array $languageIds, string $type): array
     {
-        /** @phpstan-ignore return.type (PHPStan cannot determine the returned keys and values) */
-        return $connection->fetchAllAssociative(
+        $rows = $connection->fetchAllAssociative(
             '
             SELECT mail_template_translation.mail_template_id, mail_template_translation.language_id
 
@@ -167,5 +172,15 @@ trait UpdateMailTrait
             ['ids' => Uuid::fromHexToBytesList($languageIds), 'type' => $type],
             ['ids' => ArrayParameterType::BINARY]
         );
+
+        $translations = [];
+        foreach ($rows as $row) {
+            $translations[] = [
+                'mail_template_id' => MigrationDatabaseHelper::normalizeBinaryId($row['mail_template_id']),
+                'language_id' => MigrationDatabaseHelper::normalizeBinaryId($row['language_id']),
+            ];
+        }
+
+        return $translations;
     }
 }

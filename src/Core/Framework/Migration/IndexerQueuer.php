@@ -3,6 +3,7 @@
 namespace Shopware\Core\Framework\Migration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -92,12 +93,17 @@ class IndexerQueuer
     }
 
     /**
+     * @param string|resource|null $id
      * @param array<array-key, array<string>> $indexerList
      */
-    private static function upsert(Connection $connection, ?string $id, array $indexerList): void
+    private static function upsert(Connection $connection, mixed $id, array $indexerList): void
     {
+        if ($id !== null) {
+            $id = MigrationDatabaseHelper::normalizeBinaryId($id);
+        }
+
         if ($indexerList === [] && $id !== null) {
-            $connection->delete('system_config', ['id' => $id]);
+            $connection->delete('system_config', ['id' => $id], ['id' => ParameterType::BINARY]);
 
             return;
         }
@@ -108,7 +114,8 @@ class IndexerQueuer
             $connection->update(
                 'system_config',
                 ['configuration_value' => $newValue, 'updated_at' => $date],
-                ['id' => $id]
+                ['id' => $id],
+                ['id' => ParameterType::BINARY]
             );
         } else {
             $connection->insert(
@@ -118,13 +125,14 @@ class IndexerQueuer
                     'configuration_key' => self::INDEXER_KEY,
                     'configuration_value' => $newValue,
                     'created_at' => $date,
-                ]
+                ],
+                ['id' => ParameterType::BINARY]
             );
         }
     }
 
     /**
-     * @return array{id: string, configuration_value: string}|null
+     * @return array{id: string|resource, configuration_value: string}|null
      */
     private static function fetchCurrent(Connection $connection): ?array
     {
@@ -140,7 +148,9 @@ class IndexerQueuer
             return null;
         }
 
-        /* @phpstan-ignore return.type (PHPStan cannot properly determine the array type from the DB) */
-        return $currentRow;
+        return [
+            'id' => MigrationDatabaseHelper::normalizeBinaryId($currentRow['id'] ?? null),
+            'configuration_value' => (string) ($currentRow['configuration_value'] ?? ''),
+        ];
     }
 }

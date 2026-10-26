@@ -6,12 +6,14 @@ namespace Shopware\Tests\Unit\Core\Framework\Migration;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception as DBALException;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Schema\MySQLSchemaManager;
 use Doctrine\DBAL\Schema\Table;
 use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\AddColumnTrait;
 
@@ -25,12 +27,13 @@ class AddColumnTraitTest extends TestCase
     public function testReturnsFalseIfColumnExists(): void
     {
         $connection = $this->createMock(Connection::class);
-        $connection->method('createSchemaManager')->willReturn($this->createSchemaManager(columnExists: true));
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
+        $connection->method('fetchOne')->willReturn(1);
         $connection->expects($this->never())->method('executeStatement');
 
         $migration = new TestAddColumnMigration();
 
-        $result = $migration->callAddColumn($connection, 'product', 'states', 'JSON');
+        $result = Feature::withFeatureDisabled('v6.8.0.0', static fn (): bool => $migration->callAddColumn($connection, 'product', 'states', 'JSON'));
 
         static::assertFalse($result);
     }
@@ -49,6 +52,7 @@ class AddColumnTraitTest extends TestCase
         string $expectedInstantSql
     ): void {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('createSchemaManager')->willReturn($this->createSchemaManager(columnExists: false));
         $connection->expects($this->once())
             ->method('executeStatement')
@@ -64,6 +68,7 @@ class AddColumnTraitTest extends TestCase
     public function testFallsBackWhenInstantNotSupported(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
         $connection->method('createSchemaManager')->willReturn($this->createSchemaManager(columnExists: false));
 
         $instantSql = 'ALTER TABLE `app` ADD COLUMN `source_config` JSON NOT NULL DEFAULT (JSON_OBJECT()), ALGORITHM=INSTANT;';

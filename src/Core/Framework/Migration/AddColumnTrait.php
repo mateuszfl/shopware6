@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\Migration;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception as DBALException;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 
 trait AddColumnTrait
 {
@@ -35,7 +36,15 @@ trait AddColumnTrait
             return false;
         }
 
-        $sql = 'ALTER TABLE `' . $table . '` ADD COLUMN `' . $column . '` ' . $type . ' ' . ($nullable ? 'NULL' : 'NOT NULL') . ' DEFAULT ' . $default;
+        $platform = $connection->getDatabasePlatform();
+        $quote = static fn (string $identifier): string => $platform->quoteSingleIdentifier($identifier);
+        $sql = 'ALTER TABLE ' . $quote($table) . ' ADD COLUMN ' . $quote($column) . ' ' . $type . ' ' . ($nullable ? 'NULL' : 'NOT NULL') . ' DEFAULT ' . $default;
+
+        if (!$platform instanceof AbstractMySQLPlatform) {
+            NonStandardFkGuard::executeDdl($connection, $sql);
+
+            return true;
+        }
 
         try {
             // Try INSTANT first – fast metadata-only operation, no table rebuild.

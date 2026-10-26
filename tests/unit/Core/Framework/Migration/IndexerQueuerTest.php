@@ -16,6 +16,8 @@ use Shopware\Core\Framework\Migration\IndexerQueuer;
 #[CoversClass(IndexerQueuer::class)]
 class IndexerQueuerTest extends TestCase
 {
+    private const CONFIG_ID = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10";
+
     #[TestDox('getIndexers returns an empty list when nothing is queued')]
     public function testGetIndexersWithoutRow(): void
     {
@@ -30,7 +32,7 @@ class IndexerQueuerTest extends TestCase
     {
         $connection = static::createStub(Connection::class);
         $connection->method('fetchAssociative')->willReturn([
-            'id' => 'config-id',
+            'id' => self::CONFIG_ID,
             'configuration_value' => (string) json_encode(['_value' => [
                 'product.indexer' => ['skip-seo'],
                 'category.indexer' => 1,
@@ -51,7 +53,7 @@ class IndexerQueuerTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $connection->method('fetchAssociative')->willReturn([
-            'id' => 'config-id',
+            'id' => self::CONFIG_ID,
             'configuration_value' => (string) json_encode(['_value' => [
                 'product.indexer' => ['skip-seo'],
                 'category.indexer' => 1,
@@ -62,7 +64,7 @@ class IndexerQueuerTest extends TestCase
             ->method('update')
             ->willReturnCallback(static function (string $table, array $data, array $criteria): int {
                 static::assertSame('system_config', $table);
-                static::assertSame(['id' => 'config-id'], $criteria);
+                static::assertSame(['id' => self::CONFIG_ID], $criteria);
                 static::assertSame(
                     ['_value' => ['category.indexer' => []]],
                     json_decode((string) $data['configuration_value'], true)
@@ -79,7 +81,7 @@ class IndexerQueuerTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $connection->method('fetchAssociative')->willReturn([
-            'id' => 'config-id',
+            'id' => self::CONFIG_ID,
             'configuration_value' => (string) json_encode(['_value' => ['product.indexer' => []]]),
         ]);
 
@@ -87,7 +89,7 @@ class IndexerQueuerTest extends TestCase
             ->method('delete')
             ->willReturnCallback(static function (string $table, array $criteria): int {
                 static::assertSame('system_config', $table);
-                static::assertSame(['id' => 'config-id'], $criteria);
+                static::assertSame(['id' => self::CONFIG_ID], $criteria);
 
                 return 1;
             });
@@ -122,7 +124,7 @@ class IndexerQueuerTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $connection->method('fetchAssociative')->willReturn([
-            'id' => 'config-id',
+            'id' => self::CONFIG_ID,
             'configuration_value' => (string) json_encode(['_value' => [
                 'product.indexer' => ['skip-seo'],
                 'legacy.indexer' => 1,
@@ -132,7 +134,7 @@ class IndexerQueuerTest extends TestCase
         $connection->expects($this->once())
             ->method('update')
             ->willReturnCallback(static function (string $table, array $data, array $criteria): int {
-                static::assertSame(['id' => 'config-id'], $criteria);
+                static::assertSame(['id' => self::CONFIG_ID], $criteria);
                 // array_unique() preserves keys, so the merged options carry a key gap
                 // and serialize as a JSON object instead of a list
                 static::assertSame(
