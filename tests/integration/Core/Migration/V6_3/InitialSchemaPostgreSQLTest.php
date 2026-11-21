@@ -29,6 +29,7 @@ use Shopware\Core\Migration\V6_3\Migration1536232920PaymentMethod;
 use Shopware\Core\Migration\V6_3\Migration1536232990Order;
 use Shopware\Core\Migration\V6_3\Migration1536233030OrderLineItem;
 use Shopware\Core\Migration\V6_3\Migration1536233040OrderDeliveryPosition;
+use Shopware\Core\Migration\V6_3\Migration1536233130ProductMedia;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 
 /**
@@ -37,7 +38,7 @@ use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fix
 #[Package('framework')]
 class InitialSchemaPostgreSQLTest extends TestCase
 {
-    private const LAST_TIMESTAMP = 1536233050;
+    private const LAST_TIMESTAMP = 1536233340;
 
     private Connection $postgres;
 
@@ -103,7 +104,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
         static::assertCount(335, $postgres->getMigrationSteps());
 
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(45, $pending);
+        static::assertCount(74, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
 
         foreach ($pending as $class) {
@@ -295,7 +296,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
         foreach ([$this->mysql, $this->postgres] as $connection) {
             $collection = $this->collection($connection);
             $collection->sync();
-            $collection->migrateInPlace(self::LAST_TIMESTAMP);
+            $collection->migrateInPlace(1536233050);
 
             $reference = str_repeat('R', 16);
             $version = str_repeat('V', 16);
@@ -393,13 +394,110 @@ class InitialSchemaPostgreSQLTest extends TestCase
         }
     }
 
+    public function testProductDecimalAndVersionedMediaLinkSurviveRetry(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1536233120);
+
+            $product = str_repeat('P', 16);
+            $cover = str_repeat('C', 16);
+            $media = str_repeat('M', 16);
+            $version = str_repeat('V', 16);
+            $created = '2020-01-01 00:00:00.123';
+            $searchKeywords = $connection->quoteSingleIdentifier('searchKeywords');
+            $connection->insert('product', [
+                'id' => $product,
+                'version_id' => $version,
+                $searchKeywords => $product,
+                'product_number' => 'custom-sku',
+                'purchase_unit' => '1234567.9876',
+                'created_at' => $created,
+            ], array_fill(0, 3, ParameterType::BINARY));
+            $connection->insert('media', ['id' => $media, 'created_at' => $created], [ParameterType::BINARY]);
+
+            static::assertSame([Migration1536233130ProductMedia::class], $collection->migrateInPlace(1536233130));
+            $connection->insert('product_media', [
+                'id' => $cover,
+                'version_id' => $version,
+                'product_id' => $product,
+                'product_version_id' => $version,
+                'media_id' => $media,
+                'created_at' => $created,
+            ], array_fill(0, 5, ParameterType::BINARY));
+            $connection->update('product', [
+                'product_media_id' => $cover,
+                'product_media_version_id' => $version,
+            ], ['id' => $product, 'version_id' => $version], array_fill(0, 4, ParameterType::BINARY));
+
+            if ($connection === $this->postgres) {
+                (new MigrationVariantRegistry())->resolve(Migration1536233130ProductMedia::class, 1536233130)->update($connection);
+            }
+
+            static::assertSame(
+                ['custom-sku', '1234567.9876', bin2hex($product), bin2hex($cover)],
+                $connection->fetchNumeric("SELECT product_number, purchase_unit, sw_uuid_hex($searchKeywords), sw_uuid_hex(product_media_id) FROM product")
+            );
+            try {
+                $connection->update('product', ['product_media_version_id' => $media], ['id' => $product], [ParameterType::BINARY, ParameterType::BINARY]);
+                static::fail('A cover of a different version cannot satisfy the foreign key.');
+            } catch (DriverException) {
+                static::assertSame(bin2hex($version), $connection->fetchOne('SELECT sw_uuid_hex(product_media_version_id) FROM product'));
+            }
+            try {
+                $connection->executeStatement('UPDATE product SET purchase_unit = -0.01');
+                static::fail('A negative purchase unit must be rejected.');
+            } catch (DriverException) {
+                static::assertSame('1234567.9876', $connection->fetchOne('SELECT purchase_unit FROM product'));
+            }
+            $connection->delete('product_media', ['id' => $cover, 'version_id' => $version], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM product'));
+        }
+    }
+
+    public function testConfigAndNumberRangePreserveHistoricalPersistenceBoundaries(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1536233340);
+
+            $created = '2020-01-01 00:00:00.123';
+            $first = str_repeat('F', 16);
+            $second = str_repeat('S', 16);
+            $connection->executeStatement(<<<'SQL'
+                INSERT INTO system_config (id, configuration_key, configuration_value, created_at)
+                VALUES (?, 'core.example', '{"value":"first"}', ?), (?, 'core.example', '{"value":"second"}', ?)
+                SQL, [$first, $created, $second, $created], [ParameterType::BINARY, ParameterType::STRING, ParameterType::BINARY, ParameterType::STRING]);
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.example\' AND sales_channel_id IS NULL'));
+
+            $lastValue = $connection->quoteSingleIdentifier('last_value');
+            $connection->insert('number_range_state', [
+                'id' => $second,
+                'number_range_id' => $first,
+                $lastValue => 37,
+                'created_at' => $created,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER]);
+            static::assertSame(37, $connection->fetchOne("SELECT $lastValue FROM number_range_state"));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM number_range'));
+
+            try {
+                $connection->insert('message_queue_stats', ['id' => $first, 'name' => 'queue', 'size' => -4, 'created_at' => $created], [ParameterType::BINARY, ParameterType::STRING, ParameterType::INTEGER]);
+                static::fail('A queue count must not be negative.');
+            } catch (DriverException) {
+                static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM message_queue_stats'));
+            }
+        }
+    }
+
     public function testDestructiveHistoryRunsSeparatelyWithoutChangingTheInitialSchema(): void
     {
         $postgres = $this->collection($this->postgres);
         $postgres->sync();
         static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
         $updated = $postgres->migrateInPlace(self::LAST_TIMESTAMP);
-        static::assertCount(45, $updated);
+        static::assertCount(74, $updated);
         static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM migration WHERE update_destructive IS NOT NULL'));
 
         $schema = $this->schema($this->postgres);
@@ -530,7 +628,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
             : 'extra = \'auto_increment\'';
         $generated = $postgres ? 'is_generated = \'ALWAYS\'' : 'extra = \'VIRTUAL GENERATED\'';
         $columns = $connection->fetchAllAssociative(
-            "SELECT LOWER(column_name) AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
+            "SELECT column_name AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
                     numeric_precision AS number_precision, numeric_scale AS scale, datetime_precision AS time_precision,
                     collation_name AS collation, is_nullable AS nullable, column_default AS default_value,
                     CASE WHEN $identity THEN 1 ELSE 0 END AS identity_column,
@@ -574,7 +672,8 @@ class InitialSchemaPostgreSQLTest extends TestCase
             if ($column['identity_column'] === 1) {
                 $column['default_value'] = null;
             } elseif ($postgres && \is_string($column['default_value'])) {
-                $column['default_value'] = trim(explode('::', $column['default_value'], 2)[0], '\'');
+                $literal = explode('::', $column['default_value'], 2)[0];
+                $column['default_value'] = $literal === 'NULL' ? null : trim($literal, '\'');
             } elseif ($column['default_value'] !== null) {
                 $column['default_value'] = (string) $column['default_value'];
             }
