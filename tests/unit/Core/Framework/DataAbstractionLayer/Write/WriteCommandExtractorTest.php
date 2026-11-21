@@ -11,6 +11,7 @@ use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityWriteGateway;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\AutoIncrementField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Immutable;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\PrimaryKey;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Required;
@@ -136,6 +137,65 @@ class WriteCommandExtractorTest extends TestCase
             new AdminApiSource(Uuid::randomHex()),
             true,
         ];
+    }
+
+    /**
+     * @param array<string, int> $values
+     */
+    #[DataProvider('autoIncrementFieldProvider')]
+    public function testOnlyTheDatabaseCanAllocateAutoIncrement(ContextSource $source, array $values): void
+    {
+        $definition = new class extends EntityDefinition {
+            public function getEntityName(): string
+            {
+                return 'auto_increment_test';
+            }
+
+            protected function defineFields(): FieldCollection
+            {
+                return new FieldCollection([
+                    (new IdField('id', 'id'))->addFlags(new PrimaryKey(), new Required()),
+                    new AutoIncrementField(),
+                ]);
+            }
+        };
+        $gateway = static::createStub(EntityWriteGatewayInterface::class);
+        $registry = new StaticDefinitionInstanceRegistry([$definition], static::createStub(ValidatorInterface::class), $gateway);
+        $extractor = new WriteCommandExtractor($gateway, $registry);
+        $parameters = new WriteParameterBag(
+            $registry->get($definition::class),
+            WriteContext::createFromContext(Context::createDefaultContext($source)),
+            '',
+            new WriteCommandQueue(),
+            new PrimaryKeyBag(),
+        );
+
+        $extractor->extract(['id' => Uuid::randomHex(), ...$values], $parameters);
+
+        $exceptions = $parameters->getContext()->getExceptions()->getExceptions();
+        if ($values !== []) {
+            static::assertCount(1, $exceptions);
+            $exception = array_shift($exceptions);
+            static::assertInstanceOf(WriteConstraintViolationException::class, $exception);
+            static::assertSame('/autoIncrement', $exception->getPath());
+
+            return;
+        }
+
+        static::assertSame([], $exceptions);
+        $commands = $parameters->getCommandQueue()->getCommands()[$definition->getEntityName()];
+        static::assertCount(1, $commands);
+        static::assertInstanceOf(InsertCommand::class, $commands[0]);
+        static::assertArrayNotHasKey('auto_increment', $commands[0]->getPayload());
+    }
+
+    public static function autoIncrementFieldProvider(): \Generator
+    {
+        yield 'system scope leaves the generated value to the database' => [new SystemSource(), []];
+
+        yield 'system scope cannot override the generated value' => [new SystemSource(), ['autoIncrement' => 7]];
+
+        yield 'admin scope cannot override the generated value' => [new AdminApiSource(Uuid::randomHex()), ['autoIncrement' => 7]];
     }
 
     public function testCreateUpdateCommandWithImmutableChanges(): void
