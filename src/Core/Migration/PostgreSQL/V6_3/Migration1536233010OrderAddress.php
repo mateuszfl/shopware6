@@ -1,0 +1,70 @@
+<?php declare(strict_types=1);
+
+namespace Shopware\Core\Migration\PostgreSQL\V6_3;
+
+use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Migration\MigrationStep;
+
+/**
+ * @internal
+ *
+ * @codeCoverageIgnore
+ *
+ * @see \Shopware\Tests\Integration\Core\Migration\V6_3\InitialSchemaPostgreSQLTest
+ */
+#[Package('framework')]
+class Migration1536233010OrderAddress extends MigrationStep
+{
+    public function getCreationTimestamp(): int
+    {
+        return 1536233010;
+    }
+
+    public function update(Connection $connection): void
+    {
+        $connection->executeStatement(<<<'SQL'
+            CREATE TABLE IF NOT EXISTS order_address (
+                id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_id_uuid CHECK (octet_length(id) = 16),
+                version_id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_version_id_uuid CHECK (octet_length(version_id) = 16),
+                country_id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_country_id_uuid CHECK (octet_length(country_id) = 16),
+                country_state_id BYTEA NULL CONSTRAINT chk_sw_order_address_country_state_id_uuid CHECK (octet_length(country_state_id) = 16),
+                order_id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_order_id_uuid CHECK (octet_length(order_id) = 16),
+                order_version_id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_order_version_id_uuid CHECK (octet_length(order_version_id) = 16),
+                company VARCHAR(255) COLLATE sw_type_ci NULL,
+                department VARCHAR(35) COLLATE sw_type_ci NULL,
+                salutation_id BYTEA NOT NULL CONSTRAINT chk_sw_order_address_salutation_id_uuid CHECK (octet_length(salutation_id) = 16),
+                title VARCHAR(100) COLLATE sw_type_ci NULL,
+                first_name VARCHAR(50) COLLATE sw_type_ci NOT NULL,
+                last_name VARCHAR(60) COLLATE sw_type_ci NOT NULL,
+                street VARCHAR(255) COLLATE sw_type_ci NOT NULL,
+                zipcode VARCHAR(50) COLLATE sw_type_ci NOT NULL,
+                city VARCHAR(70) COLLATE sw_type_ci NOT NULL,
+                vat_id VARCHAR(50) COLLATE sw_type_ci NULL,
+                phone_number VARCHAR(40) COLLATE sw_type_ci NULL,
+                additional_address_line1 VARCHAR(255) COLLATE sw_type_ci NULL,
+                additional_address_line2 VARCHAR(255) COLLATE sw_type_ci NULL,
+                custom_fields JSONB NULL,
+                created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
+                updated_at TIMESTAMP(3) WITHOUT TIME ZONE NULL,
+                PRIMARY KEY (id, version_id),
+                CONSTRAINT "fk.order_address.country_id" FOREIGN KEY (country_id)
+                    REFERENCES country (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT "fk.order_address.country_state_id" FOREIGN KEY (country_state_id)
+                    REFERENCES country_state (id) ON DELETE SET NULL ON UPDATE CASCADE,
+                CONSTRAINT "fk.order_address.order_id" FOREIGN KEY (order_id, order_version_id)
+                    REFERENCES "order" (id, version_id) ON DELETE CASCADE ON UPDATE CASCADE,
+                CONSTRAINT "fk.order_address.salutation_id" FOREIGN KEY (salutation_id)
+                    REFERENCES salutation (id) ON DELETE RESTRICT ON UPDATE CASCADE
+            )
+            SQL);
+
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "order_address__fk.order_address.country_id" ON order_address (country_id)');
+
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "order_address__fk.order_address.country_state_id" ON order_address (country_state_id)');
+
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "order_address__fk.order_address.order_id" ON order_address (order_id, order_version_id)');
+
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "order_address__fk.order_address.salutation_id" ON order_address (salutation_id)');
+    }
+}

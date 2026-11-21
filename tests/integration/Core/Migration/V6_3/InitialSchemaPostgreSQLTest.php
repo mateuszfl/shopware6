@@ -26,6 +26,9 @@ use Shopware\Core\Migration\V6_3\Migration1536232600Language;
 use Shopware\Core\Migration\V6_3\Migration1536232850Media;
 use Shopware\Core\Migration\V6_3\Migration1536232880Category;
 use Shopware\Core\Migration\V6_3\Migration1536232920PaymentMethod;
+use Shopware\Core\Migration\V6_3\Migration1536232990Order;
+use Shopware\Core\Migration\V6_3\Migration1536233030OrderLineItem;
+use Shopware\Core\Migration\V6_3\Migration1536233040OrderDeliveryPosition;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 
 /**
@@ -34,7 +37,7 @@ use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fix
 #[Package('framework')]
 class InitialSchemaPostgreSQLTest extends TestCase
 {
-    private const LAST_TIMESTAMP = 1536232980;
+    private const LAST_TIMESTAMP = 1536233050;
 
     private Connection $postgres;
 
@@ -100,7 +103,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
         static::assertCount(335, $postgres->getMigrationSteps());
 
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(38, $pending);
+        static::assertCount(45, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
 
         foreach ($pending as $class) {
@@ -287,19 +290,151 @@ class InitialSchemaPostgreSQLTest extends TestCase
         static::assertNull($this->postgres->fetchOne('SELECT media_id FROM payment_method'));
     }
 
+    public function testGeneratedOrderAndDeliveryPricesUseTheHistoricalJsonSemantics(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(self::LAST_TIMESTAMP);
+
+            $reference = str_repeat('R', 16);
+            $version = str_repeat('V', 16);
+            $created = '2020-01-01 00:00:00.123';
+            $this->insertOrderReferences($connection, $reference, $version, $created);
+
+            $order = $connection->quoteSingleIdentifier('order');
+            $connection->insert($order, [
+                'id' => $reference,
+                'version_id' => $version,
+                'state_id' => $reference,
+                'currency_id' => $reference,
+                'sales_channel_id' => $reference,
+                'billing_address_id' => $reference,
+                'billing_address_version_id' => $version,
+                'price' => '{"totalPrice":12.5,"netPrice":"10.25","positionPrice":7.5,"taxStatus":"gross"}',
+                'order_date' => $created,
+                'shipping_costs' => '{"totalPrice":5.25}',
+                'deep_link_code' => str_repeat('L', 32),
+                'created_at' => $created,
+            ], array_fill(0, 7, ParameterType::BINARY));
+            $connection->insert('order_line_item', [
+                'id' => $reference,
+                'version_id' => $version,
+                'order_id' => $reference,
+                'order_version_id' => $version,
+                'identifier' => 'custom-item',
+                'label' => 'Customized order item',
+                'quantity' => 2,
+                'price' => '{"unitPrice":3.125,"totalPrice":6.25}',
+                'created_at' => $created,
+            ], array_fill(0, 4, ParameterType::BINARY));
+            $connection->insert('order_delivery', [
+                'id' => $reference,
+                'version_id' => $version,
+                'order_id' => $reference,
+                'order_version_id' => $version,
+                'state_id' => $reference,
+                'shipping_method_id' => $reference,
+                'shipping_date_earliest' => '2020-01-02',
+                'shipping_date_latest' => '2020-01-03',
+                'shipping_costs' => '{}',
+                'created_at' => $created,
+            ], array_fill(0, 6, ParameterType::BINARY));
+            $connection->insert('order_delivery_position', [
+                'id' => $reference,
+                'version_id' => $version,
+                'order_delivery_id' => $reference,
+                'order_delivery_version_id' => $version,
+                'order_line_item_id' => $reference,
+                'order_line_item_version_id' => $version,
+                'price' => '{"totalPrice":2.5,"unitPrice":-1.5,"quantity":"1.5e1"}',
+                'created_at' => $created,
+            ], array_fill(0, 6, ParameterType::BINARY));
+
+            if ($connection === $this->postgres) {
+                $registry = new MigrationVariantRegistry();
+                $registry->resolve(Migration1536232990Order::class, 1536232990)->update($connection);
+                $registry->resolve(Migration1536233030OrderLineItem::class, 1536233030)->update($connection);
+                $registry->resolve(Migration1536233040OrderDeliveryPosition::class, 1536233040)->update($connection);
+            }
+
+            static::assertSame([12.5, 10.25, 7.5, 5.25, 'gross'], $connection->fetchNumeric("SELECT amount_total, amount_net, position_price, shipping_total, tax_status FROM $order"));
+            static::assertSame([3.125, 6.25, 'Customized order item'], $connection->fetchNumeric('SELECT unit_price, total_price, label FROM order_line_item'));
+            static::assertSame([3, -2, 15], $connection->fetchNumeric('SELECT total_price, unit_price, quantity FROM order_delivery_position'));
+            static::assertSame(1, (int) $connection->fetchOne("SELECT auto_increment FROM $order"));
+
+            $connection->executeStatement("UPDATE $order SET price = ?, shipping_costs = ?", ['{"taxStatus":null}', '{"totalPrice":22.5}']);
+            static::assertSame([null, null, null, 22.5, 'null'], $connection->fetchNumeric("SELECT amount_total, amount_net, position_price, shipping_total, tax_status FROM $order"));
+            $connection->executeStatement("UPDATE $order SET price = ?", ['{}']);
+            static::assertNull($connection->fetchOne("SELECT tax_status FROM $order"));
+            $connection->executeStatement('UPDATE order_line_item SET price = ?', ['{"unitPrice":-1.25}']);
+            static::assertSame([-1.25, null], $connection->fetchNumeric('SELECT unit_price, total_price FROM order_line_item'));
+            $connection->executeStatement('UPDATE order_delivery_position SET price = ?', ['{"quantity":1.25}']);
+            static::assertSame([null, null, 1], $connection->fetchNumeric('SELECT total_price, unit_price, quantity FROM order_delivery_position'));
+
+            foreach (['{"totalPrice":null}', '{"totalPrice":"NaN"}'] as $invalidPrice) {
+                try {
+                    $connection->executeStatement("UPDATE $order SET price = ?", [$invalidPrice]);
+                    static::fail('An invalid numeric price must be rejected.');
+                } catch (DriverException) {
+                    static::assertNull($connection->fetchOne("SELECT amount_total FROM $order"));
+                }
+            }
+
+            try {
+                $connection->executeStatement("UPDATE $order SET deep_link_code = ?", ['short']);
+                static::fail('The deep-link code must contain 32 characters.');
+            } catch (DriverException) {
+                static::assertSame(str_repeat('L', 32), $connection->fetchOne("SELECT deep_link_code FROM $order"));
+            }
+
+            $connection->delete($order, ['id' => $reference, 'version_id' => $version], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM order_delivery_position'));
+        }
+    }
+
     public function testDestructiveHistoryRunsSeparatelyWithoutChangingTheInitialSchema(): void
     {
         $postgres = $this->collection($this->postgres);
         $postgres->sync();
         static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
         $updated = $postgres->migrateInPlace(self::LAST_TIMESTAMP);
-        static::assertCount(38, $updated);
+        static::assertCount(45, $updated);
         static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM migration WHERE update_destructive IS NOT NULL'));
 
         $schema = $this->schema($this->postgres);
         static::assertSame($updated, $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
         static::assertSame($schema, $this->schema($this->postgres));
         static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
+    }
+
+    private function insertOrderReferences(Connection $connection, string $reference, string $version, string $created): void
+    {
+        foreach (['country', 'customer_group', 'payment_method', 'sales_channel_type'] as $table) {
+            $connection->insert($table, ['id' => $reference, 'created_at' => $created], [ParameterType::BINARY]);
+        }
+
+        $connection->insert('locale', ['id' => $reference, 'code' => 'en-GB', 'created_at' => $created], [ParameterType::BINARY]);
+        $connection->insert('language', ['id' => $reference, 'locale_id' => $reference, 'name' => 'English', 'created_at' => $created], [ParameterType::BINARY, ParameterType::BINARY]);
+        $connection->insert('currency', ['id' => $reference, 'iso_code' => 'EUR', 'factor' => 1, 'symbol' => '€', 'decimal_precision' => 2, 'created_at' => $created], [ParameterType::BINARY]);
+        $connection->insert('rule', ['id' => $reference, 'name' => 'Shipping availability', 'priority' => 1, 'created_at' => $created], [ParameterType::BINARY]);
+        $connection->insert('delivery_time', ['id' => $reference, 'min' => 1, 'max' => 2, 'unit' => 'day', 'created_at' => $created], [ParameterType::BINARY]);
+        $connection->insert('shipping_method', ['id' => $reference, 'availability_rule_id' => $reference, 'delivery_time_id' => $reference, 'created_at' => $created], array_fill(0, 3, ParameterType::BINARY));
+        $connection->insert('category', ['id' => $reference, 'version_id' => $version, 'type' => 'page', 'created_at' => $created], [ParameterType::BINARY, ParameterType::BINARY]);
+        $connection->insert('sales_channel', [
+            'id' => $reference,
+            'type_id' => $reference,
+            'language_id' => $reference,
+            'currency_id' => $reference,
+            'payment_method_id' => $reference,
+            'shipping_method_id' => $reference,
+            'country_id' => $reference,
+            'navigation_category_id' => $reference,
+            'navigation_category_version_id' => $version,
+            'customer_group_id' => $reference,
+            'access_key' => 'migration-contract',
+            'created_at' => $created,
+        ], array_fill(0, 10, ParameterType::BINARY));
     }
 
     private function collection(Connection $connection): MigrationCollection
@@ -393,11 +528,13 @@ class InitialSchemaPostgreSQLTest extends TestCase
         $identity = $postgres
             ? 'pg_get_serial_sequence(quote_ident(table_name), column_name) IS NOT NULL'
             : 'extra = \'auto_increment\'';
+        $generated = $postgres ? 'is_generated = \'ALWAYS\'' : 'extra = \'VIRTUAL GENERATED\'';
         $columns = $connection->fetchAllAssociative(
             "SELECT LOWER(column_name) AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
                     numeric_precision AS number_precision, numeric_scale AS scale, datetime_precision AS time_precision,
                     collation_name AS collation, is_nullable AS nullable, column_default AS default_value,
-                    CASE WHEN $identity THEN 1 ELSE 0 END AS identity_column
+                    CASE WHEN $identity THEN 1 ELSE 0 END AS identity_column,
+                    CASE WHEN $generated THEN 1 ELSE 0 END AS generated_column
              FROM information_schema.columns
              WHERE table_schema = $schema AND table_name = ?
              ORDER BY ordinal_position",
@@ -433,6 +570,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
                 default => $column['collation'],
             };
             $column['identity_column'] = (int) $column['identity_column'];
+            $column['generated_column'] = (int) $column['generated_column'];
             if ($column['identity_column'] === 1) {
                 $column['default_value'] = null;
             } elseif ($postgres && \is_string($column['default_value'])) {

@@ -57,6 +57,13 @@ final class MigrationVariantRegistry
         [Core63\Migration1536232960Customer::class, 1536232960, PostgreSQL63\Migration1536232960Customer::class],
         [Core63\Migration1536232970CustomerAddress::class, 1536232970, PostgreSQL63\Migration1536232970CustomerAddress::class],
         [Core63\Migration1536232980Cart::class, 1536232980, PostgreSQL63\Migration1536232980Cart::class],
+        [Core63\Migration1536232990Order::class, 1536232990, PostgreSQL63\Migration1536232990Order::class],
+        [Core63\Migration1536233000OrderCustomer::class, 1536233000, PostgreSQL63\Migration1536233000OrderCustomer::class],
+        [Core63\Migration1536233010OrderAddress::class, 1536233010, PostgreSQL63\Migration1536233010OrderAddress::class],
+        [Core63\Migration1536233020OrderDelivery::class, 1536233020, PostgreSQL63\Migration1536233020OrderDelivery::class],
+        [Core63\Migration1536233030OrderLineItem::class, 1536233030, PostgreSQL63\Migration1536233030OrderLineItem::class],
+        [Core63\Migration1536233040OrderDeliveryPosition::class, 1536233040, PostgreSQL63\Migration1536233040OrderDeliveryPosition::class],
+        [Core63\Migration1536233050OrderTransaction::class, 1536233050, PostgreSQL63\Migration1536233050OrderTransaction::class],
     ];
 
     /**
