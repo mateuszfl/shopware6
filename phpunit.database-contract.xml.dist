@@ -19,7 +19,7 @@
             <file>tests/integration/Core/Framework/Migration/MigrationPlatformContractTest.php</file>
         </testsuite>
         <testsuite name="database-migrations-v63">
-            <file>tests/integration/Core/Migration/V6_3/InitialSchemaPostgreSQLTest.php</file>
+            <directory>tests/integration/Core/Migration/V6_3</directory>
         </testsuite>
         <testsuite name="database-contract">
             <file>tests/integration/Core/Framework/DataAbstractionLayer/Contract/DatabaseContractTest.php</file>

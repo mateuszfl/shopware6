@@ -113,6 +113,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1536233530SalesChannelCategoryId::class, 1536233530, PostgreSQL63\Migration1536233530SalesChannelCategoryId::class],
         [Core63\Migration1536233540ProductSearchKeyword::class, 1536233540, PostgreSQL63\Migration1536233540ProductSearchKeyword::class],
         [Core63\Migration1536233550Tag::class, 1536233550, PostgreSQL63\Migration1536233550Tag::class],
+        [Core63\Migration1536233560BasicData::class, 1536233560, PostgreSQL63\Migration1536233560BasicData::class],
     ];
 
     /**

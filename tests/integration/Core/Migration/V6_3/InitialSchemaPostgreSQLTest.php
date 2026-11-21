@@ -6,22 +6,12 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\DriverException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\ParameterType;
-use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
-use Doctrine\DBAL\Schema\Name\OptionallyQualifiedName;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
-use PHPUnit\Framework\TestCase;
-use Psr\Log\NullLogger;
 use Shopware\Core\Checkout\Payment\Cart\PaymentHandler\DefaultPayment;
-use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Log\Package;
-use Shopware\Core\Framework\Migration\MigrationCollection;
-use Shopware\Core\Framework\Migration\MigrationRuntime;
-use Shopware\Core\Framework\Migration\MigrationSource;
 use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
-use Shopware\Core\Maintenance\System\Service\SetupDatabaseAdapter;
-use Shopware\Core\Migration\V6_3\Migration1536232600Language;
 use Shopware\Core\Migration\V6_3\Migration1536232850Media;
 use Shopware\Core\Migration\V6_3\Migration1536232880Category;
 use Shopware\Core\Migration\V6_3\Migration1536232920PaymentMethod;
@@ -30,69 +20,14 @@ use Shopware\Core\Migration\V6_3\Migration1536233030OrderLineItem;
 use Shopware\Core\Migration\V6_3\Migration1536233040OrderDeliveryPosition;
 use Shopware\Core\Migration\V6_3\Migration1536233130ProductMedia;
 use Shopware\Core\Migration\V6_3\Migration1536233530SalesChannelCategoryId;
-use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 
 /**
  * @internal
  */
 #[Package('framework')]
-class InitialSchemaPostgreSQLTest extends TestCase
+class InitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const LAST_TIMESTAMP = 1536233550;
-
-    private Connection $postgres;
-
-    private Connection $mysql;
-
-    /**
-     * @var list<Connection>
-     */
-    private array $ownedDatabases = [];
-
-    protected function setUp(): void
-    {
-        if (!getenv('DATABASE_CONTRACT_URL') || !getenv('DATABASE_CONTRACT_URL_MYSQL')) {
-            static::markTestSkipped('Set DATABASE_CONTRACT_URL and DATABASE_CONTRACT_URL_MYSQL to dedicated empty contract databases.');
-        }
-
-        $this->postgres = ContractConnectionFactory::create('DATABASE_CONTRACT_URL');
-        $this->mysql = ContractConnectionFactory::create('DATABASE_CONTRACT_URL_MYSQL');
-        static::assertInstanceOf(PostgreSQLPlatform::class, $this->postgres->getDatabasePlatform());
-        static::assertNotInstanceOf(PostgreSQLPlatform::class, $this->mysql->getDatabasePlatform());
-
-        foreach ([$this->postgres, $this->mysql] as $connection) {
-            static::assertSame([], $this->tableNames($connection), 'Use a dedicated empty database.');
-            $schema = $connection === $this->postgres ? 'current_schema()' : 'DATABASE()';
-            static::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM information_schema.views WHERE table_schema = $schema"), 'Use a dedicated empty database.');
-        }
-
-        foreach ([$this->postgres, $this->mysql] as $connection) {
-            $this->ownedDatabases[] = $connection;
-            static::assertTrue((new SetupDatabaseAdapter())->initializeShopwareDb($connection));
-        }
-    }
-
-    protected function tearDown(): void
-    {
-        foreach ($this->ownedDatabases as $connection) {
-            if ($connection === $this->mysql) {
-                $connection->executeStatement('SET SESSION FOREIGN_KEY_CHECKS = 0');
-            }
-            try {
-                foreach ($this->tableNames($connection) as $table) {
-                    $connection->executeStatement('DROP TABLE ' . $connection->quoteSingleIdentifier($table) . ($connection === $this->postgres ? ' CASCADE' : ''));
-                }
-            } finally {
-                try {
-                    if ($connection === $this->mysql) {
-                        $connection->executeStatement('SET SESSION FOREIGN_KEY_CHECKS = 1');
-                    }
-                } finally {
-                    $connection->close();
-                }
-            }
-        }
-    }
 
     public function testInitialMigrationsMatchMySqlAtEachStepAndCanBeReapplied(): void
     {
@@ -607,16 +542,6 @@ class InitialSchemaPostgreSQLTest extends TestCase
         ], array_fill(0, 10, ParameterType::BINARY));
     }
 
-    private function collection(Connection $connection): MigrationCollection
-    {
-        $file = (new \ReflectionClass(Migration1536232600Language::class))->getFileName();
-        static::assertIsString($file);
-        $source = new MigrationSource('core.V6_3', [\dirname($file) => 'Shopware\\Core\\Migration\\V6_3']);
-        $logger = new NullLogger();
-
-        return new MigrationCollection($source, new MigrationRuntime($connection, $logger), $connection, $logger);
-    }
-
     /**
      * @return array<string, array{columns: list<array<string, mixed>>, primaryKey: list<string>|null, foreignKeys: list<array<mixed>>, indexes: list<array<mixed>>}>
      */
@@ -707,17 +632,6 @@ class InitialSchemaPostgreSQLTest extends TestCase
             $key->getOnDeleteAction()->name,
             $key->getOnUpdateAction()->name,
         ];
-    }
-
-    /**
-     * @return list<non-empty-string>
-     */
-    private function tableNames(Connection $connection): array
-    {
-        return array_map(
-            static fn (OptionallyQualifiedName $table): string => $table->getUnqualifiedName()->getValue(),
-            (new DatabaseSchema($connection))->introspectCurrentSchemaTableNames()
-        );
     }
 
     /**
