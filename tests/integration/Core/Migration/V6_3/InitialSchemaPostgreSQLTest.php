@@ -14,6 +14,7 @@ use Doctrine\DBAL\Schema\Name\OptionallyQualifiedName;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Shopware\Core\Checkout\Payment\Cart\PaymentHandler\DefaultPayment;
 use Shopware\Core\Framework\Adapter\Database\DatabaseSchema;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationCollection;
@@ -22,6 +23,9 @@ use Shopware\Core\Framework\Migration\MigrationSource;
 use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 use Shopware\Core\Maintenance\System\Service\SetupDatabaseAdapter;
 use Shopware\Core\Migration\V6_3\Migration1536232600Language;
+use Shopware\Core\Migration\V6_3\Migration1536232850Media;
+use Shopware\Core\Migration\V6_3\Migration1536232880Category;
+use Shopware\Core\Migration\V6_3\Migration1536232920PaymentMethod;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 
 /**
@@ -30,7 +34,7 @@ use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fix
 #[Package('framework')]
 class InitialSchemaPostgreSQLTest extends TestCase
 {
-    private const LAST_TIMESTAMP = 1536232750;
+    private const LAST_TIMESTAMP = 1536232980;
 
     private Connection $postgres;
 
@@ -96,7 +100,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
         static::assertCount(335, $postgres->getMigrationSteps());
 
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(16, $pending);
+        static::assertCount(38, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
 
         foreach ($pending as $class) {
@@ -166,13 +170,130 @@ class InitialSchemaPostgreSQLTest extends TestCase
         $this->postgres->executeStatement('INSERT INTO locale (id, code, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)', [str_repeat('C', 16), 'CAFE'], [ParameterType::BINARY, ParameterType::STRING]);
     }
 
+    public function testStateMachineRestrictsDeletingUsedStatesAndClearsTheInitialState(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $collection->migrateInPlace(1536232760);
+
+        $machine = str_repeat('M', 16);
+        $initial = str_repeat('I', 16);
+        $next = str_repeat('N', 16);
+        $transition = str_repeat('T', 16);
+        $this->postgres->executeStatement('INSERT INTO state_machine (id, technical_name, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)', [$machine, 'checkout'], [ParameterType::BINARY, ParameterType::STRING]);
+        $this->postgres->executeStatement(<<<'SQL'
+            INSERT INTO state_machine_state (id, state_machine_id, technical_name, created_at)
+            VALUES (?, ?, 'initial', CURRENT_TIMESTAMP), (?, ?, 'next', CURRENT_TIMESTAMP)
+            SQL, [$initial, $machine, $next, $machine], array_fill(0, 4, ParameterType::BINARY));
+        $this->postgres->update('state_machine', ['initial_state_id' => $initial], ['id' => $machine], [ParameterType::BINARY, ParameterType::BINARY]);
+        $this->postgres->executeStatement(<<<'SQL'
+            INSERT INTO state_machine_transition (id, state_machine_id, from_state_id, to_state_id, action_name, created_at)
+            VALUES (?, ?, ?, ?, 'move', CURRENT_TIMESTAMP)
+            SQL, [$transition, $machine, $initial, $next], array_fill(0, 4, ParameterType::BINARY));
+
+        try {
+            $this->postgres->delete('state_machine_state', ['id' => $initial], [ParameterType::BINARY]);
+            static::fail('A transition must prevent removal of one of its states.');
+        } catch (DriverException $exception) {
+            static::assertSame('23001', $exception->getSQLState());
+            static::assertSame(bin2hex($initial), $this->postgres->fetchOne('SELECT sw_uuid_hex(initial_state_id) FROM state_machine'));
+        }
+
+        $this->postgres->delete('state_machine_transition', ['id' => $transition], [ParameterType::BINARY]);
+        $this->postgres->delete('state_machine_state', ['id' => $initial], [ParameterType::BINARY]);
+        static::assertNull($this->postgres->fetchOne('SELECT initial_state_id FROM state_machine'));
+    }
+
+    public function testCategoryParentCascadeUsesBothIdAndVersion(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $collection->migrateInPlace(1536232880);
+
+        $parent = str_repeat('P', 16);
+        $child = str_repeat('C', 16);
+        $draft = str_repeat('D', 16);
+        $published = str_repeat('L', 16);
+        $this->postgres->executeStatement(<<<'SQL'
+            INSERT INTO category (id, version_id, parent_id, parent_version_id, type, created_at)
+            VALUES
+                (?, ?, NULL, NULL, 'page', CURRENT_TIMESTAMP),
+                (?, ?, NULL, NULL, 'page', CURRENT_TIMESTAMP),
+                (?, ?, ?, ?, 'page', CURRENT_TIMESTAMP)
+            SQL, [$parent, $draft, $parent, $published, $child, $draft, $parent, $published], array_fill(0, 8, ParameterType::BINARY));
+
+        $this->postgres->delete('category', ['id' => $parent, 'version_id' => $draft], [ParameterType::BINARY, ParameterType::BINARY]);
+        static::assertSame(bin2hex($published), $this->postgres->fetchOne('SELECT sw_uuid_hex(parent_version_id) FROM category WHERE id = ?', [$child], [ParameterType::BINARY]));
+
+        $this->postgres->delete('category', ['id' => $parent, 'version_id' => $published], [ParameterType::BINARY, ParameterType::BINARY]);
+        static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM category'));
+    }
+
+    public function testCategorySequencePreservesTheFullUnsignedRangeAndOwnership(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $collection->migrateInPlace(1536232880);
+
+        $first = str_repeat('A', 16);
+        $imported = str_repeat('B', 16);
+        $last = str_repeat('C', 16);
+        $version = str_repeat('V', 16);
+        $insert = 'INSERT INTO category (id, version_id, type, created_at) VALUES (?, ?, \'page\', CURRENT_TIMESTAMP) RETURNING auto_increment';
+        static::assertSame('1', (string) $this->postgres->fetchOne($insert, [$first, $version], [ParameterType::BINARY, ParameterType::BINARY]));
+
+        $this->postgres->executeStatement(
+            'INSERT INTO category (id, version_id, type, created_at, auto_increment) VALUES (?, ?, \'page\', CURRENT_TIMESTAMP, ?)',
+            [$imported, $version, '9223372036854775808'],
+            [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING]
+        );
+        $this->postgres->executeStatement('SELECT setval(\'category_auto_increment_seq\', 9223372036854775805, true)');
+
+        (new MigrationVariantRegistry())->resolve(Migration1536232880Category::class, 1536232880)->update($this->postgres);
+
+        static::assertSame('9223372036854775808', $this->postgres->fetchOne('SELECT auto_increment FROM category WHERE id = ?', [$imported], [ParameterType::BINARY]));
+        static::assertSame('18446744073709551615', (string) $this->postgres->fetchOne($insert, [$last, $version], [ParameterType::BINARY, ParameterType::BINARY]));
+        $this->postgres->executeStatement('TRUNCATE TABLE category, category_translation RESTART IDENTITY');
+        static::assertSame('1', (string) $this->postgres->fetchOne($insert, [$first, $version], [ParameterType::BINARY, ParameterType::BINARY]));
+    }
+
+    public function testMediaFileSizeAndPaymentHandlerDefaultsSurviveRetry(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $collection->migrateInPlace(1536232920);
+
+        $media = str_repeat('M', 16);
+        $method = str_repeat('P', 16);
+        $this->postgres->executeStatement('INSERT INTO media (id, file_size, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)', [$media, 4294967295], [ParameterType::BINARY, ParameterType::INTEGER]);
+        $this->postgres->executeStatement('INSERT INTO payment_method (id, media_id, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)', [$method, $media], [ParameterType::BINARY, ParameterType::BINARY]);
+        static::assertSame(DefaultPayment::class, $this->postgres->fetchOne('SELECT handler_identifier FROM payment_method'));
+
+        $this->postgres->update('payment_method', ['handler_identifier' => 'CustomPayment'], ['id' => $method], [ParameterType::STRING, ParameterType::BINARY]);
+        $registry = new MigrationVariantRegistry();
+        $registry->resolve(Migration1536232850Media::class, 1536232850)->update($this->postgres);
+        $registry->resolve(Migration1536232920PaymentMethod::class, 1536232920)->update($this->postgres);
+
+        static::assertSame(4294967295, (int) $this->postgres->fetchOne('SELECT file_size FROM media'));
+        static::assertSame('CustomPayment', $this->postgres->fetchOne('SELECT handler_identifier FROM payment_method'));
+        try {
+            $this->postgres->executeStatement('UPDATE media SET file_size = 4294967296');
+            static::fail('The unsigned integer bound must be enforced.');
+        } catch (DriverException $exception) {
+            static::assertSame('23514', $exception->getSQLState());
+        }
+
+        $this->postgres->delete('media', ['id' => $media], [ParameterType::BINARY]);
+        static::assertNull($this->postgres->fetchOne('SELECT media_id FROM payment_method'));
+    }
+
     public function testDestructiveHistoryRunsSeparatelyWithoutChangingTheInitialSchema(): void
     {
         $postgres = $this->collection($this->postgres);
         $postgres->sync();
         static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
         $updated = $postgres->migrateInPlace(self::LAST_TIMESTAMP);
-        static::assertCount(16, $updated);
+        static::assertCount(38, $updated);
         static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM migration WHERE update_destructive IS NOT NULL'));
 
         $schema = $this->schema($this->postgres);
@@ -211,14 +332,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
                     $primaryKey->getColumnNames()
                 ),
                 'foreignKeys' => array_map(
-                    static fn (ForeignKeyConstraint $key): array => [
-                        $key->getObjectName()?->getIdentifier()->getValue(),
-                        array_map(static fn (UnqualifiedName $name): string => $name->getIdentifier()->getValue(), $key->getReferencingColumnNames()),
-                        $key->getReferencedTableName()->getUnqualifiedName()->getValue(),
-                        array_map(static fn (UnqualifiedName $name): string => $name->getIdentifier()->getValue(), $key->getReferencedColumnNames()),
-                        $key->getOnDeleteAction()->name,
-                        $key->getOnUpdateAction()->name,
-                    ],
+                    $this->foreignKeySignature(...),
                     $manager->introspectTableForeignKeyConstraints($name)
                 ),
                 'indexes' => array_map(
@@ -234,6 +348,27 @@ class InitialSchemaPostgreSQLTest extends TestCase
         }
 
         return $tables;
+    }
+
+    /**
+     * @return array{?string, array<string, string>, string, string, string}
+     */
+    private function foreignKeySignature(ForeignKeyConstraint $key): array
+    {
+        $column = static fn (UnqualifiedName $name): string => $name->getIdentifier()->getValue();
+        $pairs = array_combine(
+            array_map($column, $key->getReferencingColumnNames()),
+            array_map($column, $key->getReferencedColumnNames())
+        );
+        ksort($pairs);
+
+        return [
+            $key->getObjectName()?->getIdentifier()->getValue(),
+            $pairs,
+            $key->getReferencedTableName()->getUnqualifiedName()->getValue(),
+            $key->getOnDeleteAction()->name,
+            $key->getOnUpdateAction()->name,
+        ];
     }
 
     /**
@@ -254,9 +389,12 @@ class InitialSchemaPostgreSQLTest extends TestCase
     {
         $postgres = $connection === $this->postgres;
         $schema = $postgres ? 'current_schema()' : 'DATABASE()';
-        $identity = $postgres ? 'is_identity = \'YES\'' : 'extra = \'auto_increment\'';
+        $nativeType = $postgres ? 'data_type' : 'column_type';
+        $identity = $postgres
+            ? 'pg_get_serial_sequence(quote_ident(table_name), column_name) IS NOT NULL'
+            : 'extra = \'auto_increment\'';
         $columns = $connection->fetchAllAssociative(
-            "SELECT LOWER(column_name) AS name, data_type AS type, character_maximum_length AS length,
+            "SELECT LOWER(column_name) AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
                     numeric_precision AS number_precision, numeric_scale AS scale, datetime_precision AS time_precision,
                     collation_name AS collation, is_nullable AS nullable, column_default AS default_value,
                     CASE WHEN $identity THEN 1 ELSE 0 END AS identity_column
@@ -268,29 +406,36 @@ class InitialSchemaPostgreSQLTest extends TestCase
 
         foreach ($columns as &$column) {
             $type = (string) $column['type'];
+            $nativeType = (string) $column['native_type'];
+            unset($column['native_type']);
+            $unsignedSequence = (int) $column['identity_column'] === 1 && $nativeType === 'bigint unsigned';
             $column['type'] = match ($type) {
+                'bigint' => $unsignedSequence ? 'numeric' : 'bigint',
                 'binary', 'longblob' => 'bytea',
                 'character' => 'char',
                 'character varying' => 'varchar',
                 'datetime' => 'timestamp without time zone',
                 'decimal' => 'numeric',
                 'double' => 'double precision',
-                'int' => 'integer',
+                'float' => 'real',
+                'int' => str_ends_with($nativeType, ' unsigned') ? 'bigint' : 'integer',
                 'json' => 'jsonb',
-                'longtext' => 'text',
+                'longtext', 'mediumtext' => 'text',
                 'tinyint' => 'smallint',
                 default => $type,
             };
             $column['length'] = \in_array($type, ['char', 'character', 'character varying', 'varchar'], true) ? (int) $column['length'] : null;
-            $column['number_precision'] = \in_array($type, ['decimal', 'numeric'], true) ? (int) $column['number_precision'] : null;
-            $column['scale'] = $column['scale'] !== null && $column['type'] === 'numeric' ? (int) $column['scale'] : null;
-            $column['time_precision'] = $column['time_precision'] === null ? null : (int) $column['time_precision'];
+            $column['number_precision'] = $unsignedSequence ? 20 : (\in_array($type, ['decimal', 'numeric'], true) ? (int) $column['number_precision'] : null);
+            $column['scale'] = $column['type'] === 'numeric' ? (int) $column['scale'] : null;
+            $column['time_precision'] = $column['time_precision'] === null || $type === 'date' ? null : (int) $column['time_precision'];
             $column['collation'] = match ($column['collation']) {
                 'sw_type_ci', 'utf8mb4_unicode_ci' => 'shopware_ci',
                 default => $column['collation'],
             };
             $column['identity_column'] = (int) $column['identity_column'];
-            if ($postgres && \is_string($column['default_value'])) {
+            if ($column['identity_column'] === 1) {
+                $column['default_value'] = null;
+            } elseif ($postgres && \is_string($column['default_value'])) {
                 $column['default_value'] = trim(explode('::', $column['default_value'], 2)[0], '\'');
             } elseif ($column['default_value'] !== null) {
                 $column['default_value'] = (string) $column['default_value'];
