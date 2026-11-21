@@ -7,9 +7,8 @@ use Doctrine\DBAL\Exception\DriverException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
-use Doctrine\DBAL\Schema\Index;
-use Doctrine\DBAL\Schema\Index\IndexedColumn;
 use Doctrine\DBAL\Schema\Name\OptionallyQualifiedName;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +29,7 @@ use Shopware\Core\Migration\V6_3\Migration1536232990Order;
 use Shopware\Core\Migration\V6_3\Migration1536233030OrderLineItem;
 use Shopware\Core\Migration\V6_3\Migration1536233040OrderDeliveryPosition;
 use Shopware\Core\Migration\V6_3\Migration1536233130ProductMedia;
+use Shopware\Core\Migration\V6_3\Migration1536233530SalesChannelCategoryId;
 use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fixtures\ContractConnectionFactory;
 
 /**
@@ -38,7 +38,7 @@ use Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Contract\_fix
 #[Package('framework')]
 class InitialSchemaPostgreSQLTest extends TestCase
 {
-    private const LAST_TIMESTAMP = 1536233340;
+    private const LAST_TIMESTAMP = 1536233550;
 
     private Connection $postgres;
 
@@ -104,7 +104,7 @@ class InitialSchemaPostgreSQLTest extends TestCase
         static::assertCount(335, $postgres->getMigrationSteps());
 
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(74, $pending);
+        static::assertCount(94, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
 
         foreach ($pending as $class) {
@@ -491,19 +491,91 @@ class InitialSchemaPostgreSQLTest extends TestCase
         }
     }
 
+    public function testNavigationIsRemovedOnlyDuringTheDestructivePass(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1536233520);
+            $collection->migrateDestructiveInPlace(1536233530);
+
+            $reference = str_repeat('R', 16);
+            $version = str_repeat('V', 16);
+            $created = '2020-01-01 00:00:00.123';
+            $this->insertOrderReferences($connection, $reference, $version, $created);
+            $connection->insert('navigation', ['id' => $reference, 'version_id' => $version, 'created_at' => $created], array_fill(0, 2, ParameterType::BINARY));
+            $connection->update('sales_channel', ['navigation_id' => $reference, 'navigation_version_id' => $version], ['id' => $reference], array_fill(0, 3, ParameterType::BINARY));
+            $connection->insert('category_translation', [
+                'category_id' => $reference,
+                'category_version_id' => $version,
+                'language_id' => $reference,
+                'name' => 'Customized category',
+                'created_at' => $created,
+            ], array_fill(0, 3, ParameterType::BINARY));
+
+            static::assertSame([Migration1536233530SalesChannelCategoryId::class], $collection->migrateInPlace(1536233530));
+            static::assertSame(bin2hex($reference), $connection->fetchOne('SELECT sw_uuid_hex(navigation_id) FROM sales_channel'));
+            static::assertContains('navigation', $this->tableNames($connection));
+            $connection->insert('cms_page', ['id' => $reference, 'type' => 'product_list', 'created_at' => $created], [ParameterType::BINARY]);
+            $connection->update('category', ['cms_page_id' => $reference], ['id' => $reference, 'version_id' => $version], array_fill(0, 3, ParameterType::BINARY));
+            $connection->executeStatement('UPDATE category_translation SET slot_config = ?', ['{"headline":"User text"}']);
+
+            static::assertSame([Migration1536233530SalesChannelCategoryId::class], $collection->migrateDestructiveInPlace(1536233530));
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1536233530SalesChannelCategoryId::class, 1536233530);
+                $variant->updateDestructive($connection);
+                $variant->update($connection);
+            }
+            static::assertNotContains('navigation', $this->tableNames($connection));
+            static::assertNotContains('navigation_translation', $this->tableNames($connection));
+            $columnNames = array_map(
+                static fn (Column $column): string => $column->getObjectName()->getIdentifier()->getValue(),
+                $connection->createSchemaManager()->introspectTableColumnsByUnquotedName('sales_channel')
+            );
+            static::assertNotContains('navigation_id', $columnNames);
+            static::assertNotContains('navigation_version_id', $columnNames);
+            static::assertSame(bin2hex($reference), $connection->fetchOne('SELECT sw_uuid_hex(cms_page_id) FROM category'));
+            $translation = $connection->fetchNumeric('SELECT name, slot_config FROM category_translation');
+            static::assertIsArray($translation);
+            static::assertSame('Customized category', $translation[0]);
+            static::assertIsString($translation[1]);
+            static::assertSame(['headline' => 'User text'], json_decode($translation[1], true, flags: \JSON_THROW_ON_ERROR));
+            static::assertSame([], $collection->migrateDestructiveInPlace(1536233530));
+        }
+    }
+
+    public function testProductKeywordDictionaryKeepsItsStoredUnicodeReverse(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1536233540);
+
+            $id = str_repeat('L', 16);
+            $created = '2020-01-01 00:00:00.123';
+            $connection->insert('locale', ['id' => $id, 'code' => 'en-GB', 'created_at' => $created], [ParameterType::BINARY]);
+            $connection->insert('language', ['id' => $id, 'locale_id' => $id, 'name' => 'English', 'created_at' => $created], array_fill(0, 2, ParameterType::BINARY));
+            $connection->insert('product_keyword_dictionary', ['id' => $id, 'language_id' => $id, 'keyword' => 'Café'], array_fill(0, 2, ParameterType::BINARY));
+            static::assertSame('éfaC', $connection->fetchOne('SELECT reversed FROM product_keyword_dictionary'));
+
+            $connection->executeStatement('UPDATE product_keyword_dictionary SET keyword = ?', ['Łódź']);
+            static::assertSame('źdóŁ', $connection->fetchOne('SELECT reversed FROM product_keyword_dictionary'));
+        }
+    }
+
     public function testDestructiveHistoryRunsSeparatelyWithoutChangingTheInitialSchema(): void
     {
         $postgres = $this->collection($this->postgres);
         $postgres->sync();
-        static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
-        $updated = $postgres->migrateInPlace(self::LAST_TIMESTAMP);
-        static::assertCount(74, $updated);
+        static::assertSame([], $postgres->migrateDestructiveInPlace(1536233520));
+        $updated = $postgres->migrateInPlace(1536233520);
+        static::assertCount(91, $updated);
         static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM migration WHERE update_destructive IS NOT NULL'));
 
         $schema = $this->schema($this->postgres);
-        static::assertSame($updated, $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
+        static::assertSame($updated, $postgres->migrateDestructiveInPlace(1536233520));
         static::assertSame($schema, $this->schema($this->postgres));
-        static::assertSame([], $postgres->migrateDestructiveInPlace(self::LAST_TIMESTAMP));
+        static::assertSame([], $postgres->migrateDestructiveInPlace(1536233520));
     }
 
     private function insertOrderReferences(Connection $connection, string $reference, string $version, string $created): void
@@ -550,34 +622,67 @@ class InitialSchemaPostgreSQLTest extends TestCase
      */
     private function schema(Connection $connection): array
     {
-        $manager = $connection->createSchemaManager();
-        $tableNames = array_values(array_diff($this->tableNames($connection), ['migration', 'plugin']));
-        sort($tableNames);
-
+        $columns = $this->columns($connection);
+        $indexes = $this->indexes($connection);
         $tables = [];
-        foreach ($tableNames as $tableName) {
-            $name = OptionallyQualifiedName::unquoted($tableName);
-            $primaryKey = $manager->introspectTablePrimaryKeyConstraint($name);
+        foreach ($connection->createSchemaManager()->introspectTables() as $table) {
+            $name = $table->getObjectName();
+            $tableName = $name->getUnqualifiedName()->getValue();
+            if ($name->getQualifier() !== null || !isset($columns[$tableName])) {
+                continue;
+            }
+
+            $primaryKey = $table->getPrimaryKeyConstraint();
             $tables[$tableName] = [
-                'columns' => $this->columns($connection, $tableName),
+                'columns' => $columns[$tableName],
                 'primaryKey' => $primaryKey === null ? null : array_map(
                     static fn (UnqualifiedName $name): string => $name->getIdentifier()->getValue(),
                     $primaryKey->getColumnNames()
                 ),
-                'foreignKeys' => array_map(
-                    $this->foreignKeySignature(...),
-                    $manager->introspectTableForeignKeyConstraints($name)
-                ),
-                'indexes' => array_map(
-                    static fn (Index $index): array => [
-                        $index->getType()->name,
-                        array_map(static fn (IndexedColumn $column): string => $column->getColumnName()->getIdentifier()->getValue(), $index->getIndexedColumns()),
-                    ],
-                    $manager->introspectTableIndexes($name)
-                ),
+                'foreignKeys' => array_values(array_map($this->foreignKeySignature(...), $table->getForeignKeys())),
+                'indexes' => array_values($indexes[$tableName] ?? []),
             ];
             sort($tables[$tableName]['foreignKeys']);
             sort($tables[$tableName]['indexes']);
+        }
+        ksort($tables);
+
+        return $tables;
+    }
+
+    /**
+     * @return array<string, array<string, array{string, list<string>}>>
+     */
+    private function indexes(Connection $connection): array
+    {
+        // DBAL can synthesize an index from a foreign key while building a Table.
+        // Read the physical indexes so additional indexes and their column order are observable.
+        $sql = $connection === $this->postgres
+            ? <<<'SQL'
+                SELECT t.relname AS table_name, idx.relname AS index_name, a.attname AS column_name,
+                       CASE WHEN i.indisunique THEN 'UNIQUE' ELSE 'REGULAR' END AS index_type
+                FROM pg_catalog.pg_index i
+                JOIN pg_catalog.pg_class t ON t.oid = i.indrelid
+                JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
+                JOIN pg_catalog.pg_class idx ON idx.oid = i.indexrelid
+                CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS part(attribute_number, index_position)
+                JOIN pg_catalog.pg_attribute a ON a.attrelid = t.oid AND a.attnum = part.attribute_number
+                WHERE n.nspname = current_schema() AND NOT i.indisprimary
+                ORDER BY t.relname, idx.relname, part.index_position
+                SQL
+            : <<<'SQL'
+                SELECT table_name AS table_name, index_name AS index_name, column_name AS column_name,
+                       CASE WHEN non_unique = 0 THEN 'UNIQUE' ELSE 'REGULAR' END AS index_type
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE() AND index_name <> 'PRIMARY'
+                ORDER BY table_name, index_name, seq_in_index
+                SQL;
+        $tables = [];
+        foreach ($connection->fetchAllAssociative($sql) as $row) {
+            $tableName = (string) $row['table_name'];
+            $indexName = (string) $row['index_name'];
+            $tables[$tableName][$indexName] ??= [(string) $row['index_type'], []];
+            $tables[$tableName][$indexName][1][] = (string) $row['column_name'];
         }
 
         return $tables;
@@ -616,9 +721,9 @@ class InitialSchemaPostgreSQLTest extends TestCase
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return array<string, list<array<string, mixed>>>
      */
-    private function columns(Connection $connection, string $table): array
+    private function columns(Connection $connection): array
     {
         $postgres = $connection === $this->postgres;
         $schema = $postgres ? 'current_schema()' : 'DATABASE()';
@@ -626,20 +731,28 @@ class InitialSchemaPostgreSQLTest extends TestCase
         $identity = $postgres
             ? 'pg_get_serial_sequence(quote_ident(table_name), column_name) IS NOT NULL'
             : 'extra = \'auto_increment\'';
-        $generated = $postgres ? 'is_generated = \'ALWAYS\'' : 'extra = \'VIRTUAL GENERATED\'';
+        $generated = $postgres
+            ? 'CASE WHEN is_generated = \'ALWAYS\' THEN (
+                    SELECT attr.attgenerated::text
+                    FROM pg_catalog.pg_attribute AS attr
+                    WHERE attr.attrelid = to_regclass(quote_ident(column_info.table_name))
+                      AND attr.attname = column_info.column_name AND attr.attnum > 0
+                ) ELSE \'\' END'
+            : 'CASE extra WHEN \'VIRTUAL GENERATED\' THEN \'v\' WHEN \'STORED GENERATED\' THEN \'s\' ELSE \'\' END';
         $columns = $connection->fetchAllAssociative(
-            "SELECT column_name AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
+            "SELECT table_name AS table_name, column_name AS name, data_type AS type, $nativeType AS native_type, character_maximum_length AS length,
                     numeric_precision AS number_precision, numeric_scale AS scale, datetime_precision AS time_precision,
                     collation_name AS collation, is_nullable AS nullable, column_default AS default_value,
                     CASE WHEN $identity THEN 1 ELSE 0 END AS identity_column,
-                    CASE WHEN $generated THEN 1 ELSE 0 END AS generated_column
-             FROM information_schema.columns
-             WHERE table_schema = $schema AND table_name = ?
-             ORDER BY ordinal_position",
-            [$table],
+                    $generated AS generated_column
+             FROM information_schema.columns AS column_info
+             WHERE table_schema = $schema AND table_name NOT IN ('migration', 'plugin')",
         );
 
-        foreach ($columns as &$column) {
+        $tables = [];
+        foreach ($columns as $column) {
+            $table = (string) $column['table_name'];
+            unset($column['table_name']);
             $type = (string) $column['type'];
             $nativeType = (string) $column['native_type'];
             unset($column['native_type']);
@@ -664,11 +777,10 @@ class InitialSchemaPostgreSQLTest extends TestCase
             $column['scale'] = $column['type'] === 'numeric' ? (int) $column['scale'] : null;
             $column['time_precision'] = $column['time_precision'] === null || $type === 'date' ? null : (int) $column['time_precision'];
             $column['collation'] = match ($column['collation']) {
-                'sw_type_ci', 'utf8mb4_unicode_ci' => 'shopware_ci',
+                'sw_type_ci', 'utf8mb4_unicode_ci', 'utf8mb4_0900_ai_ci' => 'shopware_ci',
                 default => $column['collation'],
             };
             $column['identity_column'] = (int) $column['identity_column'];
-            $column['generated_column'] = (int) $column['generated_column'];
             if ($column['identity_column'] === 1) {
                 $column['default_value'] = null;
             } elseif ($postgres && \is_string($column['default_value'])) {
@@ -677,8 +789,12 @@ class InitialSchemaPostgreSQLTest extends TestCase
             } elseif ($column['default_value'] !== null) {
                 $column['default_value'] = (string) $column['default_value'];
             }
+            $tables[$table][] = $column;
+        }
+        foreach ($tables as &$tableColumns) {
+            usort($tableColumns, static fn (array $first, array $second): int => strcmp((string) $first['name'], (string) $second['name']));
         }
 
-        return $columns;
+        return $tables;
     }
 }
