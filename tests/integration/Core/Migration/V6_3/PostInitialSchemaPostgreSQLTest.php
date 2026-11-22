@@ -3,6 +3,7 @@
 namespace Shopware\Tests\Integration\Core\Migration\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\NotNullConstraintViolationException;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
@@ -32,6 +33,7 @@ use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
 use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
 use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTime;
 use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
+use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
 
 /**
  * @internal
@@ -40,7 +42,7 @@ use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562324772;
+    private const LAST_TIMESTAMP = 1562579120;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -53,7 +55,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(25, $pending);
+        static::assertCount(26, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -67,6 +69,49 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testProductAvailabilityFieldsPreserveStockAndRetryPreservesCustomValues(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562324772);
+
+            $nullStockId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $stockId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            foreach ([[$nullStockId, null, 'product-null-stock'], [$stockId, 17, 'product-stock']] as [$id, $stock, $ean]) {
+                $connection->executeStatement(
+                    'INSERT INTO product (id, version_id, stock, ean) VALUES (?, ?, ?, ?)',
+                    [$id, $versionId, $stock, $ean],
+                    [ParameterType::BINARY, ParameterType::BINARY, $stock === null ? ParameterType::NULL : ParameterType::INTEGER, ParameterType::STRING],
+                );
+            }
+
+            try {
+                $collection->migrateInPlace(1562579120);
+                static::fail('The migration must reject a product with NULL stock when making stock non-nullable.');
+            } catch (NotNullConstraintViolationException) {
+                static::assertNull($connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$nullStockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            }
+
+            $connection->delete('product', ['id' => $nullStockId, 'version_id' => $versionId], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame([Migration1562579120ProductAvailableFields::class], $collection->migrateInPlace(1562579120));
+            static::assertSame(17, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$stockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT available FROM product WHERE id = ? AND version_id = ?', [$stockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT available_stock FROM product WHERE id = ? AND version_id = ?', [$stockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $connection->update('product', ['available_stock' => 9, 'available' => 0], ['id' => $stockId, 'version_id' => $versionId], [ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::BINARY, ParameterType::BINARY]);
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562579120ProductAvailableFields::class, 1562579120);
+                $schema = $this->schema($connection)['product'];
+                $variant->update($connection);
+                static::assertSame(9, (int) $connection->fetchOne('SELECT available_stock FROM product WHERE id = ? AND version_id = ?', [$stockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame(0, (int) $connection->fetchOne('SELECT available FROM product WHERE id = ? AND version_id = ?', [$stockId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['product']);
+            }
+        }
     }
 
     public function testOrderDateIsSplitIntoTimestampAndStoredDateAndRetryPreservesValues(): void
@@ -700,7 +745,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         $id = str_repeat('R', 16);
         $version = str_repeat('V', 16);
         $created = '2020-01-01 00:00:00.123';
-        $this->postgres->insert('product', ['id' => $id, 'version_id' => $version, 'rating_average' => 4.5, 'created_at' => $created], [ParameterType::BINARY, ParameterType::BINARY]);
+        $this->postgres->insert('product', ['id' => $id, 'version_id' => $version, 'stock' => 0, 'rating_average' => 4.5, 'created_at' => $created], [ParameterType::BINARY, ParameterType::BINARY]);
         $this->postgres->insert('product_review', ['id' => $id, 'product_id' => $id, 'product_version_id' => $version, 'title' => 'Historical customer review', 'created_at' => $created], array_fill(0, 3, ParameterType::BINARY));
         $this->postgres->executeStatement('UPDATE category_translation SET breadcrumb = ?', ['{"current":"Catalogue"}']);
         $this->postgres->executeStatement('UPDATE media_folder_configuration SET no_association = 1');

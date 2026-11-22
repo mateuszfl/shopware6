@@ -139,6 +139,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1562240231UserPasswordRecovery::class, 1562240231, PostgreSQL63\Migration1562240231UserPasswordRecovery::class],
         [Core63\Migration1562306893MakeCustomerFirstLoginDateTime::class, 1562306893, PostgreSQL63\Migration1562306893MakeCustomerFirstLoginDateTime::class],
         [Core63\Migration1562324772AddOrderDateToOrder::class, 1562324772, PostgreSQL63\Migration1562324772AddOrderDateToOrder::class],
+        [Core63\Migration1562579120ProductAvailableFields::class, 1562579120, PostgreSQL63\Migration1562579120ProductAvailableFields::class],
     ];
 
     /**
