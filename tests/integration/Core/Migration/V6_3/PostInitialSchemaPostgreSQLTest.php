@@ -29,6 +29,7 @@ use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
 use Shopware\Core\Migration\V6_3\Migration1561452005Update;
 use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultValues;
 use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
+use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
 
 /**
  * @internal
@@ -37,7 +38,7 @@ use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562228335;
+    private const LAST_TIMESTAMP = 1562240231;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -50,7 +51,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(22, $pending);
+        static::assertCount(23, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -64,6 +65,29 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testUserPasswordRecoveryMailIsSeededOnceAndRetryPreservesIt(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562228335);
+
+            static::assertSame([Migration1562240231UserPasswordRecovery::class], $collection->migrateInPlace(1562240231));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'user.recovery.request\''));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'user.recovery.request\')'));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = \'user.recovery.request\''));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE subject = \'Password recovery\' AND mail_template_id IN (SELECT id FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'user.recovery.request\'))'));
+        }
+
+        $variant = (new MigrationVariantRegistry())->resolve(Migration1562240231UserPasswordRecovery::class, 1562240231);
+        $templateId = $this->postgres->fetchOne('SELECT encode(id, \'hex\') FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'user.recovery.request\')');
+        $variant->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'user.recovery.request\''));
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'user.recovery.request\')'));
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = \'user.recovery.request\''));
+        static::assertSame($templateId, $this->postgres->fetchOne('SELECT encode(id, \'hex\') FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'user.recovery.request\')'));
     }
 
     public function testCurrencyPriceColumnIsRemovedWithoutLosingTheRemainingSchema(): void
