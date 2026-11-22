@@ -61,6 +61,7 @@ use Shopware\Core\Migration\V6_3\Migration1568120302CmsBlockUpdate;
 use Shopware\Core\Migration\V6_3\Migration1568645037AddEnqueueDbal;
 use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
+use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
 
 /**
  * @internal
@@ -69,7 +70,7 @@ use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1569403146;
+    private const LAST_TIMESTAMP = 1570187167;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -82,7 +83,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(50, $pending);
+        static::assertCount(51, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -279,6 +280,31 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['product_visibility']);
                 static::assertSame($initialCount - 2, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility'));
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility WHERE id = ?', [$duplicateIds[2]], [ParameterType::BINARY]));
+            }
+        }
+    }
+
+    public function testAppConfigCacheIdIsCreatedAndPreservedOnRetry(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1569403146);
+            $keyColumn = $connection === $this->postgres ? '"key"' : '`key`';
+
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = ' . ($connection === $this->postgres ? 'current_schema()' : 'DATABASE()'), ['app_config']));
+            static::assertSame([Migration1570187167AddedAppConfig::class], $collection->migrateInPlace(1570187167));
+            $cacheId = $connection->fetchOne('SELECT value FROM app_config WHERE ' . $keyColumn . ' = ?', ['cache-id']);
+            static::assertIsString($cacheId);
+            static::assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $cacheId);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM app_config WHERE ' . $keyColumn . ' = ?', ['cache-id']));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['app_config'];
+                (new MigrationVariantRegistry())->resolve(Migration1570187167AddedAppConfig::class, 1570187167)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['app_config']);
+                static::assertSame($cacheId, $connection->fetchOne('SELECT value FROM app_config WHERE ' . $keyColumn . ' = ?', ['cache-id']));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM app_config'));
             }
         }
     }
