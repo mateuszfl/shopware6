@@ -67,6 +67,7 @@ use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
 use Shopware\Core\Migration\V6_3\Migration1570621541UpdateDefaultMailTemplates;
 use Shopware\Core\Migration\V6_3\Migration1570622696CustomerPasswordRecovery;
 use Shopware\Core\Migration\V6_3\Migration1570629862ClearCategoryBreadcrumbs;
+use Shopware\Core\Migration\V6_3\Migration1570684913ScheduleIndexer;
 
 /**
  * @internal
@@ -75,7 +76,7 @@ use Shopware\Core\Migration\V6_3\Migration1570629862ClearCategoryBreadcrumbs;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1570629862;
+    private const LAST_TIMESTAMP = 1570684913;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -88,7 +89,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(55, $pending);
+        static::assertCount(56, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -181,6 +182,28 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         $variant = (new MigrationVariantRegistry())->resolve(Migration1570629862ClearCategoryBreadcrumbs::class, 1570629862);
         $variant->update($this->postgres);
         static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM category_translation WHERE breadcrumb IS NOT NULL'));
+    }
+
+    public function testScheduledIndexersAreRegisteredOnce(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1570629862);
+
+            static::assertSame([Migration1570684913ScheduleIndexer::class], $collection->migrateInPlace(1570684913));
+            $value = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.scheduled_indexers\' AND sales_channel_id IS NULL');
+            static::assertIsString($value);
+            $indexers = json_decode($value, true, 512, \JSON_THROW_ON_ERROR)['_value'];
+            static::assertArrayHasKey('Swag.BreadcrumbIndexer', $indexers);
+            static::assertArrayHasKey('Swag.VariantListingIndexer', $indexers);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1570684913ScheduleIndexer::class, 1570684913);
+                $variant->update($connection);
+                static::assertSame($indexers, json_decode((string) $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.scheduled_indexers\' AND sales_channel_id IS NULL'), true, 512, \JSON_THROW_ON_ERROR)['_value']);
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
