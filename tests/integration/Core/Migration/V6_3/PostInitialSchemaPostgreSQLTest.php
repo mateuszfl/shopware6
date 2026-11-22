@@ -25,6 +25,7 @@ use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
 use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfile;
 use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountry;
+use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
 
 /**
  * @internal
@@ -33,7 +34,7 @@ use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountr
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1561377793;
+    private const LAST_TIMESTAMP = 1561442979;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -46,7 +47,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(18, $pending);
+        static::assertCount(19, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -103,6 +104,19 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testMovedElasticsearchIndexMigrationIsARegisteredNoOp(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $migration = (new MigrationVariantRegistry())->resolve(Migration1561442979ElasticsearchIndexTask::class, 1561442979);
+        static::assertSame(Migration1561442979ElasticsearchIndexTask::class, $migration::class);
+        $tables = $this->tableNames($this->postgres);
+
+        $migration->update($this->postgres);
+
+        static::assertSame($tables, $this->tableNames($this->postgres));
     }
 
     public function testCountriesBecomeShippingAvailableByDefaultAndRetryPreservesOptOut(): void
