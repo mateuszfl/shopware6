@@ -42,6 +42,7 @@ use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
 use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
 use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
 use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
+use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
 
 /**
  * @internal
@@ -50,7 +51,7 @@ use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1563288227;
+    private const LAST_TIMESTAMP = 1563518181;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -63,7 +64,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(31, $pending);
+        static::assertCount(32, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -77,6 +78,41 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testPromotionDiscountMaxValueIsNullableAndRetryPreservesCustomValue(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1563288227);
+
+            $promotionId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $discountId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('promotion', ['id' => $promotionId, 'created_at' => $createdAt], [ParameterType::BINARY]);
+            $connection->insert('promotion_discount', [
+                'id' => $discountId,
+                'promotion_id' => $promotionId,
+                'scope' => 'cart',
+                'type' => 'percentage',
+                'value' => 10,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY]);
+
+            static::assertSame([Migration1563518181PromotionDiscount::class], $collection->migrateInPlace(1563518181));
+            static::assertNull($connection->fetchOne('SELECT max_value FROM promotion_discount WHERE id = ?', [$discountId], [ParameterType::BINARY]));
+            static::assertSame(10.0, (float) $connection->fetchOne('SELECT value FROM promotion_discount WHERE id = ?', [$discountId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1563518181PromotionDiscount::class, 1563518181);
+                $schema = $this->schema($connection)['promotion_discount'];
+                $connection->update('promotion_discount', ['max_value' => 23.5], ['id' => $discountId], [ParameterType::STRING, ParameterType::BINARY]);
+                $variant->update($connection);
+                static::assertSame(23.5, (float) $connection->fetchOne('SELECT max_value FROM promotion_discount WHERE id = ?', [$discountId], [ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['promotion_discount']);
+            }
+        }
     }
 
     public function testMarkAsNewConfigIsSeededOnceAndRetryPreservesCustomValue(): void
