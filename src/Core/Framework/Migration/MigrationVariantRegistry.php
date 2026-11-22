@@ -114,6 +114,13 @@ final class MigrationVariantRegistry
         [Core63\Migration1536233540ProductSearchKeyword::class, 1536233540, PostgreSQL63\Migration1536233540ProductSearchKeyword::class],
         [Core63\Migration1536233550Tag::class, 1536233550, PostgreSQL63\Migration1536233550Tag::class],
         [Core63\Migration1536233560BasicData::class, 1536233560, PostgreSQL63\Migration1536233560BasicData::class],
+        [Core63\Migration1552360944MediaFolderConfigurationNoAssoc::class, 1552360944, PostgreSQL63\Migration1552360944MediaFolderConfigurationNoAssoc::class],
+        [Core63\Migration1554199340AddImportExportProfile::class, 1554199340, PostgreSQL63\Migration1554199340AddImportExportProfile::class],
+        [Core63\Migration1554200141ImportExportFile::class, 1554200141, PostgreSQL63\Migration1554200141ImportExportFile::class],
+        [Core63\Migration1554203706AddImportExportLog::class, 1554203706, PostgreSQL63\Migration1554203706AddImportExportLog::class],
+        [Core63\Migration1554900301AddReviewTable::class, 1554900301, PostgreSQL63\Migration1554900301AddReviewTable::class],
+        [Core63\Migration1556809270AddAverageRatingToProduct::class, 1556809270, PostgreSQL63\Migration1556809270AddAverageRatingToProduct::class],
+        [Core63\Migration1558082916AddBreadcrumb::class, 1558082916, PostgreSQL63\Migration1558082916AddBreadcrumb::class],
     ];
 
     /**
