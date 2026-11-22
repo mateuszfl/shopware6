@@ -11,6 +11,7 @@ use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use Shopware\Core\Content\ContactForm\Event\ContactFormEvent;
 use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
+use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -62,6 +63,7 @@ use Shopware\Core\Migration\V6_3\Migration1568645037AddEnqueueDbal;
 use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
 use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
+use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
 
 /**
  * @internal
@@ -70,7 +72,7 @@ use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1570187167;
+    private const LAST_TIMESTAMP = 1570459127;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -83,7 +85,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(51, $pending);
+        static::assertCount(52, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -305,6 +307,69 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['app_config']);
                 static::assertSame($cacheId, $connection->fetchOne('SELECT value FROM app_config WHERE ' . $keyColumn . ' = ?', ['cache-id']));
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM app_config'));
+            }
+        }
+    }
+
+    public function testCmsSidebarLayoutSeedsSectionsSlotsAndRetriesWithoutOverwritingCustomizations(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1570187167);
+
+            $defaultPageId = $connection->fetchOne('SELECT cms_page.id FROM cms_page_translation INNER JOIN cms_page ON cms_page.id = cms_page_translation.cms_page_id WHERE cms_page.locked = 1 AND cms_page_translation.name = ?', ['Default category layout']);
+            if (\is_resource($defaultPageId)) {
+                $defaultPageId = stream_get_contents($defaultPageId);
+            }
+            static::assertIsString($defaultPageId);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT position FROM cms_block WHERE cms_page_id = ? AND name = ?', [$defaultPageId, 'Category listing'], [ParameterType::BINARY, ParameterType::STRING]));
+
+            static::assertSame([Migration1570459127AddCmsSidebarLayout::class], $collection->migrateInPlace(1570459127));
+            static::assertSame(2, (int) $connection->fetchOne('SELECT position FROM cms_block WHERE cms_page_id = ? AND name = ?', [$defaultPageId, 'Category listing'], [ParameterType::BINARY, ParameterType::STRING]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block WHERE cms_section_id IN (SELECT id FROM cms_section WHERE cms_page_id = ?) AND name = ?', [$defaultPageId, 'Filter'], [ParameterType::BINARY, ParameterType::STRING]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot INNER JOIN cms_block ON cms_block.id = cms_slot.cms_block_id INNER JOIN cms_section ON cms_section.id = cms_block.cms_section_id WHERE cms_block.name = ? AND cms_section.cms_page_id = ?', ['Filter', $defaultPageId], [ParameterType::STRING, ParameterType::BINARY]));
+
+            $sidebarPageId = $connection->fetchOne('SELECT cms_page_id FROM cms_page_translation WHERE name = ?', ['Default category layout with sidebar']);
+            if (\is_resource($sidebarPageId)) {
+                $sidebarPageId = stream_get_contents($sidebarPageId);
+            }
+            static::assertIsString($sidebarPageId);
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section WHERE cms_page_id = ?', [$sidebarPageId], [ParameterType::BINARY]));
+            static::assertSame(4, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block INNER JOIN cms_section ON cms_section.id = cms_block.cms_section_id WHERE cms_section.cms_page_id = ?', [$sidebarPageId], [ParameterType::BINARY]));
+            static::assertSame(6, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot INNER JOIN cms_block ON cms_block.id = cms_slot.cms_block_id INNER JOIN cms_section ON cms_section.id = cms_block.cms_section_id WHERE cms_section.cms_page_id = ?', [$sidebarPageId], [ParameterType::BINARY]));
+            static::assertSame(1 + (int) $connection->fetchOne('SELECT COUNT(*) FROM language INNER JOIN locale ON locale.id = language.translation_code_id WHERE locale.code = ? AND language.id <> ?', ['de-DE', Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], [ParameterType::STRING, ParameterType::BINARY]), (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_page_translation WHERE cms_page_id = ?', [$sidebarPageId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $connection->update('cms_page_translation', ['name' => 'Customized sidebar layout'], ['cms_page_id' => $sidebarPageId, 'language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], [ParameterType::STRING, ParameterType::BINARY, ParameterType::BINARY]);
+                $filterBlockId = $connection->fetchOne('SELECT cms_block.id FROM cms_block INNER JOIN cms_section ON cms_section.id = cms_block.cms_section_id WHERE cms_section.cms_page_id = ? AND cms_block.name = ?', [$defaultPageId, 'Filter'], [ParameterType::BINARY, ParameterType::STRING]);
+                if (\is_resource($filterBlockId)) {
+                    $filterBlockId = stream_get_contents($filterBlockId);
+                }
+                static::assertIsString($filterBlockId);
+                $connection->update('cms_block', ['name' => 'Customized filter'], ['id' => $filterBlockId], [ParameterType::STRING, ParameterType::BINARY]);
+                $counts = [
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_page'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_page_translation'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot_translation'),
+                ];
+
+                (new MigrationVariantRegistry())->resolve(Migration1570459127AddCmsSidebarLayout::class, 1570459127)->update($connection);
+
+                static::assertSame($counts, [
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_page'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_page_translation'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot'),
+                    (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_slot_translation'),
+                ]);
+                static::assertSame('Customized sidebar layout', $connection->fetchOne('SELECT name FROM cms_page_translation WHERE cms_page_id = ? AND language_id = ?', [$sidebarPageId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame('Customized filter', $connection->fetchOne('SELECT name FROM cms_block WHERE id = ?', [$filterBlockId], [ParameterType::BINARY]));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT position FROM cms_block WHERE id = ?', [$filterBlockId], [ParameterType::BINARY]));
             }
         }
     }
