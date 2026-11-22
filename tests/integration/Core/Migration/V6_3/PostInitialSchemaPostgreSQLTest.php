@@ -48,6 +48,7 @@ use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
 use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
 use Shopware\Core\Migration\V6_3\Migration1565007156RemoveAutoIncrement;
 use Shopware\Core\Migration\V6_3\Migration1565079228AddAclStructure;
+use Shopware\Core\Migration\V6_3\Migration1565270155PromotionSetGroup;
 
 /**
  * @internal
@@ -56,7 +57,7 @@ use Shopware\Core\Migration\V6_3\Migration1565079228AddAclStructure;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1565079228;
+    private const LAST_TIMESTAMP = 1565270155;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -69,7 +70,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(37, $pending);
+        static::assertCount(38, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -83,6 +84,41 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testPromotionSetGroupRetainsValuesAndCascadesOnPromotionDelete(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1565079228);
+
+            $promotionId = Uuid::fromHexToBytes('1234567890abcdef1234567890abcdef');
+            $setGroupId = Uuid::fromHexToBytes('abcdef1234567890abcdef1234567890');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('promotion', ['id' => $promotionId, 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::STRING]);
+
+            static::assertSame([Migration1565270155PromotionSetGroup::class], $collection->migrateInPlace(1565270155));
+            $connection->insert('promotion_setgroup', [
+                'id' => $setGroupId,
+                'promotion_id' => $promotionId,
+                'packager_key' => 'price-range',
+                'sorter_key' => 'sort-by-price',
+                'value' => 1.75,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+            static::assertSame(1.75, (float) $connection->fetchOne('SELECT value FROM promotion_setgroup WHERE id = ?', [$setGroupId], [ParameterType::BINARY]));
+
+            $schema = $this->schema($connection)['promotion_setgroup'];
+            if ($connection === $this->postgres) {
+                (new MigrationVariantRegistry())->resolve(Migration1565270155PromotionSetGroup::class, 1565270155)->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup WHERE id = ? AND promotion_id = ?', [$setGroupId, $promotionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['promotion_setgroup']);
+            }
+
+            $connection->delete('promotion', ['id' => $promotionId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup WHERE id = ?', [$setGroupId], [ParameterType::BINARY]));
+        }
     }
 
     public function testAclTablesAdminDefaultsAndCascadeDeleteAreAppliedAndRetryIsSafe(): void
