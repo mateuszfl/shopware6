@@ -28,6 +28,7 @@ use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountr
 use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
 use Shopware\Core\Migration\V6_3\Migration1561452005Update;
 use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultValues;
+use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
 
 /**
  * @internal
@@ -36,7 +37,7 @@ use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultVa
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1561712450;
+    private const LAST_TIMESTAMP = 1562228335;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -49,7 +50,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(21, $pending);
+        static::assertCount(22, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -106,6 +107,26 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testConfigDefaultsAreInsertedOnlyWhenMissingAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1561712450);
+            static::assertSame([Migration1562228335SetConfigDefaults::class], $collection->migrateInPlace(1562228335));
+
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.basicInformation.shopName\' AND sales_channel_id IS NULL'));
+            static::assertSame('Demostore', json_decode((string) $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.basicInformation.shopName\' AND sales_channel_id IS NULL'), true, flags: \JSON_THROW_ON_ERROR)['_value']);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.listing.allowBuyInListing\' AND sales_channel_id IS NULL'));
+            static::assertTrue(json_decode((string) $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.listing.allowBuyInListing\' AND sales_channel_id IS NULL'), true, flags: \JSON_THROW_ON_ERROR)['_value']);
+        }
+
+        $this->postgres->update('system_config', ['configuration_value' => '{"_value":"Custom shop"}'], ['configuration_key' => 'core.basicInformation.shopName']);
+        (new MigrationVariantRegistry())->resolve(Migration1562228335SetConfigDefaults::class, 1562228335)->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.listing.allowBuyInListing\' AND sales_channel_id IS NULL'));
+        static::assertSame('Custom shop', $this->postgres->fetchOne('SELECT configuration_value ->> \'_value\' FROM system_config WHERE configuration_key = \'core.basicInformation.shopName\' AND sales_channel_id IS NULL'));
     }
 
     public function testNewSystemConfigDefaultsPreserveExistingValuesAndRetrySafely(): void
