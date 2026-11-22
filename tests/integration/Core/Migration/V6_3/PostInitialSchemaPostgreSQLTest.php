@@ -65,6 +65,7 @@ use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
 use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
 use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
 use Shopware\Core\Migration\V6_3\Migration1570621541UpdateDefaultMailTemplates;
+use Shopware\Core\Migration\V6_3\Migration1570622696CustomerPasswordRecovery;
 
 /**
  * @internal
@@ -73,7 +74,7 @@ use Shopware\Core\Migration\V6_3\Migration1570621541UpdateDefaultMailTemplates;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1570621541;
+    private const LAST_TIMESTAMP = 1570622696;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -86,7 +87,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(53, $pending);
+        static::assertCount(54, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -142,6 +143,27 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                     SQL, ['type' => MailTemplateTypes::MAILTYPE_ORDER_CONFIRM]));
             }
         }
+    }
+
+    public function testCustomerPasswordRecoveryIsSeededOnceAndRetryPreservesIt(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1570621541);
+
+            static::assertSame([Migration1570622696CustomerPasswordRecovery::class], $collection->migrateInPlace(1570622696));
+            static::assertArrayHasKey('customer_recovery', $this->schema($connection));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'customer.recovery.request\''));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'customer.recovery.request\')'));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = \'customer.recovery.request\''));
+        }
+
+        $variant = (new MigrationVariantRegistry())->resolve(Migration1570622696CustomerPasswordRecovery::class, 1570622696);
+        $variant->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'customer.recovery.request\''));
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'customer.recovery.request\')'));
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = \'customer.recovery.request\''));
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
