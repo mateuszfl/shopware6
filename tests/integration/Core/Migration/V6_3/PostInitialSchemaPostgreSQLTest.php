@@ -54,6 +54,7 @@ use Shopware\Core\Migration\V6_3\Migration1565346846Promotion;
 use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
 use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
 use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
+use Shopware\Core\Migration\V6_3\Migration1566817701AddDisplayGroup;
 
 /**
  * @internal
@@ -62,7 +63,7 @@ use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1566460168;
+    private const LAST_TIMESTAMP = 1566817701;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -75,7 +76,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(43, $pending);
+        static::assertCount(44, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -89,6 +90,47 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testDisplayGroupIsAddedBeforeOldListingFlagIsDestructivelyRemoved(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1566460168);
+            $collection->migrateDestructiveInPlace(1566460168);
+
+            $productId = Uuid::fromHexToBytes('0123456789abcdef0123456789abcdef');
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $connection->insert('product', [
+                'id' => $productId,
+                'version_id' => $versionId,
+                'display_in_listing' => 1,
+                'stock' => 8,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::INTEGER]);
+
+            static::assertSame([Migration1566817701AddDisplayGroup::class], $collection->migrateInPlace(1566817701));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT display_in_listing FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT display_group FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            static::assertSame([Migration1566817701AddDisplayGroup::class], $collection->migrateDestructiveInPlace(1566817701));
+            static::assertNotContains('display_in_listing', array_column($this->columns($connection)['product'], 'name'));
+            static::assertContains('display_group', array_column($this->columns($connection)['product'], 'name'));
+            static::assertNull($connection->fetchOne('SELECT display_group FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame(8, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['product'];
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1566817701AddDisplayGroup::class, 1566817701);
+                $variant->update($connection);
+                $variant->updateDestructive($connection);
+                static::assertSame($schema, $this->schema($connection)['product']);
+                static::assertNull($connection->fetchOne('SELECT display_group FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame(8, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            }
+
+            static::assertSame([], $collection->migrateDestructiveInPlace(1566817701));
+        }
     }
 
     public function testPaymentDescriptionsAreUpdatedOnlyForExactOldTextsAndRetryPreservesCustomText(): void
