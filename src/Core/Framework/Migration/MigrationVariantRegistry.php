@@ -156,6 +156,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1565346846Promotion::class, 1565346846, PostgreSQL63\Migration1565346846Promotion::class],
         [Core63\Migration1565705280ProductExport::class, 1565705280, PostgreSQL63\Migration1565705280ProductExport::class],
         [Core63\Migration1566293076AddAutoIncrement::class, 1566293076, PostgreSQL63\Migration1566293076AddAutoIncrement::class],
+        [Core63\Migration1566460168UpdateTexts::class, 1566460168, PostgreSQL63\Migration1566460168UpdateTexts::class],
     ];
 
     /**

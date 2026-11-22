@@ -53,6 +53,7 @@ use Shopware\Core\Migration\V6_3\Migration1565270366PromotionSetGroupRule;
 use Shopware\Core\Migration\V6_3\Migration1565346846Promotion;
 use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
 use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
+use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
 
 /**
  * @internal
@@ -61,7 +62,7 @@ use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1566293076;
+    private const LAST_TIMESTAMP = 1566460168;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -74,7 +75,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(42, $pending);
+        static::assertCount(43, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -88,6 +89,39 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testPaymentDescriptionsAreUpdatedOnlyForExactOldTextsAndRetryPreservesCustomText(): void
+    {
+        $expectedDescriptions = [
+            'Invoice' => 'Payment by invoice. Shopware provides automatic invoicing for all customers on orders after the first. This is to avoid defaults on payment.',
+            'Rechnung' => 'Sie zahlen einfach und bequem auf Rechnung. Shopware bietet z.B. auch die Möglichkeit, Rechnungen automatisiert erst ab der 2. Bestellung für Kunden zur Verfügung zu stellen, um Zahlungsausfälle zu vermeiden.',
+            'Direct Debit' => 'Pre-authorized payment, funds are withdrawn directly from the debited account.',
+            'Lastschrift' => 'Vorab autorisierte Zahlungsvereinbarung, Zahlungen werden direkt vom zu belastenden Konto abgebucht.',
+            'Cash on delivery' => 'Payment upon receipt of goods.',
+            'Nachnahme' => 'Zahlung bei Erhalt der Ware.',
+        ];
+
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1566460168);
+            $collection->migrateDestructiveInPlace(1566293076);
+
+            static::assertSame([Migration1566460168UpdateTexts::class], $collection->migrateDestructiveInPlace(1566460168));
+            foreach ($expectedDescriptions as $name => $description) {
+                static::assertSame($description, $connection->fetchOne('SELECT description FROM payment_method_translation WHERE name = ?', [$name]));
+            }
+
+            if ($connection === $this->postgres) {
+                $connection->update('payment_method_translation', ['description' => 'Custom payment description'], ['name' => 'Cash on delivery'], [ParameterType::STRING, ParameterType::STRING]);
+                (new MigrationVariantRegistry())->resolve(Migration1566460168UpdateTexts::class, 1566460168)->updateDestructive($connection);
+                static::assertSame('Custom payment description', $connection->fetchOne('SELECT description FROM payment_method_translation WHERE name = ?', ['Cash on delivery']));
+                foreach (array_diff_key($expectedDescriptions, ['Cash on delivery' => true]) as $name => $description) {
+                    static::assertSame($description, $connection->fetchOne('SELECT description FROM payment_method_translation WHERE name = ?', [$name]));
+                }
+            }
+        }
     }
 
     public function testPromotionSetGroupsDefaultOffAndRetryPreservesCustomValue(): void
