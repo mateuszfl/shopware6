@@ -16,6 +16,7 @@ use Shopware\Core\Migration\V6_3\Migration1556809270AddAverageRatingToProduct;
 use Shopware\Core\Migration\V6_3\Migration1558082916AddBreadcrumb;
 use Shopware\Core\Migration\V6_3\Migration1558105657CurrencyPrices;
 use Shopware\Core\Migration\V6_3\Migration1558443337PromotionSalesChannel;
+use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
 
 /**
  * @internal
@@ -24,7 +25,7 @@ use Shopware\Core\Migration\V6_3\Migration1558443337PromotionSalesChannel;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1558443337;
+    private const LAST_TIMESTAMP = 1558505525;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -37,7 +38,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(9, $pending);
+        static::assertCount(10, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -94,6 +95,33 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testLoggingDefaultsAreSeededOnceAndPreserveExistingValues(): void
+    {
+        $keys = [
+            'core.logging.cleanupInterval' => '86400',
+            'core.logging.entryLimit' => '10000000',
+            'core.logging.entryLifetimeSeconds' => '2678400',
+        ];
+
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1558443337);
+            static::assertSame([Migration1558505525Logging::class], $collection->migrateInPlace(1558505525));
+            foreach ($keys as $key => $expectedValue) {
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]));
+                $configuration = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]);
+                static::assertIsString($configuration);
+                static::assertSame($expectedValue, json_decode($configuration, true, flags: \JSON_THROW_ON_ERROR)['_value']);
+            }
+        }
+
+        $this->postgres->update('system_config', ['configuration_value' => '{"_value":"custom"}'], ['configuration_key' => 'core.logging.entryLimit']);
+        (new MigrationVariantRegistry())->resolve(Migration1558505525Logging::class, 1558505525)->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.logging.entryLimit\' AND sales_channel_id IS NULL'));
+        static::assertSame('custom', $this->postgres->fetchOne('SELECT configuration_value ->> \'_value\' FROM system_config WHERE configuration_key = \'core.logging.entryLimit\' AND sales_channel_id IS NULL'));
     }
 
     public function testImportProfileRetainsValidUuidSubstitutionsAndCustomizations(): void
