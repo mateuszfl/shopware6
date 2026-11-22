@@ -25,7 +25,7 @@ use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1558505525;
+    private const LAST_TIMESTAMP = 1558594334;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -38,7 +38,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(10, $pending);
+        static::assertCount(11, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -94,6 +94,74 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
+        }
+    }
+
+    public function testPromotionDiscountPricesCascadeForDiscountAndCurrencyChanges(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1558594334);
+            $createdAt = '2020-01-01 00:00:00.123';
+            $promotionId = str_repeat('P', 16);
+            $discountId = str_repeat('D', 16);
+            $movedDiscountId = str_repeat('E', 16);
+            $currencyId = str_repeat('C', 16);
+            $movedCurrencyId = str_repeat('F', 16);
+            $priceId = str_repeat('R', 16);
+            $connection->insert('currency', [
+                'id' => $currencyId,
+                'iso_code' => 'ZZZ',
+                'factor' => 1,
+                'symbol' => 'Z',
+                'decimal_precision' => 2,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY]);
+            $connection->insert('promotion', ['id' => $promotionId, 'created_at' => $createdAt], [ParameterType::BINARY]);
+            $connection->insert('promotion_discount', [
+                'id' => $discountId,
+                'promotion_id' => $promotionId,
+                'scope' => 'cart',
+                'type' => 'percentage',
+                'value' => 10,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY]);
+            $connection->insert('promotion_discount_prices', [
+                'id' => $priceId,
+                'discount_id' => $discountId,
+                'currency_id' => $currencyId,
+                'price' => 12.5,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]);
+
+            $connection->update('promotion_discount', ['id' => $movedDiscountId], ['id' => $discountId], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame(bin2hex($movedDiscountId), $connection->fetchOne('SELECT sw_uuid_hex(discount_id) FROM promotion_discount_prices'));
+            $connection->update('currency', ['id' => $movedCurrencyId], ['id' => $currencyId], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame(bin2hex($movedCurrencyId), $connection->fetchOne('SELECT sw_uuid_hex(currency_id) FROM promotion_discount_prices'));
+
+            $connection->delete('promotion_discount', ['id' => $movedDiscountId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount_prices'));
+
+            $secondDiscountId = str_repeat('G', 16);
+            $secondPriceId = str_repeat('H', 16);
+            $connection->insert('promotion_discount', [
+                'id' => $secondDiscountId,
+                'promotion_id' => $promotionId,
+                'scope' => 'cart',
+                'type' => 'percentage',
+                'value' => 5,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY]);
+            $connection->insert('promotion_discount_prices', [
+                'id' => $secondPriceId,
+                'discount_id' => $secondDiscountId,
+                'currency_id' => $movedCurrencyId,
+                'price' => 7.5,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]);
+            $connection->delete('currency', ['id' => $movedCurrencyId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount_prices'));
         }
     }
 

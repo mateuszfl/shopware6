@@ -124,6 +124,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1558105657CurrencyPrices::class, 1558105657, PostgreSQL63\Migration1558105657CurrencyPrices::class],
         [Core63\Migration1558443337PromotionSalesChannel::class, 1558443337, PostgreSQL63\Migration1558443337PromotionSalesChannel::class],
         [Core63\Migration1558505525Logging::class, 1558505525, PostgreSQL63\Migration1558505525Logging::class],
+        [Core63\Migration1558594334PromotionDiscountPrice::class, 1558594334, PostgreSQL63\Migration1558594334PromotionDiscountPrice::class],
     ];
 
     /**
