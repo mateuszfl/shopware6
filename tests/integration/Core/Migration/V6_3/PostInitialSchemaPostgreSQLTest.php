@@ -35,6 +35,7 @@ use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTi
 use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
 use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
 use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
+use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
 
 /**
  * @internal
@@ -43,7 +44,7 @@ use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562684474;
+    private const LAST_TIMESTAMP = 1562841035;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -56,7 +57,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(27, $pending);
+        static::assertCount(28, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -70,6 +71,31 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testProductChildCountIsAddedAsNullableAndRetryPreservesIt(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562684474);
+
+            $productId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $connection->insert('product', ['id' => $productId, 'version_id' => $versionId, 'stock' => 4], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER]);
+
+            static::assertSame([Migration1562841035AddProductChildCount::class], $collection->migrateInPlace(1562841035));
+            static::assertNull($connection->fetchOne('SELECT child_count FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562841035AddProductChildCount::class, 1562841035);
+                $schema = $this->schema($connection)['product'];
+                $connection->update('product', ['child_count' => 3], ['id' => $productId, 'version_id' => $versionId], [ParameterType::INTEGER, ParameterType::BINARY, ParameterType::BINARY]);
+                $variant->update($connection);
+                static::assertSame(3, (int) $connection->fetchOne('SELECT child_count FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['product']);
+            }
+        }
     }
 
     public function testDeliveryTimeMigrationPreservesDefaultsAndDoesNotOverwriteRetryValues(): void
