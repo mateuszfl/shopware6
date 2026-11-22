@@ -55,6 +55,7 @@ use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
 use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
 use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
 use Shopware\Core\Migration\V6_3\Migration1566817701AddDisplayGroup;
+use Shopware\Core\Migration\V6_3\Migration1567431050ContactFormTemplate;
 
 /**
  * @internal
@@ -63,7 +64,7 @@ use Shopware\Core\Migration\V6_3\Migration1566817701AddDisplayGroup;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1566817701;
+    private const LAST_TIMESTAMP = 1567431050;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -76,7 +77,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(44, $pending);
+        static::assertCount(45, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -130,6 +131,58 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
             }
 
             static::assertSame([], $collection->migrateDestructiveInPlace(1566817701));
+        }
+    }
+
+    public function testContactFormMailTemplateIsCreatedAndExistingTemplateIsUpdated(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1566817701);
+
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = ?)', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]));
+            static::assertSame([Migration1567431050ContactFormTemplate::class], $collection->migrateInPlace(1567431050));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = ?)', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]));
+
+            $templateId = $connection->fetchOne('SELECT mail_template.id FROM mail_template INNER JOIN mail_template_type ON mail_template_type.id = mail_template.mail_template_type_id WHERE mail_template_type.technical_name = ?', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]);
+            if (\is_resource($templateId)) {
+                $templateId = stream_get_contents($templateId);
+            }
+            static::assertIsString($templateId);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT system_default FROM mail_template WHERE id = ?', [$templateId], [ParameterType::BINARY]));
+
+            $englishLanguageId = Uuid::fromHexToBytes('2fbb5fe2e29a4d70aa5854ce7ce3e20b');
+            $translation = $connection->fetchAssociative('SELECT subject, content_html, content_plain FROM mail_template_translation WHERE mail_template_id = ? AND language_id = ?', [$templateId, $englishLanguageId], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertIsArray($translation);
+            static::assertSame('Contact form received - {{ salesChannel.name }}', $translation['subject']);
+            static::assertStringContainsString('{{ contactFormData.firstName }}', $translation['content_html']);
+            static::assertStringContainsString('{{ contactFormData.comment }}', $translation['content_plain']);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $germanLanguageId = $connection->fetchOne('SELECT language.id FROM language INNER JOIN locale ON locale.id = language.locale_id WHERE locale.code = ?', ['de-DE']);
+                if (\is_resource($germanLanguageId)) {
+                    $germanLanguageId = stream_get_contents($germanLanguageId);
+                }
+                $connection->update('mail_template_translation', ['subject' => 'Customized contact subject'], ['mail_template_id' => $templateId, 'language_id' => $englishLanguageId], [ParameterType::STRING, ParameterType::BINARY, ParameterType::BINARY]);
+                $connection->insert('mail_template_translation', [
+                    'mail_template_id' => $templateId,
+                    'language_id' => $germanLanguageId,
+                    'subject' => 'Benutzerdefinierter Betreff',
+                    'created_at' => '2020-01-01 00:00:00.123',
+                ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+
+                (new MigrationVariantRegistry())->resolve(Migration1567431050ContactFormTemplate::class, 1567431050)->update($connection);
+                $existingTemplateId = $connection->fetchOne('SELECT id FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = ?)', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]);
+                if (\is_resource($existingTemplateId)) {
+                    $existingTemplateId = stream_get_contents($existingTemplateId);
+                }
+                static::assertSame($templateId, $existingTemplateId);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+                static::assertSame('Contact form received - {{ salesChannel.name }}', $connection->fetchOne('SELECT subject FROM mail_template_translation WHERE mail_template_id = ? AND language_id = ?', [$templateId, $englishLanguageId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertGreaterThan(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE id = ? AND updated_at IS NOT NULL', [$templateId], [ParameterType::BINARY]));
+            }
         }
     }
 
