@@ -27,6 +27,7 @@ use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfil
 use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountry;
 use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
 use Shopware\Core\Migration\V6_3\Migration1561452005Update;
+use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultValues;
 
 /**
  * @internal
@@ -35,7 +36,7 @@ use Shopware\Core\Migration\V6_3\Migration1561452005Update;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1561452005;
+    private const LAST_TIMESTAMP = 1561712450;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -48,7 +49,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(20, $pending);
+        static::assertCount(21, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -105,6 +106,40 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testNewSystemConfigDefaultsPreserveExistingValuesAndRetrySafely(): void
+    {
+        $defaults = [
+            'core.cart.maxQuantity' => '100',
+            'core.loginRegistration.passwordMinLength' => '8',
+            'core.address.showZipcodeInFrontOfCity' => true,
+        ];
+
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1561452005);
+            $connection->insert('system_config', [
+                'id' => str_repeat('P', 16),
+                'configuration_key' => 'core.loginRegistration.passwordMinLength',
+                'configuration_value' => '{"_value":"12"}',
+                'created_at' => '2020-01-01 00:00:00.123',
+            ], [ParameterType::BINARY]);
+            static::assertSame([Migration1561712450NewSystemConfigsAndDefaultValues::class], $collection->migrateInPlace(1561712450));
+
+            foreach ($defaults as $key => $expected) {
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]));
+                $configuration = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]);
+                static::assertIsString($configuration);
+                $value = json_decode($configuration, true, flags: \JSON_THROW_ON_ERROR)['_value'];
+                static::assertSame($key === 'core.loginRegistration.passwordMinLength' ? '12' : $expected, $value);
+            }
+        }
+
+        (new MigrationVariantRegistry())->resolve(Migration1561712450NewSystemConfigsAndDefaultValues::class, 1561712450)->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.cart.maxQuantity\' AND sales_channel_id IS NULL'));
+        static::assertSame('12', $this->postgres->fetchOne('SELECT configuration_value ->> \'_value\' FROM system_config WHERE configuration_key = \'core.loginRegistration.passwordMinLength\' AND sales_channel_id IS NULL'));
     }
 
     public function testUpdateDefaultsAreSeededOnceAndPreserveExistingConfiguration(): void
