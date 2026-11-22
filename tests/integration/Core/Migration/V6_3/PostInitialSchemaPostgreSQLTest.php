@@ -8,6 +8,9 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
+use Shopware\Core\Content\ContactForm\Event\ContactFormEvent;
+use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
+use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -36,6 +39,7 @@ use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
 use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
 use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
 use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
+use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
 
 /**
  * @internal
@@ -44,7 +48,7 @@ use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562841035;
+    private const LAST_TIMESTAMP = 1562933907;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -57,7 +61,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(28, $pending);
+        static::assertCount(29, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -71,6 +75,37 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testContactFormMailTypeAndEventActionAreSeededOnce(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562841035);
+
+            static::assertSame([Migration1562933907ContactForm::class], $collection->migrateInPlace(1562933907));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]));
+            $typeId = $connection->fetchOne('SELECT id FROM mail_template_type WHERE technical_name = ?', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]);
+            if (\is_resource($typeId)) {
+                $typeId = stream_get_contents($typeId);
+            }
+            static::assertIsString($typeId);
+            $typeIdHex = bin2hex($typeId);
+            $availableEntities = $connection->fetchOne('SELECT available_entities FROM mail_template_type WHERE id = ?', [$typeId], [ParameterType::BINARY]);
+            static::assertSame(['salesChannel' => 'sales_channel'], json_decode($availableEntities, true, flags: \JSON_THROW_ON_ERROR));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type_translation WHERE mail_template_type_id = ? AND name = ?', [$typeId, 'Contact form'], [ParameterType::BINARY, ParameterType::STRING]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type_translation WHERE mail_template_type_id = ? AND name = ?', [$typeId, 'Kontaktformular'], [ParameterType::BINARY, ParameterType::STRING]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [ContactFormEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562933907ContactForm::class, 1562933907);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]));
+                static::assertSame($typeIdHex, $connection->fetchOne('SELECT encode(id, \'hex\') FROM mail_template_type WHERE technical_name = ?', [MailTemplateTypes::MAILTYPE_CONTACT_FORM]));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [ContactFormEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+            }
+        }
     }
 
     public function testProductChildCountIsAddedAsNullableAndRetryPreservesIt(): void
