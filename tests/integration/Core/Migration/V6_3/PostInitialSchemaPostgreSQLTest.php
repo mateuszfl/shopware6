@@ -56,6 +56,7 @@ use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
 use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
 use Shopware\Core\Migration\V6_3\Migration1566817701AddDisplayGroup;
 use Shopware\Core\Migration\V6_3\Migration1567431050ContactFormTemplate;
+use Shopware\Core\Migration\V6_3\Migration1568120239CmsSection;
 
 /**
  * @internal
@@ -64,7 +65,7 @@ use Shopware\Core\Migration\V6_3\Migration1567431050ContactFormTemplate;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1567431050;
+    private const LAST_TIMESTAMP = 1568120239;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -77,7 +78,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(45, $pending);
+        static::assertCount(46, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -91,6 +92,44 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testCmsSectionDefaultsAndIdempotentCreation(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1567431050);
+
+            static::assertSame([Migration1568120239CmsSection::class], $collection->migrateInPlace(1568120239));
+            $sectionColumns = array_column($this->columns($connection)['cms_section'], null, 'name');
+            static::assertSame('default', $sectionColumns['type']['default_value']);
+            static::assertSame('boxed', $sectionColumns['sizing_mode']['default_value']);
+            static::assertSame('wrap', $sectionColumns['mobile_behavior']['default_value']);
+            static::assertSame('0', (string) $sectionColumns['locked']['default_value']);
+
+            $pageId = $connection->fetchOne('SELECT id FROM cms_page LIMIT 1');
+            if (\is_resource($pageId)) {
+                $pageId = stream_get_contents($pageId);
+            }
+            static::assertIsString($pageId);
+            $sectionId = Uuid::randomBytes();
+            $connection->insert('cms_section', [
+                'id' => $sectionId,
+                'cms_page_id' => $pageId,
+                'position' => 9,
+                'created_at' => '2020-01-01 00:00:00.123',
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::STRING]);
+            static::assertSame('default', $connection->fetchOne('SELECT type FROM cms_section WHERE id = ?', [$sectionId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT locked FROM cms_section WHERE id = ?', [$sectionId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['cms_section'];
+                (new MigrationVariantRegistry())->resolve(Migration1568120239CmsSection::class, 1568120239)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['cms_section']);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section WHERE id = ?', [$sectionId], [ParameterType::BINARY]));
+            }
+        }
     }
 
     public function testDisplayGroupIsAddedBeforeOldListingFlagIsDestructivelyRemoved(): void
