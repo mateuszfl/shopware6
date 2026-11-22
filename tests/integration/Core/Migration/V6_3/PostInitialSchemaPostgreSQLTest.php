@@ -20,6 +20,7 @@ use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
 use Shopware\Core\Migration\V6_3\Migration1558938938ChangeGroupSortingColumn;
 use Shopware\Core\Migration\V6_3\Migration1559050088Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
+use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
 
 /**
  * @internal
@@ -28,7 +29,7 @@ use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1559050903;
+    private const LAST_TIMESTAMP = 1559134989;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -41,7 +42,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(14, $pending);
+        static::assertCount(15, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -96,6 +97,29 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant = (new MigrationVariantRegistry())->resolve(Migration1558443337PromotionSalesChannel::class, 1558443337);
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
+            }
+        }
+    }
+
+    public function testPromotionIndividualCodeFieldsDefaultAndRemainUniqueAfterRetry(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1559050903);
+            $promotionId = str_repeat('Y', 16);
+            $connection->insert('promotion', ['id' => $promotionId, 'code' => 'INDIVIDUAL-CODE-CONTRACT', 'created_at' => '2020-01-01 00:00:00.123'], [ParameterType::BINARY]);
+            static::assertSame([Migration1559134989Promotion::class], $collection->migrateInPlace(1559134989));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT use_individual_codes FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT individual_code_pattern FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
+            $promotionSchema = $this->schema($connection)['promotion'];
+            static::assertContains(['UNIQUE', ['individual_code_pattern']], $promotionSchema['indexes']);
+
+            if ($connection === $this->postgres) {
+                $connection->update('promotion', ['use_individual_codes' => 1, 'individual_code_pattern' => 'SPRING-{code}'], ['id' => $promotionId], [ParameterType::INTEGER, ParameterType::STRING, ParameterType::BINARY]);
+                (new MigrationVariantRegistry())->resolve(Migration1559134989Promotion::class, 1559134989)->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT use_individual_codes FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
+                static::assertSame('SPRING-{code}', $connection->fetchOne('SELECT individual_code_pattern FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
             }
         }
     }
