@@ -41,6 +41,7 @@ use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
 use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
 use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
 use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
+use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
 
 /**
  * @internal
@@ -49,7 +50,7 @@ use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1563180880;
+    private const LAST_TIMESTAMP = 1563288227;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -62,7 +63,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(30, $pending);
+        static::assertCount(31, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -76,6 +77,29 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testMarkAsNewConfigIsSeededOnceAndRetryPreservesCustomValue(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1563180880);
+
+            static::assertSame([Migration1563288227MarkAsNewConfig::class], $collection->migrateInPlace(1563288227));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.listing.markAsNew']));
+            $configuration = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.listing.markAsNew']);
+            static::assertIsString($configuration);
+            static::assertSame('30', json_decode($configuration, true, flags: \JSON_THROW_ON_ERROR)['_value']);
+
+            if ($connection === $this->postgres) {
+                $connection->update('system_config', ['configuration_value' => '{"_value":"custom"}'], ['configuration_key' => 'core.listing.markAsNew']);
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1563288227MarkAsNewConfig::class, 1563288227);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.listing.markAsNew']));
+                static::assertSame('custom', $connection->fetchOne('SELECT configuration_value ->> \'_value\' FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.listing.markAsNew']));
+            }
+        }
     }
 
     public function testDefaultThumbnailSizesPreserveExistingSizesAndRetrySafely(): void
