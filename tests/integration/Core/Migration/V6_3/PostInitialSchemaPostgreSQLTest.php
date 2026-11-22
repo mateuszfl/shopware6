@@ -15,6 +15,7 @@ use Shopware\Core\Migration\V6_3\Migration1554900301AddReviewTable;
 use Shopware\Core\Migration\V6_3\Migration1556809270AddAverageRatingToProduct;
 use Shopware\Core\Migration\V6_3\Migration1558082916AddBreadcrumb;
 use Shopware\Core\Migration\V6_3\Migration1558105657CurrencyPrices;
+use Shopware\Core\Migration\V6_3\Migration1558443337PromotionSalesChannel;
 
 /**
  * @internal
@@ -23,7 +24,7 @@ use Shopware\Core\Migration\V6_3\Migration1558105657CurrencyPrices;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1558105657;
+    private const LAST_TIMESTAMP = 1558443337;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -36,7 +37,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(8, $pending);
+        static::assertCount(9, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -69,6 +70,30 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $variant->update($this->postgres);
         static::assertSame($after, $this->schema($this->postgres)['product_price']);
+    }
+
+    public function testPromotionSalesChannelForeignKeysCascadeAfterUpgradeAndRetry(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1558443337);
+            $foreignKeys = $this->schema($connection)['promotion_sales_channel']['foreignKeys'];
+            foreach ($foreignKeys as $foreignKey) {
+                if (\in_array($foreignKey[0], ['fk.promotion_sales_channel.promotion_id', 'fk.promotion_sales_channel.sales_channel_id'], true)) {
+                    static::assertSame('CASCADE', $foreignKey[3]);
+                    static::assertSame('CASCADE', $foreignKey[4]);
+                }
+            }
+            static::assertCount(2, array_filter($foreignKeys, static fn (array $foreignKey): bool => \in_array($foreignKey[0], ['fk.promotion_sales_channel.promotion_id', 'fk.promotion_sales_channel.sales_channel_id'], true)));
+
+            $schema = $this->schema($connection)['promotion_sales_channel'];
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1558443337PromotionSalesChannel::class, 1558443337);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
+            }
+        }
     }
 
     public function testImportProfileRetainsValidUuidSubstitutionsAndCustomizations(): void
