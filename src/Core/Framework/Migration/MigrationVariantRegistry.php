@@ -163,6 +163,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1568120302CmsBlockUpdate::class, 1568120302, PostgreSQL63\Migration1568120302CmsBlockUpdate::class],
         [Core63\Migration1568645037AddEnqueueDbal::class, 1568645037, PostgreSQL63\Migration1568645037AddEnqueueDbal::class],
         [Core63\Migration1568901713PromotionDiscount::class, 1568901713, PostgreSQL63\Migration1568901713PromotionDiscount::class],
+        [Core63\Migration1569403146ProductVisibilityUnique::class, 1569403146, PostgreSQL63\Migration1569403146ProductVisibilityUnique::class],
     ];
 
     /**

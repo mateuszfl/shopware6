@@ -60,6 +60,7 @@ use Shopware\Core\Migration\V6_3\Migration1568120239CmsSection;
 use Shopware\Core\Migration\V6_3\Migration1568120302CmsBlockUpdate;
 use Shopware\Core\Migration\V6_3\Migration1568645037AddEnqueueDbal;
 use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
+use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
 
 /**
  * @internal
@@ -68,7 +69,7 @@ use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1568901713;
+    private const LAST_TIMESTAMP = 1569403146;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -81,7 +82,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(49, $pending);
+        static::assertCount(50, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -217,6 +218,67 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 (new MigrationVariantRegistry())->resolve(Migration1568901713PromotionDiscount::class, 1568901713)->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_discount']);
                 static::assertSame($existingCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount'));
+            }
+        }
+    }
+
+    public function testProductVisibilityDuplicatesKeepNewestThenHighestId(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1568901713);
+
+            $productId = Uuid::fromHexToBytes('1234567890abcdef1234567890abcdef');
+            $productVersionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $connection->insert('product', [
+                'id' => $productId,
+                'version_id' => $productVersionId,
+                'display_in_listing' => 1,
+                'stock' => 1,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::INTEGER]);
+
+            $template = $connection->fetchAssociative('SELECT product.id AS product_id, product.version_id AS product_version_id, sales_channel.id AS sales_channel_id FROM product CROSS JOIN sales_channel LIMIT 1');
+            static::assertIsArray($template);
+            foreach (['product_id', 'product_version_id', 'sales_channel_id'] as $column) {
+                if (\is_resource($template[$column])) {
+                    $template[$column] = stream_get_contents($template[$column]);
+                }
+            }
+
+            $duplicateIds = [
+                Uuid::fromHexToBytes('00000000000000000000000000000011'),
+                Uuid::fromHexToBytes('00000000000000000000000000000022'),
+                Uuid::fromHexToBytes('00000000000000000000000000000033'),
+            ];
+            $rows = [
+                [$duplicateIds[0], '2020-01-01 00:00:00.000'],
+                [$duplicateIds[2], '2021-01-01 00:00:00.000'],
+                [$duplicateIds[1], '2021-01-01 00:00:00.000'],
+            ];
+            foreach ($rows as [$id, $createdAt]) {
+                $connection->insert('product_visibility', [
+                    'id' => $id,
+                    'product_id' => $template['product_id'],
+                    'product_version_id' => $template['product_version_id'],
+                    'sales_channel_id' => $template['sales_channel_id'],
+                    'visibility' => 30,
+                    'created_at' => $createdAt,
+                ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::STRING]);
+            }
+
+            $initialCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility');
+            static::assertSame([Migration1569403146ProductVisibilityUnique::class], $collection->migrateInPlace(1569403146));
+            static::assertSame($initialCount - 2, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility'));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility WHERE id = ?', [$duplicateIds[2]], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility WHERE id IN (?, ?)', [$duplicateIds[0], $duplicateIds[1]], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['product_visibility'];
+                (new MigrationVariantRegistry())->resolve(Migration1569403146ProductVisibilityUnique::class, 1569403146)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['product_visibility']);
+                static::assertSame($initialCount - 2, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility'));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_visibility WHERE id = ?', [$duplicateIds[2]], [ParameterType::BINARY]));
             }
         }
     }
