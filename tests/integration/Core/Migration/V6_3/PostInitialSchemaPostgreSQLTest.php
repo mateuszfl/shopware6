@@ -45,6 +45,7 @@ use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
 use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
 use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
+use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
 
 /**
  * @internal
@@ -53,7 +54,7 @@ use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1563949275;
+    private const LAST_TIMESTAMP = 1564475053;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -66,7 +67,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(34, $pending);
+        static::assertCount(35, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -80,6 +81,24 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testSaveDocumentsConfigIsRemovedAndRetryIsSafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1563949275);
+
+            static::assertGreaterThan(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ?', ['core.saveDocuments']));
+            static::assertSame([Migration1564475053RemoveSaveDocumentsConfig::class], $collection->migrateInPlace(1564475053));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ?', ['core.saveDocuments']));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ?', ['core.store.apiUri']));
+
+            (new MigrationVariantRegistry())->resolve(Migration1564475053RemoveSaveDocumentsConfig::class, 1564475053)->update($connection);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ?', ['core.saveDocuments']));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ?', ['core.store.apiUri']));
+        }
     }
 
     public function testOrderCustomerCompanyIsNullableAndRetryPreservesCustomValue(): void
