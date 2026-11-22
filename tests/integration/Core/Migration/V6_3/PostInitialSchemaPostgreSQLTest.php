@@ -57,6 +57,7 @@ use Shopware\Core\Migration\V6_3\Migration1566460168UpdateTexts;
 use Shopware\Core\Migration\V6_3\Migration1566817701AddDisplayGroup;
 use Shopware\Core\Migration\V6_3\Migration1567431050ContactFormTemplate;
 use Shopware\Core\Migration\V6_3\Migration1568120239CmsSection;
+use Shopware\Core\Migration\V6_3\Migration1568120302CmsBlockUpdate;
 
 /**
  * @internal
@@ -65,7 +66,7 @@ use Shopware\Core\Migration\V6_3\Migration1568120239CmsSection;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1568120239;
+    private const LAST_TIMESTAMP = 1568120302;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -78,7 +79,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(46, $pending);
+        static::assertCount(47, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -128,6 +129,47 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 (new MigrationVariantRegistry())->resolve(Migration1568120239CmsSection::class, 1568120239)->update($connection);
                 static::assertSame($schema, $this->schema($connection)['cms_section']);
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section WHERE id = ?', [$sectionId], [ParameterType::BINARY]));
+            }
+        }
+    }
+
+    public function testCmsBlocksMoveToSectionsAndDestructiveColumnsAreRemoved(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1568120239);
+            $collection->migrateDestructiveInPlace(1568120239);
+            $initialBlockCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block');
+
+            static::assertSame([Migration1568120302CmsBlockUpdate::class], $collection->migrateInPlace(1568120302));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block WHERE cms_section_id IS NULL'));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block INNER JOIN cms_section ON cms_section.id = cms_block.cms_section_id WHERE cms_block.cms_page_id <> cms_section.cms_page_id'));
+            static::assertSame('main', $connection->fetchOne('SELECT section_position FROM cms_block LIMIT 1'));
+            static::assertSame($initialBlockCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block'));
+
+            if ($connection === $this->postgres) {
+                $sectionCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section');
+                $assignments = $connection->fetchAllAssociative('SELECT encode(id, \'hex\') AS id, encode(cms_section_id, \'hex\') AS cms_section_id FROM cms_block ORDER BY id');
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1568120302CmsBlockUpdate::class, 1568120302);
+                $schema = $this->schema($connection)['cms_block'];
+                $variant->update($connection);
+                static::assertSame($sectionCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_section'));
+                static::assertSame($assignments, $connection->fetchAllAssociative('SELECT encode(id, \'hex\') AS id, encode(cms_section_id, \'hex\') AS cms_section_id FROM cms_block ORDER BY id'));
+                static::assertSame($schema, $this->schema($connection)['cms_block']);
+            }
+
+            static::assertSame([Migration1568120302CmsBlockUpdate::class], $collection->migrateDestructiveInPlace(1568120302));
+            static::assertNotContains('cms_page_id', array_column($this->columns($connection)['cms_block'], 'name'));
+            static::assertNotContains('sizing_mode', array_column($this->columns($connection)['cms_block'], 'name'));
+            static::assertSame($initialBlockCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block'));
+            static::assertSame($initialBlockCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block WHERE cms_section_id IS NOT NULL'));
+
+            if ($connection === $this->postgres) {
+                (new MigrationVariantRegistry())->resolve(Migration1568120302CmsBlockUpdate::class, 1568120302)->updateDestructive($connection);
+                static::assertNotContains('cms_page_id', array_column($this->columns($connection)['cms_block'], 'name'));
+                static::assertNotContains('sizing_mode', array_column($this->columns($connection)['cms_block'], 'name'));
+                static::assertSame($initialBlockCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM cms_block'));
             }
         }
     }

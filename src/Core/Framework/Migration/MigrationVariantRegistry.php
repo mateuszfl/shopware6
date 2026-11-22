@@ -160,6 +160,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1566817701AddDisplayGroup::class, 1566817701, PostgreSQL63\Migration1566817701AddDisplayGroup::class],
         [Core63\Migration1567431050ContactFormTemplate::class, 1567431050, PostgreSQL63\Migration1567431050ContactFormTemplate::class],
         [Core63\Migration1568120239CmsSection::class, 1568120239, PostgreSQL63\Migration1568120239CmsSection::class],
+        [Core63\Migration1568120302CmsBlockUpdate::class, 1568120302, PostgreSQL63\Migration1568120302CmsBlockUpdate::class],
     ];
 
     /**
