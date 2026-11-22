@@ -133,6 +133,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1561370284AddImportExportProductProfile::class, 1561370284, PostgreSQL63\Migration1561370284AddImportExportProductProfile::class],
         [Core63\Migration1561377793AddAvailableAsShippingCountry::class, 1561377793, PostgreSQL63\Migration1561377793AddAvailableAsShippingCountry::class],
         [Core63\Migration1561442979ElasticsearchIndexTask::class, 1561442979, Core63\Migration1561442979ElasticsearchIndexTask::class],
+        [Core63\Migration1561452005Update::class, 1561452005, PostgreSQL63\Migration1561452005Update::class],
     ];
 
     /**

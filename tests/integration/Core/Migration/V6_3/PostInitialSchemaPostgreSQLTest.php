@@ -26,6 +26,7 @@ use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
 use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfile;
 use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountry;
 use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
+use Shopware\Core\Migration\V6_3\Migration1561452005Update;
 
 /**
  * @internal
@@ -34,7 +35,7 @@ use Shopware\Core\Migration\V6_3\Migration1561442979ElasticsearchIndexTask;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1561442979;
+    private const LAST_TIMESTAMP = 1561452005;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -47,7 +48,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(19, $pending);
+        static::assertCount(20, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -104,6 +105,33 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testUpdateDefaultsAreSeededOnceAndPreserveExistingConfiguration(): void
+    {
+        $defaults = [
+            'core.update.apiUri' => 'https://update-api.shopware.com',
+            'core.update.channel' => 'ea',
+            'core.update.code' => '',
+        ];
+
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1561442979);
+            static::assertSame([Migration1561452005Update::class], $collection->migrateInPlace(1561452005));
+            foreach ($defaults as $key => $value) {
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]));
+                $configuration = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', [$key]);
+                static::assertIsString($configuration);
+                static::assertSame($value, json_decode($configuration, true, flags: \JSON_THROW_ON_ERROR)['_value']);
+            }
+        }
+
+        $this->postgres->update('system_config', ['configuration_value' => '{"_value":"custom-channel"}'], ['configuration_key' => 'core.update.channel']);
+        (new MigrationVariantRegistry())->resolve(Migration1561452005Update::class, 1561452005)->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = \'core.update.channel\' AND sales_channel_id IS NULL'));
+        static::assertSame('custom-channel', $this->postgres->fetchOne('SELECT configuration_value ->> \'_value\' FROM system_config WHERE configuration_key = \'core.update.channel\' AND sales_channel_id IS NULL'));
     }
 
     public function testMovedElasticsearchIndexMigrationIsARegisteredNoOp(): void
