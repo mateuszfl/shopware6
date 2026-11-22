@@ -59,6 +59,7 @@ use Shopware\Core\Migration\V6_3\Migration1567431050ContactFormTemplate;
 use Shopware\Core\Migration\V6_3\Migration1568120239CmsSection;
 use Shopware\Core\Migration\V6_3\Migration1568120302CmsBlockUpdate;
 use Shopware\Core\Migration\V6_3\Migration1568645037AddEnqueueDbal;
+use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
 
 /**
  * @internal
@@ -67,7 +68,7 @@ use Shopware\Core\Migration\V6_3\Migration1568645037AddEnqueueDbal;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1568645037;
+    private const LAST_TIMESTAMP = 1568901713;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -80,7 +81,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(48, $pending);
+        static::assertCount(49, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -191,6 +192,31 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 (new MigrationVariantRegistry())->resolve(Migration1568645037AddEnqueueDbal::class, 1568645037)->update($connection);
                 static::assertSame($schema, $this->schema($connection)['enqueue']);
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM enqueue'));
+            }
+        }
+    }
+
+    public function testPromotionDiscountKeysAreAddedWithoutChangingExistingRows(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1568645037);
+            $existingCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount');
+
+            static::assertSame([Migration1568901713PromotionDiscount::class], $collection->migrateInPlace(1568901713));
+            $discountColumns = array_column($this->columns($connection)['promotion_discount'], null, 'name');
+            foreach (['sorter_key', 'applier_key', 'usage_key'] as $column) {
+                static::assertArrayHasKey($column, $discountColumns);
+                static::assertSame($existingCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount'));
+                static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount WHERE ' . $column . ' IS NOT NULL'));
+            }
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['promotion_discount'];
+                (new MigrationVariantRegistry())->resolve(Migration1568901713PromotionDiscount::class, 1568901713)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['promotion_discount']);
+                static::assertSame($existingCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_discount'));
             }
         }
     }
