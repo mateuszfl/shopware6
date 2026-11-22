@@ -1983,7 +1983,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
             $column['scale'] = $column['type'] === 'numeric' ? (int) $column['scale'] : null;
             $column['time_precision'] = $column['time_precision'] === null || $type === 'date' ? null : (int) $column['time_precision'];
             $column['collation'] = match ($column['collation']) {
-                'sw_type_ci', 'utf8mb4_unicode_ci', 'utf8mb4_0900_ai_ci' => 'shopware_ci',
+                'sw_type_ci', 'utf8mb3_unicode_ci', 'utf8_unicode_ci', 'utf8mb4_unicode_ci', 'utf8mb4_0900_ai_ci' => 'shopware_ci',
                 default => $column['collation'],
             };
             $column['identity_column'] = (int) $column['identity_column'];
