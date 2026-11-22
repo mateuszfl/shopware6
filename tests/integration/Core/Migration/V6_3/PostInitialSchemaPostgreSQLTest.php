@@ -43,6 +43,7 @@ use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
 use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
 use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
 use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
+use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
 
 /**
  * @internal
@@ -51,7 +52,7 @@ use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1563518181;
+    private const LAST_TIMESTAMP = 1563805586;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -64,7 +65,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(32, $pending);
+        static::assertCount(33, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -78,6 +79,130 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testOrderLanguageUsesCustomerThenSalesChannelAndRetryPreservesValues(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1563518181);
+
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $customerOrderId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $guestOrderId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $customerId = Uuid::fromHexToBytes('abcdef0123456789abcdef0123456789');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $customerLanguageId = $connection->fetchOne(<<<'SQL'
+                SELECT language.id
+                FROM language
+                INNER JOIN locale ON locale.id = language.locale_id
+                WHERE locale.code = 'de-DE'
+                SQL);
+            if (\is_resource($customerLanguageId)) {
+                $customerLanguageId = stream_get_contents($customerLanguageId);
+            }
+            static::assertIsString($customerLanguageId);
+
+            $connection->executeStatement(<<<'SQL'
+                INSERT INTO customer (
+                    id, customer_group_id, default_payment_method_id, sales_channel_id, language_id,
+                    default_billing_address_id, default_shipping_address_id, customer_number, salutation_id,
+                    first_name, last_name, email, created_at
+                ) VALUES (
+                    ?, (SELECT id FROM customer_group LIMIT 1), (SELECT id FROM payment_method LIMIT 1),
+                    (SELECT id FROM sales_channel LIMIT 1), ?, ?, ?, ?,
+                    (SELECT id FROM salutation LIMIT 1), ?, ?, ?, ?
+                )
+                SQL, [
+                $customerId,
+                $customerLanguageId,
+                Uuid::fromHexToBytes('11111111111111111111111111111111'),
+                Uuid::fromHexToBytes('22222222222222222222222222222222'),
+                'customer-language-contract',
+                'Test',
+                'Customer',
+                'customer-language-contract@example.com',
+                $createdAt,
+            ], [
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+            ]);
+
+            $orderTable = $connection->quoteSingleIdentifier('order');
+            foreach ([$customerOrderId, $guestOrderId] as $orderId) {
+                $connection->executeStatement(
+                    'INSERT INTO ' . $orderTable . ' (id, version_id, state_id, currency_id, sales_channel_id, billing_address_id, billing_address_version_id, price, order_date_time, shipping_costs, created_at) VALUES (?, ?, ?, (SELECT id FROM currency LIMIT 1), (SELECT id FROM sales_channel LIMIT 1), ?, ?, ?, ?, ?, ?)',
+                    [
+                        $orderId,
+                        $versionId,
+                        Uuid::fromHexToBytes('33333333333333333333333333333333'),
+                        Uuid::fromHexToBytes('44444444444444444444444444444444'),
+                        $versionId,
+                        '{"totalPrice":1,"netPrice":1,"positionPrice":1}',
+                        '2020-01-02 03:04:05.123',
+                        '{"totalPrice":0}',
+                        $createdAt,
+                    ],
+                    [
+                        ParameterType::BINARY,
+                        ParameterType::BINARY,
+                        ParameterType::BINARY,
+                        ParameterType::BINARY,
+                        ParameterType::BINARY,
+                        ParameterType::STRING,
+                        ParameterType::STRING,
+                        ParameterType::STRING,
+                        ParameterType::STRING,
+                    ],
+                );
+            }
+
+            $connection->insert('order_customer', [
+                'id' => Uuid::fromHexToBytes('55555555555555555555555555555555'),
+                'version_id' => $versionId,
+                'customer_id' => $customerId,
+                'order_id' => $customerOrderId,
+                'order_version_id' => $versionId,
+                'email' => 'customer-language-contract@example.com',
+                'salutation_id' => $connection->fetchOne('SELECT id FROM salutation LIMIT 1'),
+                'first_name' => 'Test',
+                'last_name' => 'Customer',
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+            $connection->insert('order_customer', [
+                'id' => Uuid::fromHexToBytes('66666666666666666666666666666666'),
+                'version_id' => $versionId,
+                'customer_id' => null,
+                'order_id' => $guestOrderId,
+                'order_version_id' => $versionId,
+                'email' => 'guest-language-contract@example.com',
+                'salutation_id' => $connection->fetchOne('SELECT id FROM salutation LIMIT 1'),
+                'first_name' => 'Guest',
+                'last_name' => 'Customer',
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::NULL, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1563805586AddLanguageToOrder::class], $collection->migrateInPlace(1563805586));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM ' . $orderTable . ' WHERE id = ? AND version_id = ? AND language_id = ?', [$customerOrderId, $versionId, $customerLanguageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+            $guestLanguageQuery = 'SELECT COUNT(*) FROM ' . $orderTable . ' WHERE id = ? AND version_id = ? AND language_id = (SELECT language.id FROM language INNER JOIN sales_channel_language ON language.id = sales_channel_language.language_id WHERE sales_channel_language.sales_channel_id = ' . $orderTable . '.sales_channel_id LIMIT 1)';
+            static::assertSame(1, (int) $connection->fetchOne($guestLanguageQuery, [$guestOrderId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1563805586AddLanguageToOrder::class, 1563805586);
+                $schema = $this->schema($connection)['order'];
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM ' . $orderTable . ' WHERE id = ? AND version_id = ? AND language_id = ?', [$customerOrderId, $versionId, $customerLanguageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['order']);
+            }
+        }
     }
 
     public function testPromotionDiscountMaxValueIsNullableAndRetryPreservesCustomValue(): void
