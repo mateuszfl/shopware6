@@ -147,6 +147,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1563288227MarkAsNewConfig::class, 1563288227, PostgreSQL63\Migration1563288227MarkAsNewConfig::class],
         [Core63\Migration1563518181PromotionDiscount::class, 1563518181, PostgreSQL63\Migration1563518181PromotionDiscount::class],
         [Core63\Migration1563805586AddLanguageToOrder::class, 1563805586, PostgreSQL63\Migration1563805586AddLanguageToOrder::class],
+        [Core63\Migration1563949275AddCompanyToOrderCustomer::class, 1563949275, PostgreSQL63\Migration1563949275AddCompanyToOrderCustomer::class],
     ];
 
     /**

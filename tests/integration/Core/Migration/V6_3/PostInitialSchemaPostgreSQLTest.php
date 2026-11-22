@@ -44,6 +44,7 @@ use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
 use Shopware\Core\Migration\V6_3\Migration1563288227MarkAsNewConfig;
 use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
+use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
 
 /**
  * @internal
@@ -52,7 +53,7 @@ use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1563805586;
+    private const LAST_TIMESTAMP = 1563949275;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -65,7 +66,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(33, $pending);
+        static::assertCount(34, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -79,6 +80,67 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testOrderCustomerCompanyIsNullableAndRetryPreservesCustomValue(): void
+    {
+        $connection = $this->postgres;
+        $collection = $this->collection($connection);
+        $collection->sync();
+        $collection->migrateInPlace(1563805586);
+
+        $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+        $orderId = Uuid::fromHexToBytes('1234567890abcdef1234567890abcdef');
+        $orderCustomerId = Uuid::fromHexToBytes('abcdef1234567890abcdef1234567890');
+        $createdAt = '2020-01-01 00:00:00.123';
+        $orderTable = $connection->quoteSingleIdentifier('order');
+        $connection->executeStatement(
+            'INSERT INTO ' . $orderTable . ' (id, version_id, state_id, currency_id, sales_channel_id, language_id, billing_address_id, billing_address_version_id, price, order_date_time, shipping_costs, created_at) VALUES (?, ?, ?, (SELECT id FROM currency LIMIT 1), (SELECT id FROM sales_channel LIMIT 1), (SELECT language_id FROM sales_channel_language LIMIT 1), ?, ?, ?, ?, ?, ?)',
+            [
+                $orderId,
+                $versionId,
+                Uuid::fromHexToBytes('33333333333333333333333333333333'),
+                Uuid::fromHexToBytes('44444444444444444444444444444444'),
+                $versionId,
+                '{"totalPrice":1,"netPrice":1,"positionPrice":1}',
+                '2020-01-02 03:04:05.123',
+                '{"totalPrice":0}',
+                $createdAt,
+            ],
+            [
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+            ],
+        );
+        $connection->insert('order_customer', [
+            'id' => $orderCustomerId,
+            'version_id' => $versionId,
+            'customer_id' => null,
+            'order_id' => $orderId,
+            'order_version_id' => $versionId,
+            'email' => 'company-contract@example.com',
+            'salutation_id' => $connection->fetchOne('SELECT id FROM salutation LIMIT 1'),
+            'first_name' => 'Test',
+            'last_name' => 'Customer',
+            'created_at' => $createdAt,
+        ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::NULL, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+
+        static::assertSame([Migration1563949275AddCompanyToOrderCustomer::class], $collection->migrateInPlace(1563949275));
+        static::assertNull($connection->fetchOne('SELECT company FROM order_customer WHERE id = ? AND version_id = ?', [$orderCustomerId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+        $connection->update('order_customer', ['company' => 'Acme Corporation'], ['id' => $orderCustomerId, 'version_id' => $versionId], [ParameterType::STRING, ParameterType::BINARY, ParameterType::BINARY]);
+
+        $schema = $this->schema($connection)['order_customer'];
+        (new MigrationVariantRegistry())->resolve(Migration1563949275AddCompanyToOrderCustomer::class, 1563949275)->update($connection);
+
+        static::assertSame('Acme Corporation', $connection->fetchOne('SELECT company FROM order_customer WHERE id = ? AND version_id = ?', [$orderCustomerId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+        static::assertSame($schema, $this->schema($connection)['order_customer']);
     }
 
     public function testOrderLanguageUsesCustomerThenSalesChannelAndRetryPreservesValues(): void
