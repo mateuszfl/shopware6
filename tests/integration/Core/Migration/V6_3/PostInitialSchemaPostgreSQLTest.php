@@ -46,6 +46,7 @@ use Shopware\Core\Migration\V6_3\Migration1563518181PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
 use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
 use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
+use Shopware\Core\Migration\V6_3\Migration1565007156RemoveAutoIncrement;
 
 /**
  * @internal
@@ -54,7 +55,7 @@ use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1564475053;
+    private const LAST_TIMESTAMP = 1565007156;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -67,7 +68,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(35, $pending);
+        static::assertCount(36, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -81,6 +82,60 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testAutoIncrementColumnsAreRemovedOnlyInDestructivePass(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1565007156);
+            $collection->migrateDestructiveInPlace(1564475053);
+
+            $productId = str_repeat('P', 16);
+            $categoryId = str_repeat('C', 16);
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('product', [
+                'id' => $productId,
+                'version_id' => $versionId,
+                'stock' => 17,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER]);
+            $connection->insert('category', [
+                'id' => $categoryId,
+                'version_id' => $versionId,
+                'type' => 'page',
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertGreaterThan(0, (int) $connection->fetchOne('SELECT auto_increment FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertGreaterThan(0, (int) $connection->fetchOne('SELECT auto_increment FROM category WHERE id = ? AND version_id = ?', [$categoryId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertContains('auto_increment', array_column($this->columns($connection)['product'], 'name'));
+            static::assertContains('auto_increment', array_column($this->columns($connection)['category'], 'name'));
+
+            static::assertSame([Migration1565007156RemoveAutoIncrement::class], $collection->migrateDestructiveInPlace(1565007156));
+            static::assertNotContains('auto_increment', array_column($this->columns($connection)['product'], 'name'));
+            static::assertNotContains('auto_increment', array_column($this->columns($connection)['category'], 'name'));
+            foreach (['product', 'category'] as $table) {
+                foreach ($this->indexes($connection)[$table] ?? [] as [, $indexedColumns]) {
+                    static::assertNotContains('auto_increment', $indexedColumns);
+                }
+            }
+            static::assertSame(17, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame('page', $connection->fetchOne('SELECT type FROM category WHERE id = ? AND version_id = ?', [$categoryId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                static::assertNull($connection->fetchOne('SELECT to_regclass(\'product_auto_increment_seq\')'));
+                static::assertNull($connection->fetchOne('SELECT to_regclass(\'category_auto_increment_seq\')'));
+                (new MigrationVariantRegistry())->resolve(Migration1565007156RemoveAutoIncrement::class, 1565007156)->updateDestructive($connection);
+                static::assertNotContains('auto_increment', array_column($this->columns($connection)['product'], 'name'));
+                static::assertNotContains('auto_increment', array_column($this->columns($connection)['category'], 'name'));
+                static::assertSame(17, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$productId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame('page', $connection->fetchOne('SELECT type FROM category WHERE id = ? AND version_id = ?', [$categoryId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            }
+
+            static::assertSame([], $collection->migrateDestructiveInPlace(1565007156));
+        }
     }
 
     public function testSaveDocumentsConfigIsRemovedAndRetryIsSafe(): void
