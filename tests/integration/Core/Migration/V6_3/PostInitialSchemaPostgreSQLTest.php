@@ -52,6 +52,7 @@ use Shopware\Core\Migration\V6_3\Migration1565270155PromotionSetGroup;
 use Shopware\Core\Migration\V6_3\Migration1565270366PromotionSetGroupRule;
 use Shopware\Core\Migration\V6_3\Migration1565346846Promotion;
 use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
+use Shopware\Core\Migration\V6_3\Migration1566293076AddAutoIncrement;
 
 /**
  * @internal
@@ -60,7 +61,7 @@ use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1565705280;
+    private const LAST_TIMESTAMP = 1566293076;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -73,7 +74,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(41, $pending);
+        static::assertCount(42, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -163,6 +164,57 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection));
             }
         }
+    }
+
+    public function testAutoIncrementColumnsAreRecreatedDestructivelyAndGenerateUniqueValues(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1566293076);
+            $collection->migrateDestructiveInPlace(1565705280);
+
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $productIds = [Uuid::fromHexToBytes('11223344556677889900aabbccddeeff'), Uuid::fromHexToBytes('ffeeddccbbaa00998877665544332211')];
+            $categoryIds = [Uuid::fromHexToBytes('00112233445566778899aabbccddeeff'), Uuid::fromHexToBytes('ffeeddccbbaa99887766554433221100')];
+            $createdAt = '2020-01-01 00:00:00.123';
+            foreach ($productIds as $productId) {
+                $connection->insert('product', ['id' => $productId, 'version_id' => $versionId, 'stock' => 5], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER]);
+            }
+            foreach ($categoryIds as $categoryId) {
+                $connection->insert('category', ['id' => $categoryId, 'version_id' => $versionId, 'type' => 'page', 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+            }
+
+            static::assertSame([Migration1566293076AddAutoIncrement::class], $collection->migrateDestructiveInPlace(1566293076));
+            $generatedValues = [];
+            foreach (['product' => $productIds, 'category' => $categoryIds] as $table => $ids) {
+                $autoIncrementColumn = array_values(array_filter($this->columns($connection)[$table], static fn (array $column): bool => $column['name'] === 'auto_increment'))[0];
+                static::assertSame(1, $autoIncrementColumn['identity_column']);
+                $values = [];
+                foreach ($ids as $id) {
+                    $value = (int) $connection->fetchOne('SELECT auto_increment FROM ' . $connection->quoteSingleIdentifier($table) . ' WHERE id = ? AND version_id = ?', [$id, $versionId], [ParameterType::BINARY, ParameterType::BINARY]);
+                    static::assertGreaterThan(0, $value);
+                    $values[] = $value;
+                }
+                static::assertCount(2, array_unique($values));
+                $generatedValues[$table] = $values;
+            }
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection);
+                (new MigrationVariantRegistry())->resolve(Migration1566293076AddAutoIncrement::class, 1566293076)->updateDestructive($connection);
+                static::assertSame($schema, $this->schema($connection));
+                foreach (['product' => $productIds, 'category' => $categoryIds] as $table => $ids) {
+                    foreach ($ids as $index => $id) {
+                        static::assertSame($generatedValues[$table][$index], (int) $connection->fetchOne('SELECT auto_increment FROM ' . $connection->quoteSingleIdentifier($table) . ' WHERE id = ? AND version_id = ?', [$id, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                    }
+                }
+            }
+
+            static::assertSame([], $collection->migrateDestructiveInPlace(1566293076));
+        }
+
+        static::assertSame($this->schema($this->mysql), $this->schema($this->postgres));
     }
 
     public function testPromotionSetGroupRuleCascadeDeletesBothReferencesAndRetryPreservesLinks(): void
