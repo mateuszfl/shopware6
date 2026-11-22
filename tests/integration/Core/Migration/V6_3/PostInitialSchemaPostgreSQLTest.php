@@ -24,6 +24,7 @@ use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
 use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
 use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfile;
+use Shopware\Core\Migration\V6_3\Migration1561377793AddAvailableAsShippingCountry;
 
 /**
  * @internal
@@ -32,7 +33,7 @@ use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfil
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1561370284;
+    private const LAST_TIMESTAMP = 1561377793;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -45,7 +46,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(17, $pending);
+        static::assertCount(18, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -100,6 +101,27 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant = (new MigrationVariantRegistry())->resolve(Migration1558443337PromotionSalesChannel::class, 1558443337);
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
+            }
+        }
+    }
+
+    public function testCountriesBecomeShippingAvailableByDefaultAndRetryPreservesOptOut(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1561370284);
+            $countryId = str_repeat('K', 16);
+            $connection->insert('country', ['id' => $countryId, 'active' => 0, 'created_at' => '2020-01-01 00:00:00.123'], [ParameterType::BINARY]);
+            static::assertSame([Migration1561377793AddAvailableAsShippingCountry::class], $collection->migrateInPlace(1561377793));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT shipping_available FROM country WHERE id = ?', [$countryId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT active FROM country WHERE id = ?', [$countryId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM country WHERE shipping_available <> 1'));
+
+            if ($connection === $this->postgres) {
+                $connection->update('country', ['shipping_available' => 0], ['id' => $countryId], [ParameterType::INTEGER, ParameterType::BINARY]);
+                (new MigrationVariantRegistry())->resolve(Migration1561377793AddAvailableAsShippingCountry::class, 1561377793)->update($connection);
+                static::assertSame(0, (int) $connection->fetchOne('SELECT shipping_available FROM country WHERE id = ?', [$countryId], [ParameterType::BINARY]));
             }
         }
     }
