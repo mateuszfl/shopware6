@@ -21,6 +21,7 @@ use Shopware\Core\Migration\V6_3\Migration1558938938ChangeGroupSortingColumn;
 use Shopware\Core\Migration\V6_3\Migration1559050088Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
 use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
+use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
 
 /**
  * @internal
@@ -29,7 +30,7 @@ use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1559134989;
+    private const LAST_TIMESTAMP = 1559306391;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -42,7 +43,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(15, $pending);
+        static::assertCount(16, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -98,6 +99,46 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
+        }
+    }
+
+    public function testPromotionIndividualCodesKeepUniqueCodesAndCascadeWithTheirPromotion(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1559134989);
+            $promotionId = str_repeat('Z', 16);
+            $movedPromotionId = str_repeat('W', 16);
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('promotion', ['id' => $promotionId, 'code' => 'INDIVIDUAL-CODES-CONTRACT', 'created_at' => $createdAt], [ParameterType::BINARY]);
+            static::assertSame([Migration1559306391PromotionIndividualCode::class], $collection->migrateInPlace(1559306391));
+            $tableSchema = $this->schema($connection)['promotion_individual_code'];
+            static::assertContains(['UNIQUE', ['code']], $tableSchema['indexes']);
+            static::assertContains('payload', array_column($tableSchema['columns'], 'name'));
+
+            $individualCodeId = str_repeat('I', 16);
+            $connection->insert('promotion_individual_code', [
+                'id' => $individualCodeId,
+                'promotion_id' => $promotionId,
+                'code' => 'SUMMER-2026-001',
+                'payload' => null,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY]);
+            $connection->update('promotion', ['id' => $movedPromotionId], ['id' => $promotionId], [ParameterType::BINARY, ParameterType::BINARY]);
+            static::assertSame(bin2hex($movedPromotionId), $connection->fetchOne('SELECT sw_uuid_hex(promotion_id) FROM promotion_individual_code WHERE id = ?', [$individualCodeId], [ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT payload FROM promotion_individual_code WHERE id = ?', [$individualCodeId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1559306391PromotionIndividualCode::class, 1559306391);
+                $schema = $this->schema($connection)['promotion_individual_code'];
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['promotion_individual_code']);
+                static::assertSame('SUMMER-2026-001', $connection->fetchOne('SELECT code FROM promotion_individual_code WHERE id = ?', [$individualCodeId], [ParameterType::BINARY]));
+            }
+
+            $connection->delete('promotion', ['id' => $movedPromotionId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_individual_code'));
         }
     }
 

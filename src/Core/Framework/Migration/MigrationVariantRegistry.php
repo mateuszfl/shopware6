@@ -129,6 +129,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1559050088Promotion::class, 1559050088, PostgreSQL63\Migration1559050088Promotion::class],
         [Core63\Migration1559050903PromotionExclusion::class, 1559050903, PostgreSQL63\Migration1559050903PromotionExclusion::class],
         [Core63\Migration1559134989Promotion::class, 1559134989, PostgreSQL63\Migration1559134989Promotion::class],
+        [Core63\Migration1559306391PromotionIndividualCode::class, 1559306391, PostgreSQL63\Migration1559306391PromotionIndividualCode::class],
     ];
 
     /**
