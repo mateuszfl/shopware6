@@ -17,6 +17,7 @@ use Shopware\Core\Migration\V6_3\Migration1558082916AddBreadcrumb;
 use Shopware\Core\Migration\V6_3\Migration1558105657CurrencyPrices;
 use Shopware\Core\Migration\V6_3\Migration1558443337PromotionSalesChannel;
 use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
+use Shopware\Core\Migration\V6_3\Migration1558938938ChangeGroupSortingColumn;
 
 /**
  * @internal
@@ -25,7 +26,7 @@ use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1558594334;
+    private const LAST_TIMESTAMP = 1558938938;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -38,7 +39,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(11, $pending);
+        static::assertCount(12, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -93,6 +94,41 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant = (new MigrationVariantRegistry())->resolve(Migration1558443337PromotionSalesChannel::class, 1558443337);
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
+            }
+        }
+    }
+
+    public function testConfiguratorSettingsReplaceTheOldSortingColumnAndSetListingDefault(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1558594334);
+            $productId = str_repeat('S', 16);
+            $versionId = str_repeat('V', 16);
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('product', [
+                'id' => $productId,
+                'version_id' => $versionId,
+                'product_number' => 'CONFIGURATOR-CONTRACT',
+                'configurator_group_sorting' => '["color"]',
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY]);
+
+            static::assertSame([Migration1558938938ChangeGroupSortingColumn::class], $collection->migrateInPlace(1558938938));
+            $columns = array_column($this->schema($connection)['product']['columns'], 'name');
+            static::assertNotContains('configurator_group_sorting', $columns);
+            static::assertContains('configurator_group_config', $columns);
+            static::assertContains('display_in_listing', $columns);
+            static::assertSame('CONFIGURATOR-CONTRACT', $connection->fetchOne('SELECT product_number FROM product WHERE id = ?', [$productId], [ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT configurator_group_config FROM product WHERE id = ?', [$productId], [ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT display_in_listing FROM product WHERE id = ?', [$productId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['product'];
+                (new MigrationVariantRegistry())->resolve(Migration1558938938ChangeGroupSortingColumn::class, 1558938938)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['product']);
+                static::assertSame('CONFIGURATOR-CONTRACT', $connection->fetchOne('SELECT product_number FROM product WHERE id = ?', [$productId], [ParameterType::BINARY]));
             }
         }
     }
