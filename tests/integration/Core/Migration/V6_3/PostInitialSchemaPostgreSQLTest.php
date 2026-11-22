@@ -9,6 +9,7 @@ use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Migration\V6_3\Migration1552360944MediaFolderConfigurationNoAssoc;
 use Shopware\Core\Migration\V6_3\Migration1554199340AddImportExportProfile;
 use Shopware\Core\Migration\V6_3\Migration1554900301AddReviewTable;
@@ -22,6 +23,7 @@ use Shopware\Core\Migration\V6_3\Migration1559050088Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
 use Shopware\Core\Migration\V6_3\Migration1559134989Promotion;
 use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
+use Shopware\Core\Migration\V6_3\Migration1561370284AddImportExportProductProfile;
 
 /**
  * @internal
@@ -30,7 +32,7 @@ use Shopware\Core\Migration\V6_3\Migration1559306391PromotionIndividualCode;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1559306391;
+    private const LAST_TIMESTAMP = 1561370284;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -43,7 +45,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(16, $pending);
+        static::assertCount(17, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -100,6 +102,32 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
             }
         }
+    }
+
+    public function testDefaultProductProfileMappingIsSeededOnceAndPreservesCustomizations(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1559306391);
+            static::assertSame([Migration1561370284AddImportExportProductProfile::class], $collection->migrateInPlace(1561370284));
+            $profile = $connection->fetchAssociative('SELECT id, name, mapping FROM import_export_profile WHERE source_entity = \'product\' AND system_default = 1');
+            static::assertIsArray($profile);
+            static::assertSame('Default product', $profile['name']);
+            static::assertIsString($profile['mapping']);
+            $mapping = json_decode($profile['mapping'], true, flags: \JSON_THROW_ON_ERROR);
+            static::assertIsArray($mapping);
+            static::assertCount(11, $mapping);
+            static::assertSame(['name.de-DE', 'name.en-GB', 'stock', 'manufacturer.id', 'tax.id', 'price.net', 'price.gross', 'price.linked', 'productNumber', 'releaseDate', 'categories.id'], array_column($mapping, 'entityField'));
+            static::assertSame(array_column($mapping, 'entityField'), array_column($mapping, 'fileField'));
+            static::assertSame(array_fill(0, 11, []), array_column($mapping, 'valueSubstitutions'));
+        }
+
+        $profileId = Uuid::fromHexToBytes((string) $this->postgres->fetchOne('SELECT sw_uuid_hex(id) FROM import_export_profile WHERE source_entity = \'product\' AND system_default = 1'));
+        $this->postgres->update('import_export_profile', ['name' => 'Customized product', 'mapping' => '[]'], ['id' => $profileId], [ParameterType::STRING, ParameterType::STRING, ParameterType::BINARY]);
+        (new MigrationVariantRegistry())->resolve(Migration1561370284AddImportExportProductProfile::class, 1561370284)->update($this->postgres);
+        static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM import_export_profile WHERE source_entity = \'product\' AND system_default = 1'));
+        static::assertSame([['Customized product', '[]']], $this->postgres->fetchAllNumeric('SELECT name, mapping FROM import_export_profile WHERE source_entity = \'product\' AND system_default = 1'));
     }
 
     public function testPromotionIndividualCodesKeepUniqueCodesAndCascadeWithTheirPromotion(): void
