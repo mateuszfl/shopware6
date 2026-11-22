@@ -19,6 +19,7 @@ use Shopware\Core\Migration\V6_3\Migration1558443337PromotionSalesChannel;
 use Shopware\Core\Migration\V6_3\Migration1558505525Logging;
 use Shopware\Core\Migration\V6_3\Migration1558938938ChangeGroupSortingColumn;
 use Shopware\Core\Migration\V6_3\Migration1559050088Promotion;
+use Shopware\Core\Migration\V6_3\Migration1559050903PromotionExclusion;
 
 /**
  * @internal
@@ -27,7 +28,7 @@ use Shopware\Core\Migration\V6_3\Migration1559050088Promotion;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1559050088;
+    private const LAST_TIMESTAMP = 1559050903;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -40,7 +41,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(13, $pending);
+        static::assertCount(14, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -95,6 +96,26 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant = (new MigrationVariantRegistry())->resolve(Migration1558443337PromotionSalesChannel::class, 1558443337);
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['promotion_sales_channel']);
+            }
+        }
+    }
+
+    public function testPromotionExclusionJsonIsAddedAndSurvivesRetry(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1559050088);
+            $promotionId = str_repeat('X', 16);
+            $connection->insert('promotion', ['id' => $promotionId, 'code' => 'EXCLUSION-JSON-CONTRACT', 'created_at' => '2020-01-01 00:00:00.123'], [ParameterType::BINARY]);
+            static::assertSame([Migration1559050903PromotionExclusion::class], $collection->migrateInPlace(1559050903));
+            static::assertNull($connection->fetchOne('SELECT exclusion_ids FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
+            static::assertContains('exclusion_ids', array_column($this->schema($connection)['promotion']['columns'], 'name'));
+
+            if ($connection === $this->postgres) {
+                $connection->update('promotion', ['exclusion_ids' => '["customer", "cart"]'], ['id' => $promotionId], [ParameterType::STRING, ParameterType::BINARY]);
+                (new MigrationVariantRegistry())->resolve(Migration1559050903PromotionExclusion::class, 1559050903)->update($connection);
+                static::assertSame(['customer', 'cart'], json_decode((string) $connection->fetchOne('SELECT exclusion_ids FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]), true, flags: \JSON_THROW_ON_ERROR));
             }
         }
     }
