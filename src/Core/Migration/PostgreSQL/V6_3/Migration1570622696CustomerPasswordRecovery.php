@@ -31,7 +31,7 @@ class Migration1570622696CustomerPasswordRecovery extends MigrationStep
             CREATE TABLE IF NOT EXISTS customer_recovery (
                 id BYTEA NOT NULL,
                 customer_id BYTEA NOT NULL,
-                hash VARCHAR(255) NOT NULL,
+                hash VARCHAR(255) COLLATE sw_type_ci NOT NULL,
                 created_at TIMESTAMP(3) NOT NULL,
                 updated_at TIMESTAMP(3) NULL,
                 PRIMARY KEY (id),
