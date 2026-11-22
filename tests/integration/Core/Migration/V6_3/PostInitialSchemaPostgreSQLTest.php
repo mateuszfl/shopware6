@@ -47,6 +47,7 @@ use Shopware\Core\Migration\V6_3\Migration1563805586AddLanguageToOrder;
 use Shopware\Core\Migration\V6_3\Migration1563949275AddCompanyToOrderCustomer;
 use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
 use Shopware\Core\Migration\V6_3\Migration1565007156RemoveAutoIncrement;
+use Shopware\Core\Migration\V6_3\Migration1565079228AddAclStructure;
 
 /**
  * @internal
@@ -55,7 +56,7 @@ use Shopware\Core\Migration\V6_3\Migration1565007156RemoveAutoIncrement;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1565007156;
+    private const LAST_TIMESTAMP = 1565079228;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -68,7 +69,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(36, $pending);
+        static::assertCount(37, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -82,6 +83,46 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testAclTablesAdminDefaultsAndCascadeDeleteAreAppliedAndRetryIsSafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1565007156);
+
+            $userId = Uuid::fromHexToBytes('0123456789abcdef0123456789abcdef');
+            $roleId = Uuid::fromHexToBytes('abcdef0123456789abcdef0123456789');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $userTable = $connection->quoteSingleIdentifier('user');
+            $connection->executeStatement(
+                'INSERT INTO ' . $userTable . ' (id, username, password, first_name, last_name, email, active, locale_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT id FROM locale WHERE code = \'en-GB\' LIMIT 1), ?)',
+                [$userId, 'acl-structure-user', 'password-hash', 'ACL', 'User', 'acl-structure-user@example.com', 1, $createdAt],
+                [ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING],
+            );
+
+            static::assertSame([Migration1565079228AddAclStructure::class], $collection->migrateInPlace(1565079228));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT admin FROM ' . $userTable . ' WHERE id = ?', [$userId], [ParameterType::BINARY]));
+
+            $connection->insert('acl_role', ['id' => $roleId, 'name' => 'Contract role', 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+            $connection->insert('acl_resource', ['resource' => 'product', 'privilege' => 'read', 'acl_role_id' => $roleId, 'created_at' => $createdAt], [ParameterType::STRING, ParameterType::STRING, ParameterType::BINARY, ParameterType::STRING]);
+            $connection->insert('acl_user_role', ['user_id' => $userId, 'acl_role_id' => $roleId, 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING]);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM acl_resource WHERE acl_role_id = ?', [$roleId], [ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM acl_user_role WHERE user_id = ? AND acl_role_id = ?', [$userId, $roleId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            $schema = $this->schema($connection);
+            $connection->delete('acl_role', ['id' => $roleId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM acl_resource WHERE acl_role_id = ?', [$roleId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM acl_user_role WHERE user_id = ? AND acl_role_id = ?', [$userId, $roleId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $connection->update($userTable, ['admin' => 0], ['id' => $userId], [ParameterType::INTEGER, ParameterType::BINARY]);
+                (new MigrationVariantRegistry())->resolve(Migration1565079228AddAclStructure::class, 1565079228)->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT admin FROM ' . $userTable . ' WHERE id = ?', [$userId], [ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection));
+            }
+        }
     }
 
     public function testAutoIncrementColumnsAreRemovedOnlyInDestructivePass(): void
