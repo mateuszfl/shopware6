@@ -34,6 +34,7 @@ use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
 use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTime;
 use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
 use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
+use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
 
 /**
  * @internal
@@ -42,7 +43,7 @@ use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562579120;
+    private const LAST_TIMESTAMP = 1562684474;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -55,7 +56,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(26, $pending);
+        static::assertCount(27, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -69,6 +70,54 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testDeliveryTimeMigrationPreservesDefaultsAndDoesNotOverwriteRetryValues(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562579120);
+
+            $rootId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $childId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $versionId = Uuid::fromHexToBytes('00000000000000000000000000000001');
+            $connection->insert('product', [
+                'id' => $rootId,
+                'version_id' => $versionId,
+                'stock' => 12,
+                'min_delivery_time' => 2,
+                'max_delivery_time' => 5,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER]);
+            $connection->insert('product', [
+                'id' => $childId,
+                'version_id' => $versionId,
+                'parent_id' => $rootId,
+                'parent_version_id' => $versionId,
+                'stock' => 7,
+                'min_delivery_time' => 1,
+                'max_delivery_time' => 4,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::INTEGER]);
+
+            static::assertSame([Migration1562684474AddDeliveryTime::class], $collection->migrateInPlace(1562684474));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM product WHERE id = ? AND version_id = ? AND delivery_time_id = (SELECT id FROM delivery_time LIMIT 1)', [$rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertNull($connection->fetchOne('SELECT delivery_time_id FROM product WHERE id = ? AND version_id = ?', [$childId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame(12, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame(7, (int) $connection->fetchOne('SELECT stock FROM product WHERE id = ? AND version_id = ?', [$childId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            $deliveryTimeColumn = $connection->quoteSingleIdentifier('deliveryTime');
+            static::assertNull($connection->fetchOne('SELECT ' . $deliveryTimeColumn . ' FROM product WHERE id = ? AND version_id = ?', [$rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $customDeliveryTimeId = Uuid::fromHexToBytes('abcdef0123456789abcdef0123456789');
+                $connection->executeStatement('UPDATE product SET delivery_time_id = ?, "deliveryTime" = ? WHERE id = ? AND version_id = ?', [$customDeliveryTimeId, $customDeliveryTimeId, $rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]);
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562684474AddDeliveryTime::class, 1562684474);
+                $schema = $this->schema($connection)['product'];
+                $variant->update($connection);
+                static::assertSame($customDeliveryTimeId, stream_get_contents($connection->fetchOne('SELECT delivery_time_id FROM product WHERE id = ? AND version_id = ?', [$rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY])));
+                static::assertSame(bin2hex($customDeliveryTimeId), $connection->fetchOne('SELECT encode("deliveryTime", \'hex\') FROM product WHERE id = ? AND version_id = ?', [$rootId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['product']);
+            }
+        }
     }
 
     public function testProductAvailabilityFieldsPreserveStockAndRetryPreservesCustomValues(): void
