@@ -154,6 +154,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1565270155PromotionSetGroup::class, 1565270155, PostgreSQL63\Migration1565270155PromotionSetGroup::class],
         [Core63\Migration1565270366PromotionSetGroupRule::class, 1565270366, PostgreSQL63\Migration1565270366PromotionSetGroupRule::class],
         [Core63\Migration1565346846Promotion::class, 1565346846, PostgreSQL63\Migration1565346846Promotion::class],
+        [Core63\Migration1565705280ProductExport::class, 1565705280, PostgreSQL63\Migration1565705280ProductExport::class],
     ];
 
     /**

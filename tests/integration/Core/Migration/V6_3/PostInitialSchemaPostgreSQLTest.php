@@ -51,6 +51,7 @@ use Shopware\Core\Migration\V6_3\Migration1565079228AddAclStructure;
 use Shopware\Core\Migration\V6_3\Migration1565270155PromotionSetGroup;
 use Shopware\Core\Migration\V6_3\Migration1565270366PromotionSetGroupRule;
 use Shopware\Core\Migration\V6_3\Migration1565346846Promotion;
+use Shopware\Core\Migration\V6_3\Migration1565705280ProductExport;
 
 /**
  * @internal
@@ -59,7 +60,7 @@ use Shopware\Core\Migration\V6_3\Migration1565346846Promotion;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1565346846;
+    private const LAST_TIMESTAMP = 1565705280;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -72,7 +73,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(40, $pending);
+        static::assertCount(41, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -108,6 +109,58 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 (new MigrationVariantRegistry())->resolve(Migration1565346846Promotion::class, 1565346846)->update($connection);
                 static::assertSame(1, (int) $connection->fetchOne('SELECT use_setgroups FROM promotion WHERE id = ?', [$promotionId], [ParameterType::BINARY]));
                 static::assertSame($schema, $this->schema($connection)['promotion']);
+            }
+        }
+    }
+
+    public function testProductExportSchemaAndComparisonChannelSeedsAreRetrySafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1565346846);
+
+            $createdAt = '2020-01-01 00:00:00.123';
+            $productStreamId = Uuid::fromHexToBytes('1234567890abcdef1234567890abcdef');
+            $exportId = Uuid::fromHexToBytes('abcdef1234567890abcdef1234567890');
+            $salesChannelId = $connection->fetchOne('SELECT id FROM sales_channel LIMIT 1');
+            if (\is_resource($salesChannelId)) {
+                $salesChannelId = stream_get_contents($salesChannelId);
+            }
+            $connection->insert('product_stream', ['id' => $productStreamId, 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::STRING]);
+
+            static::assertSame([Migration1565705280ProductExport::class], $collection->migrateInPlace(1565705280));
+            $typeId = Uuid::fromHexToBytes('ed535e5722134ac1aa6524f73e26881b');
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel_type WHERE id = ?', [$typeId], [ParameterType::BINARY]));
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel_type_translation WHERE sales_channel_type_id = ?', [$typeId], [ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel_type_translation WHERE sales_channel_type_id = ? AND name = ?', [$typeId, 'Product comparison'], [ParameterType::BINARY, ParameterType::STRING]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel_type_translation WHERE sales_channel_type_id = ? AND name = ?', [$typeId, 'Produktvergleich'], [ParameterType::BINARY, ParameterType::STRING]));
+
+            $productExportTable = $connection->quoteSingleIdentifier('product_export');
+            $intervalColumn = $connection->quoteSingleIdentifier('interval');
+            $connection->executeStatement(
+                'INSERT INTO ' . $productExportTable . ' (id, product_stream_id, sales_channel_id, file_name, access_key, encoding, file_format, ' . $intervalColumn . ', created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$exportId, $productStreamId, $salesChannelId, 'product-export-contract.xml', 'contract-access-key', 'UTF-8', 'xml', 60, $createdAt],
+                [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING],
+            );
+            static::assertSame(60, (int) $connection->fetchOne('SELECT ' . $intervalColumn . ' FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT include_variants FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT generate_by_cronjob FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $languageEnglish = $connection->fetchOne('SELECT language.id FROM language INNER JOIN locale ON locale.id = language.locale_id WHERE locale.code = ?', ['en-GB']);
+                if (\is_resource($languageEnglish)) {
+                    $languageEnglish = stream_get_contents($languageEnglish);
+                }
+                $connection->update('sales_channel_type', ['icon_name' => 'custom-icon'], ['id' => $typeId], [ParameterType::STRING, ParameterType::BINARY]);
+                $connection->update('sales_channel_type_translation', ['name' => 'Customized comparison'], ['sales_channel_type_id' => $typeId, 'language_id' => $languageEnglish], [ParameterType::STRING, ParameterType::BINARY, ParameterType::BINARY]);
+                $schema = $this->schema($connection);
+                (new MigrationVariantRegistry())->resolve(Migration1565705280ProductExport::class, 1565705280)->update($connection);
+                static::assertSame('custom-icon', $connection->fetchOne('SELECT icon_name FROM sales_channel_type WHERE id = ?', [$typeId], [ParameterType::BINARY]));
+                static::assertSame('Customized comparison', $connection->fetchOne('SELECT name FROM sales_channel_type_translation WHERE sales_channel_type_id = ? AND language_id = ?', [$typeId, $languageEnglish], [ParameterType::BINARY, ParameterType::BINARY]));
+                static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel_type_translation WHERE sales_channel_type_id = ?', [$typeId], [ParameterType::BINARY]));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection));
             }
         }
     }
