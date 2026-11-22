@@ -30,6 +30,7 @@ use Shopware\Core\Migration\V6_3\Migration1561452005Update;
 use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultValues;
 use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
 use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
+use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTime;
 
 /**
  * @internal
@@ -38,7 +39,7 @@ use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562240231;
+    private const LAST_TIMESTAMP = 1562306893;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -51,7 +52,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(23, $pending);
+        static::assertCount(24, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -65,6 +66,58 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testCustomerFirstLoginDateBecomesMidnightTimestampAndRetryPreservesData(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562240231);
+
+            $customerId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $connection->executeStatement(<<<'SQL'
+                INSERT INTO customer (
+                    id, customer_group_id, default_payment_method_id, sales_channel_id, language_id,
+                    default_billing_address_id, default_shipping_address_id, customer_number, salutation_id,
+                    first_name, last_name, email, first_login, created_at
+                ) VALUES (
+                    ?, (SELECT id FROM customer_group LIMIT 1), (SELECT id FROM payment_method LIMIT 1),
+                    (SELECT id FROM sales_channel LIMIT 1), (SELECT id FROM language LIMIT 1), ?, ?, ?,
+                    (SELECT id FROM salutation LIMIT 1), ?, ?, ?, ?, '2020-01-01 00:00:00.000'
+                )
+                SQL, [
+                $customerId,
+                Uuid::fromHexToBytes('abcdef0123456789abcdef0123456789'),
+                Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210'),
+                'migration-first-login',
+                'Test',
+                'Customer',
+                'migration-first-login@example.com',
+                '2019-04-20',
+            ], [
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+            ]);
+
+            static::assertSame([Migration1562306893MakeCustomerFirstLoginDateTime::class], $collection->migrateInPlace(1562306893));
+            if ($connection === $this->postgres) {
+                static::assertSame('2019-04-20 00:00:00.000', $connection->fetchOne('SELECT to_char(first_login, \'YYYY-MM-DD HH24:MI:SS.MS\') FROM customer WHERE id = ?', [$customerId], [ParameterType::BINARY]));
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562306893MakeCustomerFirstLoginDateTime::class, 1562306893);
+                $schema = $this->schema($connection)['customer'];
+                $variant->update($connection);
+                static::assertSame('2019-04-20 00:00:00.000', $connection->fetchOne('SELECT to_char(first_login, \'YYYY-MM-DD HH24:MI:SS.MS\') FROM customer WHERE id = ?', [$customerId], [ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['customer']);
+            } else {
+                static::assertSame('2019-04-20 00:00:00.000000', $connection->fetchOne('SELECT DATE_FORMAT(first_login, \'%Y-%m-%d %H:%i:%s.%f\') FROM customer WHERE id = ?', [$customerId], [ParameterType::BINARY]));
+            }
+        }
     }
 
     public function testUserPasswordRecoveryMailIsSeededOnceAndRetryPreservesIt(): void

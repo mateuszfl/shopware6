@@ -137,6 +137,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1561712450NewSystemConfigsAndDefaultValues::class, 1561712450, PostgreSQL63\Migration1561712450NewSystemConfigsAndDefaultValues::class],
         [Core63\Migration1562228335SetConfigDefaults::class, 1562228335, PostgreSQL63\Migration1562228335SetConfigDefaults::class],
         [Core63\Migration1562240231UserPasswordRecovery::class, 1562240231, PostgreSQL63\Migration1562240231UserPasswordRecovery::class],
+        [Core63\Migration1562306893MakeCustomerFirstLoginDateTime::class, 1562306893, PostgreSQL63\Migration1562306893MakeCustomerFirstLoginDateTime::class],
     ];
 
     /**
