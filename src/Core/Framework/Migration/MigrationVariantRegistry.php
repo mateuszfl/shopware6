@@ -121,6 +121,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1554900301AddReviewTable::class, 1554900301, PostgreSQL63\Migration1554900301AddReviewTable::class],
         [Core63\Migration1556809270AddAverageRatingToProduct::class, 1556809270, PostgreSQL63\Migration1556809270AddAverageRatingToProduct::class],
         [Core63\Migration1558082916AddBreadcrumb::class, 1558082916, PostgreSQL63\Migration1558082916AddBreadcrumb::class],
+        [Core63\Migration1558105657CurrencyPrices::class, 1558105657, PostgreSQL63\Migration1558105657CurrencyPrices::class],
     ];
 
     /**

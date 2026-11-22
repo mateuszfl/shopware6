@@ -14,6 +14,7 @@ use Shopware\Core\Migration\V6_3\Migration1554199340AddImportExportProfile;
 use Shopware\Core\Migration\V6_3\Migration1554900301AddReviewTable;
 use Shopware\Core\Migration\V6_3\Migration1556809270AddAverageRatingToProduct;
 use Shopware\Core\Migration\V6_3\Migration1558082916AddBreadcrumb;
+use Shopware\Core\Migration\V6_3\Migration1558105657CurrencyPrices;
 
 /**
  * @internal
@@ -22,7 +23,7 @@ use Shopware\Core\Migration\V6_3\Migration1558082916AddBreadcrumb;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1558082916;
+    private const LAST_TIMESTAMP = 1558105657;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -35,7 +36,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(7, $pending);
+        static::assertCount(8, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -49,6 +50,25 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testCurrencyPriceColumnIsRemovedWithoutLosingTheRemainingSchema(): void
+    {
+        $collection = $this->collection($this->postgres);
+        $collection->sync();
+        $collection->migrateInPlace(1558082916);
+        $before = $this->schema($this->postgres)['product_price'];
+        static::assertContains('currency_id', array_column($before['columns'], 'name'));
+
+        $variant = (new MigrationVariantRegistry())->resolve(Migration1558105657CurrencyPrices::class, 1558105657);
+        $variant->update($this->postgres);
+        $after = $this->schema($this->postgres)['product_price'];
+        static::assertNotContains('currency_id', array_column($after['columns'], 'name'));
+        static::assertContains('price', array_column($after['columns'], 'name'));
+        static::assertNotContains('fk.product_price.currency_id', array_column($after['foreignKeys'], 0));
+
+        $variant->update($this->postgres);
+        static::assertSame($after, $this->schema($this->postgres)['product_price']);
     }
 
     public function testImportProfileRetainsValidUuidSubstitutionsAndCustomizations(): void
