@@ -31,6 +31,7 @@ use Shopware\Core\Migration\V6_3\Migration1561712450NewSystemConfigsAndDefaultVa
 use Shopware\Core\Migration\V6_3\Migration1562228335SetConfigDefaults;
 use Shopware\Core\Migration\V6_3\Migration1562240231UserPasswordRecovery;
 use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTime;
+use Shopware\Core\Migration\V6_3\Migration1562324772AddOrderDateToOrder;
 
 /**
  * @internal
@@ -39,7 +40,7 @@ use Shopware\Core\Migration\V6_3\Migration1562306893MakeCustomerFirstLoginDateTi
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562306893;
+    private const LAST_TIMESTAMP = 1562324772;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -52,7 +53,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(24, $pending);
+        static::assertCount(25, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -66,6 +67,71 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testOrderDateIsSplitIntoTimestampAndStoredDateAndRetryPreservesValues(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562306893);
+
+            $orderId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $versionId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $orderTable = $connection->quoteSingleIdentifier('order');
+            $connection->executeStatement(<<<SQL
+                INSERT INTO {$orderTable} (
+                    id, version_id, state_id, order_number, currency_id, sales_channel_id,
+                    billing_address_id, billing_address_version_id, price, order_date,
+                    shipping_costs, created_at
+                ) VALUES (
+                    ?, ?, ?, ?, (SELECT id FROM currency LIMIT 1), (SELECT id FROM sales_channel LIMIT 1),
+                    ?, ?, ?, ?, ?, '2020-01-01 00:00:00.000'
+                )
+                SQL, [
+                $orderId,
+                $versionId,
+                Uuid::fromHexToBytes('abcdef0123456789abcdef0123456789'),
+                'migration-order-date',
+                Uuid::fromHexToBytes('abcdef0123456789abcdef0123456788'),
+                $versionId,
+                '{"totalPrice":1,"netPrice":1,"positionPrice":1}',
+                '2020-05-04 12:34:56.789',
+                '{"totalPrice":0}',
+            ], [
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::STRING,
+                ParameterType::BINARY,
+                ParameterType::BINARY,
+                ParameterType::STRING,
+                ParameterType::STRING,
+                ParameterType::STRING,
+            ]);
+
+            static::assertSame([Migration1562324772AddOrderDateToOrder::class], $collection->migrateInPlace(1562324772));
+            if ($connection === $this->postgres) {
+                $timestampAndDate = $connection->fetchAssociative(
+                    'SELECT to_char(order_date_time, \'YYYY-MM-DD HH24:MI:SS.MS\') AS date_time, to_char(order_date, \'YYYY-MM-DD\') AS order_date FROM "order" WHERE id = ? AND version_id = ?',
+                    [$orderId, $versionId],
+                    [ParameterType::BINARY, ParameterType::BINARY],
+                );
+                static::assertSame(['date_time' => '2020-05-04 12:34:56.789', 'order_date' => '2020-05-04'], $timestampAndDate);
+
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1562324772AddOrderDateToOrder::class, 1562324772);
+                $schema = $this->schema($connection)['order'];
+                $variant->update($connection);
+                static::assertSame($timestampAndDate, $connection->fetchAssociative(
+                    'SELECT to_char(order_date_time, \'YYYY-MM-DD HH24:MI:SS.MS\') AS date_time, to_char(order_date, \'YYYY-MM-DD\') AS order_date FROM "order" WHERE id = ? AND version_id = ?',
+                    [$orderId, $versionId],
+                    [ParameterType::BINARY, ParameterType::BINARY],
+                ));
+                static::assertSame($schema, $this->schema($connection)['order']);
+            } else {
+                static::assertSame(['2020-05-04 12:34:56.789000', '2020-05-04'], $connection->fetchNumeric('SELECT DATE_FORMAT(order_date_time, \'%Y-%m-%d %H:%i:%s.%f\'), DATE_FORMAT(order_date, \'%Y-%m-%d\') FROM `order` WHERE id = ? AND version_id = ?', [$orderId, $versionId], [ParameterType::BINARY, ParameterType::BINARY]));
+            }
+        }
     }
 
     public function testCustomerFirstLoginDateBecomesMidnightTimestampAndRetryPreservesData(): void
