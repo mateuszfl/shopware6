@@ -64,6 +64,7 @@ use Shopware\Core\Migration\V6_3\Migration1568901713PromotionDiscount;
 use Shopware\Core\Migration\V6_3\Migration1569403146ProductVisibilityUnique;
 use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
 use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
+use Shopware\Core\Migration\V6_3\Migration1570621541UpdateDefaultMailTemplates;
 
 /**
  * @internal
@@ -72,7 +73,7 @@ use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1570459127;
+    private const LAST_TIMESTAMP = 1570621541;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -85,7 +86,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(52, $pending);
+        static::assertCount(53, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -99,6 +100,48 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testDefaultMailTemplatesAreUpdatedOnceAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1570459127);
+
+            static::assertSame([Migration1570621541UpdateDefaultMailTemplates::class], $collection->migrateInPlace(1570621541));
+            $contents = $connection->fetchFirstColumn(<<<'SQL'
+                SELECT translation.content_plain
+                FROM mail_template_translation AS translation
+                INNER JOIN mail_template AS template ON template.id = translation.mail_template_id
+                INNER JOIN mail_template_type AS type ON type.id = template.mail_template_type_id
+                WHERE type.technical_name = :type AND template.system_default = 1
+                ORDER BY translation.language_id
+                SQL, ['type' => MailTemplateTypes::MAILTYPE_ORDER_CONFIRM]);
+            static::assertNotEmpty($contents);
+            static::assertNotSame([], array_filter($contents, static fn (string $content): bool => str_contains($content, 'Thank you for your order') || str_contains($content, 'vielen Dank für Ihre Bestellung')));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1570621541UpdateDefaultMailTemplates::class, 1570621541);
+                $variant->update($connection);
+                static::assertSame(\count($contents), (int) $connection->fetchOne(<<<'SQL'
+                    SELECT COUNT(*)
+                    FROM mail_template_translation AS translation
+                    INNER JOIN mail_template AS template ON template.id = translation.mail_template_id
+                    INNER JOIN mail_template_type AS type ON type.id = template.mail_template_type_id
+                    WHERE type.technical_name = :type AND template.system_default = 1
+                    SQL, ['type' => MailTemplateTypes::MAILTYPE_ORDER_CONFIRM]));
+                static::assertSame($contents[0], $connection->fetchOne(<<<'SQL'
+                    SELECT translation.content_plain
+                    FROM mail_template_translation AS translation
+                    INNER JOIN mail_template AS template ON template.id = translation.mail_template_id
+                    INNER JOIN mail_template_type AS type ON type.id = template.mail_template_type_id
+                    WHERE type.technical_name = :type AND template.system_default = 1
+                    ORDER BY translation.language_id
+                    LIMIT 1
+                    SQL, ['type' => MailTemplateTypes::MAILTYPE_ORDER_CONFIRM]));
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
