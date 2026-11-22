@@ -40,6 +40,7 @@ use Shopware\Core\Migration\V6_3\Migration1562579120ProductAvailableFields;
 use Shopware\Core\Migration\V6_3\Migration1562684474AddDeliveryTime;
 use Shopware\Core\Migration\V6_3\Migration1562841035AddProductChildCount;
 use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
+use Shopware\Core\Migration\V6_3\Migration1563180880AddDefaultThumbnailSizes;
 
 /**
  * @internal
@@ -48,7 +49,7 @@ use Shopware\Core\Migration\V6_3\Migration1562933907ContactForm;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1562933907;
+    private const LAST_TIMESTAMP = 1563180880;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -61,7 +62,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(29, $pending);
+        static::assertCount(30, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -75,6 +76,48 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testDefaultThumbnailSizesPreserveExistingSizesAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1562933907);
+
+            $existingId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $connection->insert('media_thumbnail_size', [
+                'id' => $existingId,
+                'width' => 400,
+                'height' => 400,
+                'custom_fields' => '{"custom":"value"}',
+                'created_at' => '2020-01-01 00:00:00.000',
+            ], [ParameterType::BINARY, ParameterType::INTEGER, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1563180880AddDefaultThumbnailSizes::class], $collection->migrateInPlace(1563180880));
+            static::assertSame(3, (int) $connection->fetchOne('SELECT COUNT(*) FROM media_thumbnail_size WHERE (width, height) IN ((400, 400), (800, 800), (1920, 1920))'));
+            static::assertSame(['custom' => 'value'], json_decode($connection->fetchOne('SELECT custom_fields FROM media_thumbnail_size WHERE id = ?', [$existingId], [ParameterType::BINARY]), true, flags: \JSON_THROW_ON_ERROR));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM media_folder_configuration_media_thumbnail_size WHERE media_thumbnail_size_id = ?', [$existingId], [ParameterType::BINARY]));
+            static::assertSame(6, (int) $connection->fetchOne(<<<'SQL'
+                SELECT COUNT(*)
+                FROM media_folder_configuration_media_thumbnail_size AS association
+                INNER JOIN media_folder ON media_folder.media_folder_configuration_id = association.media_folder_configuration_id
+                WHERE media_folder.name IN ('Product Media', 'Category Media', 'Cms Page Media')
+                SQL));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1563180880AddDefaultThumbnailSizes::class, 1563180880);
+                $variant->update($connection);
+                static::assertSame(3, (int) $connection->fetchOne('SELECT COUNT(*) FROM media_thumbnail_size WHERE (width, height) IN ((400, 400), (800, 800), (1920, 1920))'));
+                static::assertSame(6, (int) $connection->fetchOne(<<<'SQL'
+                    SELECT COUNT(*)
+                    FROM media_folder_configuration_media_thumbnail_size AS association
+                    INNER JOIN media_folder ON media_folder.media_folder_configuration_id = association.media_folder_configuration_id
+                    WHERE media_folder.name IN ('Product Media', 'Category Media', 'Cms Page Media')
+                    SQL));
+                static::assertSame(['custom' => 'value'], json_decode($connection->fetchOne('SELECT custom_fields FROM media_thumbnail_size WHERE id = ?', [$existingId], [ParameterType::BINARY]), true, flags: \JSON_THROW_ON_ERROR));
+            }
+        }
     }
 
     public function testContactFormMailTypeAndEventActionAreSeededOnce(): void

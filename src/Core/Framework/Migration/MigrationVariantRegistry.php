@@ -143,6 +143,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1562684474AddDeliveryTime::class, 1562684474, PostgreSQL63\Migration1562684474AddDeliveryTime::class],
         [Core63\Migration1562841035AddProductChildCount::class, 1562841035, PostgreSQL63\Migration1562841035AddProductChildCount::class],
         [Core63\Migration1562933907ContactForm::class, 1562933907, PostgreSQL63\Migration1562933907ContactForm::class],
+        [Core63\Migration1563180880AddDefaultThumbnailSizes::class, 1563180880, PostgreSQL63\Migration1563180880AddDefaultThumbnailSizes::class],
     ];
 
     /**
