@@ -49,6 +49,7 @@ use Shopware\Core\Migration\V6_3\Migration1564475053RemoveSaveDocumentsConfig;
 use Shopware\Core\Migration\V6_3\Migration1565007156RemoveAutoIncrement;
 use Shopware\Core\Migration\V6_3\Migration1565079228AddAclStructure;
 use Shopware\Core\Migration\V6_3\Migration1565270155PromotionSetGroup;
+use Shopware\Core\Migration\V6_3\Migration1565270366PromotionSetGroupRule;
 
 /**
  * @internal
@@ -57,7 +58,7 @@ use Shopware\Core\Migration\V6_3\Migration1565270155PromotionSetGroup;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1565270155;
+    private const LAST_TIMESTAMP = 1565270366;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -70,7 +71,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(38, $pending);
+        static::assertCount(39, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -84,6 +85,51 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $postgres->sync();
         static::assertSame([], $postgres->migrateInPlace(self::LAST_TIMESTAMP));
+    }
+
+    public function testPromotionSetGroupRuleCascadeDeletesBothReferencesAndRetryPreservesLinks(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1565270155);
+
+            $setGroupId = Uuid::fromHexToBytes('abcdef1234567890abcdef1234567890');
+            $firstRuleId = Uuid::fromHexToBytes('1234567890abcdef1234567890abcdef');
+            $secondRuleId = Uuid::fromHexToBytes('fedcba9876543210fedcba9876543210');
+            $promotionId = Uuid::fromHexToBytes('1029384756abcdef1029384756abcdef');
+            $createdAt = '2020-01-01 00:00:00.123';
+            $connection->insert('promotion', ['id' => $promotionId, 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::STRING]);
+            foreach ([$firstRuleId, $secondRuleId] as $ruleId) {
+                $connection->insert('rule', ['id' => $ruleId, 'name' => 'Set group rule', 'priority' => 1, 'created_at' => $createdAt], [ParameterType::BINARY, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING]);
+            }
+            $connection->insert('promotion_setgroup', [
+                'id' => $setGroupId,
+                'promotion_id' => $promotionId,
+                'packager_key' => 'price-range',
+                'sorter_key' => 'sort-by-price',
+                'value' => 1.75,
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1565270366PromotionSetGroupRule::class], $collection->migrateInPlace(1565270366));
+            foreach ([$firstRuleId, $secondRuleId] as $ruleId) {
+                $connection->insert('promotion_setgroup_rule', ['setgroup_id' => $setGroupId, 'rule_id' => $ruleId], [ParameterType::BINARY, ParameterType::BINARY]);
+            }
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup_rule WHERE setgroup_id = ?', [$setGroupId], [ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['promotion_setgroup_rule'];
+                (new MigrationVariantRegistry())->resolve(Migration1565270366PromotionSetGroupRule::class, 1565270366)->update($connection);
+                static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup_rule WHERE setgroup_id = ?', [$setGroupId], [ParameterType::BINARY]));
+                static::assertSame($schema, $this->schema($connection)['promotion_setgroup_rule']);
+            }
+
+            $connection->delete('rule', ['id' => $firstRuleId], [ParameterType::BINARY]);
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup_rule WHERE setgroup_id = ?', [$setGroupId], [ParameterType::BINARY]));
+            $connection->delete('promotion_setgroup', ['id' => $setGroupId], [ParameterType::BINARY]);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM promotion_setgroup_rule WHERE setgroup_id = ?', [$setGroupId], [ParameterType::BINARY]));
+        }
     }
 
     public function testPromotionSetGroupRetainsValuesAndCascadesOnPromotionDelete(): void

@@ -152,6 +152,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1565007156RemoveAutoIncrement::class, 1565007156, PostgreSQL63\Migration1565007156RemoveAutoIncrement::class],
         [Core63\Migration1565079228AddAclStructure::class, 1565079228, PostgreSQL63\Migration1565079228AddAclStructure::class],
         [Core63\Migration1565270155PromotionSetGroup::class, 1565270155, PostgreSQL63\Migration1565270155PromotionSetGroup::class],
+        [Core63\Migration1565270366PromotionSetGroupRule::class, 1565270366, PostgreSQL63\Migration1565270366PromotionSetGroupRule::class],
     ];
 
     /**
