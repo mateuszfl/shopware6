@@ -168,6 +168,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1570459127AddCmsSidebarLayout::class, 1570459127, PostgreSQL63\Migration1570459127AddCmsSidebarLayout::class],
         [Core63\Migration1570621541UpdateDefaultMailTemplates::class, 1570621541, PostgreSQL63\Migration1570621541UpdateDefaultMailTemplates::class],
         [Core63\Migration1570622696CustomerPasswordRecovery::class, 1570622696, PostgreSQL63\Migration1570622696CustomerPasswordRecovery::class],
+        [Core63\Migration1570629862ClearCategoryBreadcrumbs::class, 1570629862, PostgreSQL63\Migration1570629862ClearCategoryBreadcrumbs::class],
     ];
 
     /**

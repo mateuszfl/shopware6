@@ -66,6 +66,7 @@ use Shopware\Core\Migration\V6_3\Migration1570187167AddedAppConfig;
 use Shopware\Core\Migration\V6_3\Migration1570459127AddCmsSidebarLayout;
 use Shopware\Core\Migration\V6_3\Migration1570621541UpdateDefaultMailTemplates;
 use Shopware\Core\Migration\V6_3\Migration1570622696CustomerPasswordRecovery;
+use Shopware\Core\Migration\V6_3\Migration1570629862ClearCategoryBreadcrumbs;
 
 /**
  * @internal
@@ -74,7 +75,7 @@ use Shopware\Core\Migration\V6_3\Migration1570622696CustomerPasswordRecovery;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1570622696;
+    private const LAST_TIMESTAMP = 1570629862;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -87,7 +88,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(54, $pending);
+        static::assertCount(55, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -164,6 +165,22 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'customer.recovery.request\''));
         static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'customer.recovery.request\')'));
         static::assertSame(1, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = \'customer.recovery.request\''));
+    }
+
+    public function testCategoryBreadcrumbsAreClearedAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1570622696);
+
+            static::assertSame([Migration1570629862ClearCategoryBreadcrumbs::class], $collection->migrateInPlace(1570629862));
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM category_translation WHERE breadcrumb IS NOT NULL'));
+        }
+
+        $variant = (new MigrationVariantRegistry())->resolve(Migration1570629862ClearCategoryBreadcrumbs::class, 1570629862);
+        $variant->update($this->postgres);
+        static::assertSame(0, (int) $this->postgres->fetchOne('SELECT COUNT(*) FROM category_translation WHERE breadcrumb IS NOT NULL'));
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
