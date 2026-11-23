@@ -28,7 +28,7 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
             CREATE TABLE IF NOT EXISTS "import_export_profile_translation" (
                 "import_export_profile_id" BYTEA CHECK (octet_length("import_export_profile_id") = 16) NOT NULL,
                 "language_id" BYTEA CHECK (octet_length("language_id") = 16) NOT NULL,
-                "label" VARCHAR(255) NULL,
+                "label" VARCHAR(255) COLLATE "sw_type_ci" NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("import_export_profile_id", "language_id"),

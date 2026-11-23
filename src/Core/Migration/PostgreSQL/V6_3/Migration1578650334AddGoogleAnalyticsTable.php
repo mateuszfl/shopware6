@@ -23,7 +23,7 @@ class Migration1578650334AddGoogleAnalyticsTable extends MigrationStep
         $connection->executeStatement(<<<'SQL'
                     CREATE TABLE IF NOT EXISTS "sales_channel_analytics" (
                         "id" BYTEA CHECK (octet_length("id") = 16)  NOT NULL,
-                        "tracking_id" VARCHAR(50) NOT NULL,
+                        "tracking_id" VARCHAR(50) COLLATE "sw_type_ci" NOT NULL,
                         "active" SMALLINT NOT NULL DEFAULT '0',
                         "track_orders" SMALLINT NOT NULL DEFAULT '0',
                         "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,

@@ -24,7 +24,7 @@ class Migration1610531188AddUserConfig extends MigrationStep
             CREATE TABLE IF NOT EXISTS "user_config" (
                 "id"                    BYTEA CHECK (octet_length("id") = 16)      NOT NULL,
                 "user_id"               BYTEA CHECK (octet_length("user_id") = 16)      NOT NULL,
-                "key"                   VARCHAR(255)    NOT NULL,
+                "key"                   VARCHAR(255) COLLATE "sw_type_ci"    NOT NULL,
                 "value"                 JSON            NULL,
                 "created_at"            TIMESTAMP(3) WITHOUT TIME ZONE     NOT NULL,
                 "updated_at"            TIMESTAMP(3) WITHOUT TIME ZONE     NULL,

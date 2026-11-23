@@ -24,7 +24,7 @@ class Migration1583844433AddRefreshTokenTable extends MigrationStep
             CREATE TABLE IF NOT EXISTS "refresh_token" (
               "id"                  BYTEA CHECK (octet_length("id") = 16)                              NOT NULL,
               "user_id"             BYTEA CHECK (octet_length("user_id") = 16)                              NOT NULL,
-              "token_id"            VARCHAR(80)                             NOT NULL,
+              "token_id"            VARCHAR(80) COLLATE "sw_type_ci"                             NOT NULL,
               "issued_at"           TIMESTAMP(3) WITHOUT TIME ZONE                             NOT NULL,
               "expires_at"          TIMESTAMP(3) WITHOUT TIME ZONE                             NOT NULL,
               PRIMARY KEY ("id"),

@@ -23,9 +23,9 @@ class Migration1597762808Webhook extends MigrationStep
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "webhook" (
                 "id" BYTEA CHECK (octet_length("id") = 16) NOT NULL,
-                "name" VARCHAR(255) NOT NULL,
-                "event_name" VARCHAR(500) NOT NULL,
-                "url" VARCHAR(500) NOT NULL,
+                "name" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
+                "event_name" VARCHAR(500) COLLATE "sw_type_ci" NOT NULL,
+                "url" VARCHAR(500) COLLATE "sw_type_ci" NOT NULL,
                 "app_id" BYTEA CHECK (octet_length("app_id") = 16) NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,

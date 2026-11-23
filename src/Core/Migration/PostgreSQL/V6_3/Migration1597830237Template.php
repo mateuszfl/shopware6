@@ -23,8 +23,8 @@ class Migration1597830237Template extends MigrationStep
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "app_template" (
               "id" BYTEA CHECK (octet_length("id") = 16) NOT NULL,
-              "template" LONGTEXT NOT NULL,
-              "path" VARCHAR(1024) NOT NULL,
+              "template" LONGTEXT COLLATE "sw_type_ci" NOT NULL,
+              "path" VARCHAR(1024) COLLATE "sw_type_ci" NOT NULL,
               "active" SMALLINT NOT NULL,
               "app_id" BYTEA CHECK (octet_length("app_id") = 16) NOT NULL,
               "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,

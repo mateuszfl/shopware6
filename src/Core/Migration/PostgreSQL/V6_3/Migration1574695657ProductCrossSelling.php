@@ -26,8 +26,8 @@ class Migration1574695657ProductCrossSelling extends MigrationStep
             CREATE TABLE IF NOT EXISTS "product_cross_selling" (
                 "id" BYTEA CHECK (octet_length("id") = 16) NOT NULL,
                 "position" INT NOT NULL,
-                "sort_by" VARCHAR(255) NOT NULL,
-                "sort_direction" VARCHAR(255) NOT NULL,
+                "sort_by" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
+                "sort_direction" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
                 "active" SMALLINT NULL DEFAULT \'0\',
                 "product_id" BYTEA CHECK (octet_length("product_id") = 16) NOT NULL,
                 "product_version_id" BYTEA CHECK (octet_length("product_version_id") = 16) NOT NULL,
@@ -45,7 +45,7 @@ class Migration1574695657ProductCrossSelling extends MigrationStep
             CREATE TABLE IF NOT EXISTS "product_cross_selling_translation" (
                 "product_cross_selling_id" BYTEA CHECK (octet_length("product_cross_selling_id") = 16) NOT NULL,
                 "language_id" BYTEA CHECK (octet_length("language_id") = 16) NOT NULL,
-                "name" VARCHAR(255) NOT NULL,
+                "name" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("product_cross_selling_id","language_id"),

@@ -23,10 +23,10 @@ class Migration1597657689ActionButton extends MigrationStep
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "app_action_button" (
                 "id" BYTEA CHECK (octet_length("id") = 16) NOT NULL,
-                "entity" VARCHAR(255) NOT NULL,
-                "view" VARCHAR(255) NOT NULL,
-                "url" VARCHAR(255) NOT NULL,
-                "action" VARCHAR(255) NOT NULL,
+                "entity" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
+                "view" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
+                "url" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
+                "action" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
                 "open_new_tab" SMALLINT NOT NULL DEFAULT \'0\',
                 "app_id" BYTEA CHECK (octet_length("app_id") = 16) NOT NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
@@ -39,7 +39,7 @@ class Migration1597657689ActionButton extends MigrationStep
         ');
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "app_action_button_translation" (
-                "label" VARCHAR(255) NOT NULL,
+                "label" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 "app_action_button_id" BYTEA CHECK (octet_length("app_action_button_id") = 16) NOT NULL,

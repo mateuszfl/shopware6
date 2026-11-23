@@ -50,7 +50,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "product_sorting" (
               "id"                              BYTEA CHECK (octet_length("id") = 16)                              NOT NULL,
-              "url_key"                         VARCHAR(255)                            NOT NULL,
+              "url_key"                         VARCHAR(255) COLLATE "sw_type_ci"                            NOT NULL,
               "priority"                        INT unsigned                        NOT NULL,
               "active"                          SMALLINT                              NOt NULL DEFAULT 1,
               "fields"                          JSON                                    NOT NULL,

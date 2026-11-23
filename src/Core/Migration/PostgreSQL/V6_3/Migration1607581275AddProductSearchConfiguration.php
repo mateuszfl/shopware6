@@ -55,7 +55,7 @@ class Migration1607581275AddProductSearchConfiguration extends MigrationStep
                 "id"                            BYTEA CHECK (octet_length("id") = 16)                                  NOT NULL,
                 "product_search_config_id"      BYTEA CHECK (octet_length("product_search_config_id") = 16)                                  NOT NULL,
                 "custom_field_id"               BYTEA CHECK (octet_length("custom_field_id") = 16)                                  NULL,
-                "field"                         VARCHAR(255)                                NOT NULL,
+                "field"                         VARCHAR(255) COLLATE "sw_type_ci"                                NOT NULL,
                 "tokenize"                      SMALLINT                                  NOT NULL    DEFAULT 0,
                 "searchable"                    SMALLINT                                  NOT NULL    DEFAULT 0,
                 "ranking"                       INT                                     NOT NULL    DEFAULT 0,

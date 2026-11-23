@@ -116,43 +116,120 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $this->appliedRules[$rule] = ($this->appliedRules[$rule] ?? 0) + $count;
             }
 
+            private function splitSqlStatements(string $sql): array
+            {
+                $statements = [];
+                $start = 0;
+                $quote = null;
+                $length = strlen($sql);
+
+                for ($index = 0; $index < $length; ++$index) {
+                    $character = $sql[$index];
+                    $next = $sql[$index + 1] ?? '';
+
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if (($character === '-' && $next === '-') || ($character === '/' && $next === '*')) {
+                        $endMarker = $character === '-' ? "\n" : '*/';
+                        $end = strpos($sql, $endMarker, $index + 2);
+                        if ($end === false) {
+                            break;
+                        }
+                        $index = $end + strlen($endMarker) - 1;
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+
+                        continue;
+                    }
+                    if ($character === ';') {
+                        $statements[] = substr($sql, $start, $index - $start + 1);
+                        $start = $index + 1;
+                    }
+                }
+
+                $statements[] = substr($sql, $start);
+
+                return $statements;
+            }
+
             private function rewriteCreateTable(string $sql): string
             {
                 if (!preg_match('/^\\s*CREATE\\s+TABLE\\b/i', $sql)) {
                     return $sql;
                 }
 
-                $this->replace(
-                    'create_table_mysql_options_removed',
-                    '/(?:\\s+(?:ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*[A-Za-z0-9_]+))+(?=\\s*(?:;|CREATE\\b|ALTER\\b|INSERT\\b|UPDATE\\b|DELETE\\b|DROP\\b|$))/i',
-                    '',
-                    $sql
-                );
-                $this->replace(
-                    'create_table_binary16_to_bytea_with_length_check',
-                    '/(?m)^([ \\t]*)(?:"(?<double>[^"\\r\\n]+)"|`(?<tick>[^`\\r\\n]+)`|(?<plain>[A-Za-z_][A-Za-z0-9_$]*))([ \\t]+)BINARY\\s*\\(\\s*16\\s*\\)/i',
-                    static function (array $matches): string {
-                        $identifier = $matches['double'] !== '' ? '"' . $matches['double'] . '"' : ($matches['tick'] !== '' ? '"' . $matches['tick'] . '"' : $matches['plain']);
+                $rewritten = '';
+                foreach ($this->splitSqlStatements($sql) as $statement) {
+                    if (!preg_match('/^\\s*CREATE\\s+TABLE\\b/i', $statement)) {
+                        $rewritten .= $statement;
 
-                        return $matches[1] . $identifier . $matches[5] . 'BYTEA CHECK (octet_length(' . $identifier . ') = 16)';
-                    },
-                    $sql
-                );
-                $this->replace('create_table_tinyint_to_smallint', '/\\bTINYINT(?:\\s*\\(\\s*\\d+\\s*\\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $sql);
-                $this->replace(
-                    'create_table_datetime_to_timestamp_without_time_zone',
-                    '/\\bDATETIME(?:\\s*\\(\\s*(\\d+)\\s*\\))?/i',
-                    static fn (array $matches): string => 'TIMESTAMP' . (($matches[1] ?? '') === '' ? '' : '(' . $matches[1] . ')') . ' WITHOUT TIME ZONE',
-                    $sql
-                );
-                $this->replace(
-                    'create_table_utf8mb4_collation_to_sw_type_ci',
-                    '/\\bCOLLATE\\s+[" ]?utf8mb4?_[A-Za-z0-9_]+[" ]?/i',
-                    'COLLATE sw_type_ci',
-                    $sql
-                );
+                        continue;
+                    }
 
-                return $sql;
+                    if (preg_match('/\\bCOLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+/i', $statement)) {
+                        $this->replace(
+                            'create_table_default_collation_to_sw_type_ci',
+                            '/(?m)^([ \\t]*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)[ \\t]+(?:VARCHAR|CHAR|TINYTEXT|MEDIUMTEXT|LONGTEXT|TEXT)(?:[ \\t]*\\([0-9]+\\))?)(?![^\\r\\n]*\\bCOLLATE\\b)/i',
+                            '$1 COLLATE "sw_type_ci"',
+                            $statement
+                        );
+                    }
+                    if (preg_match('/\\bCOLLATE\\s*=\\s*(?!utf8mb4?_)[A-Za-z0-9_]+/i', $statement)) {
+                        $this->unsupported[] = 'unsupported MySQL table default collation needs explicit mapping';
+                    }
+
+                    $this->replace(
+                        'create_table_mysql_options_removed',
+                        '/(?:\\s+(?:ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+))+(?=\\s*(?:;|$))/i',
+                        '',
+                        $statement
+                    );
+                    $this->replace(
+                        'create_table_binary16_to_bytea_with_length_check',
+                        '/(?m)^([ \\t]*)(?:"(?<double>[^"\\r\\n]+)"|`(?<tick>[^`\\r\\n]+)`|(?<plain>[A-Za-z_][A-Za-z0-9_$]*))([ \\t]+)BINARY\\s*\\(\\s*16\\s*\\)/i',
+                        static function (array $matches): string {
+                            $identifier = $matches['double'] !== '' ? '"' . $matches['double'] . '"' : ($matches['tick'] !== '' ? '"' . $matches['tick'] . '"' : $matches['plain']);
+
+                            return $matches[1] . $identifier . $matches[5] . 'BYTEA CHECK (octet_length(' . $identifier . ') = 16)';
+                        },
+                        $statement
+                    );
+                    $this->replace('create_table_tinyint_to_smallint', '/\\bTINYINT(?:\\s*\\(\\s*\\d+\\s*\\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $statement);
+                    $this->replace(
+                        'create_table_datetime_to_timestamp_without_time_zone',
+                        '/\\bDATETIME(?:\\s*\\(\\s*(\\d+)\\s*\\))?/i',
+                        static fn (array $matches): string => 'TIMESTAMP' . (($matches[1] ?? '') === '' ? '' : '(' . $matches[1] . ')') . ' WITHOUT TIME ZONE',
+                        $statement
+                    );
+                    $this->replace(
+                        'create_table_utf8mb4_collation_to_sw_type_ci',
+                        '/\\bCOLLATE\\s+[" ]?utf8mb4?_[A-Za-z0-9_]+[" ]?/i',
+                        'COLLATE sw_type_ci',
+                        $statement
+                    );
+
+                    $rewritten .= $statement;
+                }
+
+                return $rewritten;
             }
 
             public function enterNode(Node $node): ?Node

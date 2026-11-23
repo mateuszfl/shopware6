@@ -50,8 +50,8 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         CREATE TABLE IF NOT EXISTS "product_feature_set_translation" (
             "product_feature_set_id" BYTEA CHECK (octet_length("product_feature_set_id") = 16)   NOT NULL,
             "language_id"            BYTEA CHECK (octet_length("language_id") = 16)   NOT NULL,
-            "name"                   VARCHAR(255) NULL,
-            "description"            MEDIUMTEXT   NULL,
+            "name"                   VARCHAR(255) COLLATE "sw_type_ci" NULL,
+            "description"            MEDIUMTEXT COLLATE "sw_type_ci"   NULL,
             "created_at"             TIMESTAMP(3) WITHOUT TIME ZONE  NOT NULL,
             "updated_at"             TIMESTAMP(3) WITHOUT TIME ZONE  NULL,
             PRIMARY KEY ("product_feature_set_id", "language_id"),

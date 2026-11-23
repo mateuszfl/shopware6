@@ -12,6 +12,7 @@
     "diagnostic output retains unhandled SQL/runtime shapes": 149
   },
   "applied_rule_totals": {
+    "create_table_default_collation_to_sw_type_ci": 31,
     "create_table_mysql_options_removed": 28,
     "create_table_binary16_to_bytea_with_length_check": 71,
     "create_table_tinyint_to_smallint": 15,
@@ -2106,6 +2107,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 3,
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 6,
         "create_table_tinyint_to_smallint": 1,
@@ -2450,6 +2452,7 @@
         "MySQL AFTER column placement changes schema order"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 1,
         "create_table_tinyint_to_smallint": 2,
@@ -2643,6 +2646,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 2
@@ -2834,6 +2838,7 @@
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 2
@@ -3111,7 +3116,8 @@
       "applied_rules": {
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 3,
-        "create_table_datetime_to_timestamp_without_time_zone": 4
+        "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "create_table_default_collation_to_sw_type_ci": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1590758953,
@@ -3434,6 +3440,7 @@
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 3,
         "create_table_tinyint_to_smallint": 2,
@@ -3624,6 +3631,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 10,
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 5,
         "create_table_tinyint_to_smallint": 1,
@@ -3660,6 +3668,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 5,
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 4,
         "create_table_tinyint_to_smallint": 1,
@@ -3680,6 +3689,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 3,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 2
@@ -3700,6 +3710,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 2,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_tinyint_to_smallint": 1,
@@ -4497,7 +4508,8 @@
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 5,
         "create_table_tinyint_to_smallint": 3,
-        "create_table_datetime_to_timestamp_without_time_zone": 4
+        "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "create_table_default_collation_to_sw_type_ci": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1607581275,
@@ -4575,6 +4587,7 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 2
