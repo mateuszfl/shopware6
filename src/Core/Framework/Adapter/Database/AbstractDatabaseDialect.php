@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\Adapter\Database;
 
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Shopware\Core\Framework\Log\Package;
 
 /**
@@ -82,7 +83,7 @@ abstract class AbstractDatabaseDialect implements DatabaseDialect
         foreach ($values as $column => $value) {
             $parameterTypes[] = $types[$column] ?? match (true) {
                 $value === null => ParameterType::NULL,
-                \is_bool($value) => ParameterType::BOOLEAN,
+                \is_bool($value) => $this->platform instanceof PostgreSQLPlatform ? ParameterType::INTEGER : ParameterType::BOOLEAN,
                 \is_int($value) => ParameterType::INTEGER,
                 default => ParameterType::STRING,
             };

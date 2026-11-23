@@ -3,7 +3,7 @@
 namespace Shopware\Core\Framework\Api\EventListener\Authentication;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Types\Types;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Api\ApiException;
 use Shopware\Core\Framework\Api\Util\AccessKeyHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -110,7 +110,7 @@ class SalesChannelAuthenticationListener implements EventSubscriberInterface
             ->where('sales_channel.access_key = :accessKey')
             ->andWhere('sales_channel.active = :active')
             ->setParameter('accessKey', $accessKey)
-            ->setParameter('active', true, Types::BOOLEAN)
+            ->setParameter('active', 1, ParameterType::INTEGER)
             ->executeQuery()
             ->fetchAssociative();
 

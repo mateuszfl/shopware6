@@ -10,6 +10,7 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\QueryBuilder as DbalQueryBuilderAlias;
 use Shopware\Core\Framework\Adapter\Database\DatabaseDialect;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
+use Shopware\Core\Framework\Adapter\Database\PostgreSQLDialect;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Doctrine\MultiInsertQueryQueue;
@@ -427,7 +428,7 @@ class EntityWriteGateway implements EntityWriteGatewayInterface
             $types[$escaped ? $this->dialect->quoteIdentifier($column) : $column] = match (true) {
                 $value === null => ParameterType::NULL,
                 $field instanceof IdField, $field instanceof FkField, $field instanceof BlobField => ParameterType::BINARY,
-                $field instanceof BoolField => ParameterType::BOOLEAN,
+                $field instanceof BoolField => $this->dialect instanceof PostgreSQLDialect ? ParameterType::INTEGER : ParameterType::BOOLEAN,
                 \is_int($value) => ParameterType::INTEGER,
                 default => ParameterType::STRING,
             };

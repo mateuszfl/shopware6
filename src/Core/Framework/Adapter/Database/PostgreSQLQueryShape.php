@@ -50,7 +50,7 @@ final class PostgreSQLQueryShape implements DatabaseQueryShape
     {
         return match (true) {
             $value === null => ParameterType::NULL,
-            \is_bool($value) => ParameterType::BOOLEAN,
+            \is_bool($value) => ParameterType::INTEGER,
             \is_int($value) => ParameterType::INTEGER,
             default => ParameterType::STRING,
         };
