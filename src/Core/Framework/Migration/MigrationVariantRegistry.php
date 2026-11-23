@@ -182,6 +182,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1572421282AddDoubleOptInRegistration::class, 1572421282, PostgreSQL63\Migration1572421282AddDoubleOptInRegistration::class],
         [Core63\Migration1572425108AddDoubleOptInRegistrationMailTemplate::class, 1572425108, PostgreSQL63\Migration1572425108AddDoubleOptInRegistrationMailTemplate::class],
         [Core63\Migration1572957455AddAffiliateTrackingColumns::class, 1572957455, PostgreSQL63\Migration1572957455AddAffiliateTrackingColumns::class],
+        [Core63\Migration1573049297AddReopenTransitionToDeliveryStates::class, 1573049297, PostgreSQL63\Migration1573049297AddReopenTransitionToDeliveryStates::class],
     ];
 
     /**

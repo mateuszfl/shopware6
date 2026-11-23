@@ -81,6 +81,7 @@ use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnic
 use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
 use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMailTemplate;
 use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
+use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliveryStates;
 
 /**
  * @internal
@@ -89,7 +90,7 @@ use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572957455;
+    private const LAST_TIMESTAMP = 1573049297;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -102,7 +103,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(68, $pending);
+        static::assertCount(69, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -668,6 +669,40 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         static::assertSame($this->schema($this->mysql)['customer'], $this->schema($this->postgres)['customer']);
         static::assertSame($this->schema($this->mysql)['order'], $this->schema($this->postgres)['order']);
+    }
+
+    public function testReopenTransitionIsAddedAndRetrySafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572957455);
+
+            static::assertSame([Migration1573049297AddReopenTransitionToDeliveryStates::class], $collection->migrateInPlace(1573049297));
+            $transitionCount = (int) $connection->fetchOne(<<<'SQL'
+                SELECT COUNT(*)
+                FROM state_machine_transition transition
+                INNER JOIN state_machine machine ON machine.id = transition.state_machine_id
+                INNER JOIN state_machine_state from_state ON from_state.id = transition.from_state_id
+                INNER JOIN state_machine_state to_state ON to_state.id = transition.to_state_id
+                WHERE machine.technical_name = 'order_delivery.state'
+                    AND transition.action_name = 'reopen'
+                    AND from_state.technical_name = 'cancelled'
+                    AND to_state.technical_name = 'open'
+                SQL);
+            static::assertSame(1, $transitionCount);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1573049297AddReopenTransitionToDeliveryStates::class, 1573049297);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne(<<<'SQL'
+                    SELECT COUNT(*)
+                    FROM state_machine_transition transition
+                    INNER JOIN state_machine machine ON machine.id = transition.state_machine_id
+                    WHERE machine.technical_name = 'order_delivery.state' AND transition.action_name = 'reopen'
+                    SQL));
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
