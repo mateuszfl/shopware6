@@ -186,6 +186,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1573569685DoubleOptInGuestMailTemplate::class, 1573569685, PostgreSQL63\Migration1573569685DoubleOptInGuestMailTemplate::class],
         [Core63\Migration1573729158AddSitemapConfig::class, 1573729158, PostgreSQL63\Migration1573729158AddSitemapConfig::class],
         [Core63\Migration1574063550AddCurrencyToProductExport::class, 1574063550, PostgreSQL63\Migration1574063550AddCurrencyToProductExport::class],
+        [Core63\Migration1574082635AddOrderLineItemProductId::class, 1574082635, PostgreSQL63\Migration1574082635AddOrderLineItemProductId::class],
     ];
 
     /**

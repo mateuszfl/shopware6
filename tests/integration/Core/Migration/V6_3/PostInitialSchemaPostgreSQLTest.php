@@ -86,6 +86,7 @@ use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliver
 use Shopware\Core\Migration\V6_3\Migration1573569685DoubleOptInGuestMailTemplate;
 use Shopware\Core\Migration\V6_3\Migration1573729158AddSitemapConfig;
 use Shopware\Core\Migration\V6_3\Migration1574063550AddCurrencyToProductExport;
+use Shopware\Core\Migration\V6_3\Migration1574082635AddOrderLineItemProductId;
 
 /**
  * @internal
@@ -94,7 +95,7 @@ use Shopware\Core\Migration\V6_3\Migration1574063550AddCurrencyToProductExport;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1574063550;
+    private const LAST_TIMESTAMP = 1574082635;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -107,7 +108,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(72, $pending);
+        static::assertCount(73, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -824,6 +825,69 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         }
 
         static::assertSame($this->schema($this->mysql)['product_export'], $this->schema($this->postgres)['product_export']);
+    }
+
+    public function testProductIdsAreCopiedIntoOrderLineItemsAndForeignKeyIsAdded(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1574063550);
+            $salesChannelId = $connection->fetchOne('SELECT id FROM sales_channel LIMIT 1');
+            $currencyId = $connection->fetchOne('SELECT id FROM currency LIMIT 1');
+            $stateId = $connection->fetchOne('SELECT state.id FROM state_machine_state state INNER JOIN state_machine machine ON machine.id = state.state_machine_id WHERE machine.technical_name = \'order.state\' AND state.technical_name = \'open\'');
+            foreach (['salesChannelId' => &$salesChannelId, 'currencyId' => &$currencyId, 'stateId' => &$stateId] as &$id) {
+                if (\is_resource($id)) {
+                    $id = stream_get_contents($id);
+                }
+                static::assertIsString($id);
+            }
+            unset($id);
+
+            $orderId = Uuid::randomBytes();
+            $orderVersionId = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
+            $orderTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('order');
+            $connection->executeStatement(
+                'INSERT INTO ' . $orderTable . ' (id, version_id, state_id, currency_id, language_id, sales_channel_id, billing_address_id, billing_address_version_id, price, order_date_time, shipping_costs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$orderId, $orderVersionId, $stateId, $currencyId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), $salesChannelId, Uuid::randomBytes(), $orderVersionId, '{"totalPrice":1,"netPrice":1,"positionPrice":1,"taxStatus":"gross"}', '2020-01-01 00:00:00.000', '{"unitPrice":0,"totalPrice":0}', '2020-01-01 00:00:00.000'],
+                [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING],
+            );
+            $referencedId = Uuid::randomHex();
+            $lineItemId = Uuid::randomBytes();
+            $connection->insert('order_line_item', [
+                'id' => $lineItemId,
+                'version_id' => $orderVersionId,
+                'order_id' => $orderId,
+                'order_version_id' => $orderVersionId,
+                'identifier' => 'migration-product',
+                'referenced_id' => $referencedId,
+                'label' => 'Migration test product',
+                'quantity' => 1,
+                'type' => 'product',
+                'price' => '{"unitPrice":1,"totalPrice":1}',
+                'created_at' => '2020-01-01 00:00:00.000',
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1574082635AddOrderLineItemProductId::class], $collection->migrateInPlace(1574082635));
+            $productId = $connection->fetchOne('SELECT product_id FROM order_line_item WHERE id = ? AND version_id = ?', [$lineItemId, $orderVersionId], [ParameterType::BINARY, ParameterType::BINARY]);
+            if (\is_resource($productId)) {
+                $productId = stream_get_contents($productId);
+            }
+            static::assertSame(Uuid::fromHexToBytes($referencedId), $productId);
+            static::assertNull($connection->fetchOne('SELECT product_version_id FROM order_line_item WHERE id = ? AND version_id = ?', [$lineItemId, $orderVersionId], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['order_line_item'];
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1574082635AddOrderLineItemProductId::class, 1574082635);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['order_line_item']);
+                $productIdAfterRetry = $connection->fetchOne('SELECT product_id FROM order_line_item WHERE id = ? AND version_id = ?', [$lineItemId, $orderVersionId], [ParameterType::BINARY, ParameterType::BINARY]);
+                if (\is_resource($productIdAfterRetry)) {
+                    $productIdAfterRetry = stream_get_contents($productIdAfterRetry);
+                }
+                static::assertSame(Uuid::fromHexToBytes($referencedId), $productIdAfterRetry);
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
