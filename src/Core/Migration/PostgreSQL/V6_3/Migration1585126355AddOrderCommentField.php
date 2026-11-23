@@ -25,7 +25,7 @@ class Migration1585126355AddOrderCommentField extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "order"
-            ADD COLUMN "customer_comment" TEXT COLLATE utf8mb4_unicode_ci NULL;
+            ADD COLUMN "customer_comment" TEXT COLLATE sw_type_ci NULL;
         ');
     }
 

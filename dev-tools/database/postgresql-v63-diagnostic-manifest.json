@@ -32,7 +32,8 @@
     "alter_blob_type_to_bytea": 0,
     "create_table_key_to_create_index": 14,
     "alter_add_unique_to_constraint": 3,
-    "create_table_unique_key_to_constraint": 5
+    "create_table_unique_key_to_constraint": 5,
+    "alter_column_utf8_collation_to_sw_type_ci": 4
   },
   "classes": [
     {
@@ -2755,13 +2756,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql collation",
-        "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "alter_text_type_to_postgresql_type": 1,
-        "alter_after_column_placement_removed": 1
+        "alter_after_column_placement_removed": 1,
+        "alter_column_utf8_collation_to_sw_type_ci": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1585126355,
@@ -3103,11 +3103,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql collation",
-        "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_column_utf8_collation_to_sw_type_ci": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1590409548,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590409548AddPackUnitPluralMigration",
@@ -3201,12 +3201,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "alter_text_type_to_postgresql_type": 1,
-        "alter_after_column_placement_removed": 2
+        "alter_after_column_placement_removed": 2,
+        "alter_column_utf8_collation_to_sw_type_ci": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1591167126,

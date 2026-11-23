@@ -422,6 +422,13 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         static fn (array $matches): string => $matches[1] . 'BYTEA',
                         $statement
                     );
+                    // Match collation only after an ALTER column operation and a textual type.
+                    $this->replace(
+                        'alter_column_utf8_collation_to_sw_type_ci',
+                        '/(\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?|CHANGE(?:\s+COLUMN)?)\s+' . $identifier . '(?:\s+' . $identifier . ')?\s+(?:VARCHAR\s*\(\s*\d+\s*\)|CHAR(?:ACTER)?(?:\s+VARYING)?\s*\(\s*\d+\s*\)|TEXT)\s+COLLATE\s+)["\'`]?utf8mb4?_[A-Za-z0-9_]+["\'`]?/i',
+                        '$1sw_type_ci',
+                        $statement
+                    );
                     $this->replace('alter_unsigned_removed', '/\s+UNSIGNED\b/i', '', $statement);
                     $this->replace('alter_after_column_placement_removed', '/\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)/i', '', $statement);
                     // PostgreSQL uses ALTER COLUMN TYPE and separate clauses for
