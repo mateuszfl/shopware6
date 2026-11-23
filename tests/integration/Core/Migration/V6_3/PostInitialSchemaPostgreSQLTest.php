@@ -73,6 +73,7 @@ use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesCh
 use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
 use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrderDelivery;
 use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
+use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTemplates;
 
 /**
  * @internal
@@ -81,7 +82,7 @@ use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571981437;
+    private const LAST_TIMESTAMP = 1571990395;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -94,7 +95,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(61, $pending);
+        static::assertCount(62, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -401,6 +402,48 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         static::assertNotNull($mysqlSchema);
         static::assertNotNull($postgresSchema);
         static::assertSame($mysqlSchema, $postgresSchema);
+    }
+
+    public function testDefaultStatusMailTemplatesAreUpdatedAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571981437);
+
+            static::assertSame([Migration1571990395UpdateDefaultStatusMailTemplates::class], $collection->migrateInPlace(1571990395));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = \'order_delivery.state.shipped\''));
+            $subject = $connection->fetchOne(<<<'SQL'
+                SELECT translation.subject
+                FROM mail_template_translation AS translation
+                INNER JOIN mail_template AS template ON template.id = translation.mail_template_id
+                INNER JOIN mail_template_type AS template_type ON template_type.id = template.mail_template_type_id
+                INNER JOIN language ON language.id = translation.language_id
+                INNER JOIN locale ON locale.id = language.locale_id
+                WHERE template_type.technical_name = :type AND locale.code = 'en-GB' AND template.system_default = 1
+                ORDER BY template.created_at DESC
+                LIMIT 1
+                SQL, ['type' => 'order_delivery.state.shipped']);
+            static::assertSame('Your order with {{ salesChannel.name }} is delivered', $subject);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1571990395UpdateDefaultStatusMailTemplates::class, 1571990395);
+                $templateCount = (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'order_delivery.state.shipped\') AND system_default = 1');
+                $variant->update($connection);
+                static::assertSame($templateCount, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = (SELECT id FROM mail_template_type WHERE technical_name = \'order_delivery.state.shipped\') AND system_default = 1'));
+                static::assertSame($subject, $connection->fetchOne(<<<'SQL'
+                    SELECT translation.subject
+                    FROM mail_template_translation AS translation
+                    INNER JOIN mail_template AS template ON template.id = translation.mail_template_id
+                    INNER JOIN mail_template_type AS template_type ON template_type.id = template.mail_template_type_id
+                    INNER JOIN language ON language.id = translation.language_id
+                    INNER JOIN locale ON locale.id = language.locale_id
+                    WHERE template_type.technical_name = :type AND locale.code = 'en-GB' AND template.system_default = 1
+                    ORDER BY template.created_at DESC
+                    LIMIT 1
+                    SQL, ['type' => 'order_delivery.state.shipped']));
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
