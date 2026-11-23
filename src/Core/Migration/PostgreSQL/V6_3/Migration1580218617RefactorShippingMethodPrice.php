@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -114,11 +115,12 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
     {
         $shippingPrices = $connection->fetchAllAssociative('SELECT * FROM "shipping_method_price"');
         foreach ($shippingPrices as $shippingPrice) {
-            $id = Uuid::fromBytesToHex($shippingPrice['currency_id']);
-            $key = 'c' . $id;
-            $currencyPrice = [$key => ['currencyId' => Uuid::fromBytesToHex($shippingPrice['currency_id']), 'net' => $shippingPrice['price'], 'gross' => $shippingPrice['price'], 'linked' => false]];
+            $currencyId = Uuid::fromBytesToHex($shippingPrice['currency_id']);
+            $id = Uuid::fromHexToBytes(Uuid::fromBytesToHex($shippingPrice['id']));
+            $key = 'c' . $currencyId;
+            $currencyPrice = [$key => ['currencyId' => $currencyId, 'net' => $shippingPrice['price'], 'gross' => $shippingPrice['price'], 'linked' => false]];
             $currencyPrice = json_encode($currencyPrice, \JSON_THROW_ON_ERROR);
-            $connection->executeStatement('UPDATE "shipping_method_price" SET "currency_price" = :currencyPrice WHERE "id" = :id', ['currencyPrice' => $currencyPrice, 'id' => $shippingPrice['id']]);
+            $connection->executeStatement('UPDATE "shipping_method_price" SET "currency_price" = :currencyPrice WHERE "id" = :id', ['currencyPrice' => $currencyPrice, 'id' => $id], ['currencyPrice' => ParameterType::STRING, 'id' => ParameterType::BINARY]);
         }
     }
 }
