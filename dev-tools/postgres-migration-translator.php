@@ -621,6 +621,20 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
                     $this->replace(
+                        'check_json_valid_to_native_json_validation',
+                        '/\bCHECK\s*\(\s*JSON_VALID\s*\(\s*(?:"[^"\r\n]+"|`[^`\r\n]+`)\s*\)\s*\)/i',
+                        'CHECK (TRUE)',
+                        $sql
+                    );
+                }
+                $this->replace(
+                    'comparison_double_quoted_literal_to_single_quoted',
+                    '/(\s*(?:=|<>|!=|<=|>=|<|>)\s*)"((?:[^"]|"")*)"/',
+                    static fn (array $match): string => $match[1] . "'" . str_replace("'", "''", str_replace('""', '"', $match[2])) . "'",
+                    $sql
+                );
+                if ($this->diagnosticMode) {
+                    $this->replace(
                         'mysql_order_currency_multi_table_update_to_postgresql_update_from',
                         '/^\s*UPDATE\s+("order"|`order`|order)\s*,\s*("currency"|`currency`|currency)\s+SET\s+(.+?)\s+WHERE\s+(.+?)\s*;?\s*$/is',
                         static function (array $matches): string {
@@ -639,26 +653,14 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                                     return $matches[0];
                                 }
 
-                                $translatedAssignments[] = '"order"."' . $columns[1] . '" = "currency"."' . $columns[2] . '"';
+                                $translatedAssignments[] = '"' . $columns[1] . '" = "currency"."' . $columns[2] . '"';
                             }
 
                             return 'UPDATE "order" SET ' . implode(', ', $translatedAssignments) . ' FROM "currency" WHERE "order"."currency_id" = "currency"."id"';
                         },
                         $sql
                     );
-                    $this->replace(
-                        'check_json_valid_to_native_json_validation',
-                        '/\bCHECK\s*\(\s*JSON_VALID\s*\(\s*(?:"[^"\r\n]+"|`[^`\r\n]+`)\s*\)\s*\)/i',
-                        'CHECK (TRUE)',
-                        $sql
-                    );
                 }
-                $this->replace(
-                    'comparison_double_quoted_literal_to_single_quoted',
-                    '/(\s*(?:=|<>|!=|<=|>=|<|>)\s*)"((?:[^"]|"")*)"/',
-                    static fn (array $match): string => $match[1] . "'" . str_replace("'", "''", str_replace('""', '"', $match[2])) . "'",
-                    $sql
-                );
                 if ($this->hasMultiActionDropForeignKey($sql)) {
                     $this->unsupported[] = 'multi-action ALTER TABLE DROP FOREIGN KEY grouping is retained; splitting changes statement atomicity';
                 }
