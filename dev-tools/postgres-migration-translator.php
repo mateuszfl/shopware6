@@ -27,13 +27,23 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
         exit(2);
     }
 
+    $version = $diagnosticMode ? basename($sourceDirectory) : 'V6_3';
+    if (!preg_match('/\AV6_[0-9]+\z/', $version)) {
+        fwrite(\STDERR, "Diagnostic source directory must be named V6_<minor>\n");
+        exit(2);
+    }
+
+    $logicalNamespace = 'Shopware\\Core\\Migration\\' . $version;
+    $implementationNamespace = 'Shopware\\Core\\Migration\\PostgreSQL\\' . $version;
+    $registryAliasSuffix = str_replace('_', '', substr($version, 1));
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $printer = new Standard();
     $registry = new MigrationVariantRegistry();
     $report = [];
     foreach (glob($sourceDirectory . '/Migration*.php') ?: [] as $path) {
         $name = basename($path);
-        $logicalClass = 'Shopware\\Core\\Migration\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);
+        $className = pathinfo($name, \PATHINFO_FILENAME);
+        $logicalClass = $logicalNamespace . '\\' . $className;
         if (!class_exists($logicalClass)) {
             $report[] = ['class_file' => $name, 'source' => $path, 'status' => 'source_class_not_autoloadable', 'blocker_category' => 'inventory error'];
             continue;
@@ -646,11 +656,15 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             }
 
             ++$namespaceCount;
-            $statement->name = new Node\Name('Shopware\\Core\\Migration\\PostgreSQL\\V6_3');
+            $statement->name = new Node\Name($implementationNamespace);
         }
         if ($diagnosticMode && preg_match('/\\b__DIR__\\b/', $source)) {
             $dirTraverser = new NodeTraverser();
-            $dirTraverser->addVisitor(new class extends NodeVisitorAbstract {
+            $dirTraverser->addVisitor(new class($version) extends NodeVisitorAbstract {
+                public function __construct(private readonly string $version)
+                {
+                }
+
                 public function enterNode(Node $node): ?Node
                 {
                     if (!$node instanceof Node\Scalar\MagicConst\Dir) {
@@ -659,10 +673,10 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
                     return new Node\Expr\BinaryOp\Concat(
                         new Node\Expr\FuncCall(new Node\Name('dirname'), [
-                                new Node\Arg(new Node\Scalar\MagicConst\File()),
+                            new Node\Arg(new Node\Scalar\MagicConst\File()),
                             new Node\Arg(new Node\Scalar\LNumber(2)),
                         ]),
-                        new Node\Scalar\String_('/V6_3')
+                        new Node\Scalar\String_('/' . $this->version)
                     );
                 }
             });
@@ -674,9 +688,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
         $entry['applied_rules'] = $visitor->appliedRules;
         $entry['unsupported_shapes'] = array_values(array_unique($visitor->unsupported));
         $entry['logical_class'] = $logicalClass;
-        $entry['proposed_implementation'] = 'Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);
+        $entry['proposed_implementation'] = $implementationNamespace . '\\' . $className;
         $entry['proposed_timestamp'] = $timestamp;
-        $entry['registry_entry_proposal'] = 'Core63\\' . pathinfo($name, PATHINFO_FILENAME) . '::class, ' . $timestamp . ', PostgreSQL63\\' . pathinfo($name, PATHINFO_FILENAME) . '::class';
+        $entry['registry_entry_proposal'] = 'Core' . $registryAliasSuffix . '\\' . $className . '::class, ' . $timestamp . ', PostgreSQL' . $registryAliasSuffix . '\\' . $className . '::class';
         if ($namespaceCount !== 1) {
             $entry['status'] = 'rejected_namespace_shape';
             $entry['blocker_category'] = 'PHP namespace shape';
