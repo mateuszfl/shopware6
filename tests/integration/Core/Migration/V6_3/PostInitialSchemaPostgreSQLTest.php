@@ -77,6 +77,7 @@ use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTempl
 use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
 use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
 use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType;
+use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
 
 /**
  * @internal
@@ -85,7 +86,7 @@ use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnic
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572273565;
+    private const LAST_TIMESTAMP = 1572421282;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -98,7 +99,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(65, $pending);
+        static::assertCount(66, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -563,6 +564,38 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['document_type']);
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM document_type WHERE technical_name = :name', ['name' => 'migration.test.duplicate']));
+            }
+        }
+
+        static::assertArrayHasKey('mysql', $schemas);
+        static::assertArrayHasKey('postgres', $schemas);
+        static::assertSame($schemas['mysql'], $schemas['postgres']);
+    }
+
+    public function testCustomerDoubleOptInColumnsAndUniqueHashMatchMySql(): void
+    {
+        $schemas = [];
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572273565);
+
+            static::assertSame([Migration1572421282AddDoubleOptInRegistration::class], $collection->migrateInPlace(1572421282));
+            $schema = $this->schema($connection)['customer'];
+            $schemas[$connection === $this->mysql ? 'mysql' : 'postgres'] = $schema;
+            $columns = array_column($schema['columns'], null, 'name');
+            static::assertArrayHasKey('doubleOptInRegistration', $columns);
+            static::assertArrayHasKey('doubleOptInEmailSentDate', $columns);
+            static::assertArrayHasKey('doubleOptInConfirmDate', $columns);
+            static::assertArrayHasKey('hash', $columns);
+            $hashIndexes = array_filter($schema['indexes'], static fn (array $index): bool => $index[1] === ['hash']);
+            static::assertNotEmpty($hashIndexes);
+            static::assertSame('UNIQUE', array_values($hashIndexes)[0][0]);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572421282AddDoubleOptInRegistration::class, 1572421282);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['customer']);
             }
         }
 
