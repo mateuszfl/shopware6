@@ -19,7 +19,8 @@
     "create_table_datetime_to_timestamp_without_time_zone": 49,
     "alter_drop_foreign_key_to_drop_constraint": 19,
     "comparison_double_quoted_literal_to_single_quoted": 10,
-    "create_table_utf8mb4_collation_to_sw_type_ci": 2
+    "create_table_utf8mb4_collation_to_sw_type_ci": 2,
+    "language_uuid_bytea_resource_to_nullable_string": 1
   },
   "classes": [
     {
@@ -2161,7 +2162,9 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "language_uuid_bytea_resource_to_nullable_string": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575021466,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575021466AddCurrencies",

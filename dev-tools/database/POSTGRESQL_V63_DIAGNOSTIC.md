@@ -10,6 +10,8 @@ This refresh addresses the observed DDL syntax blocker in the first emitted migr
 
 The diagnostic translator also rewrites a double-quoted token to a single-quoted SQL literal only when it immediately follows a comparison operator. This handles MySQL string comparisons such as `loc.code = "de-DE"`; the manifest counts these rewrites under `comparison_double_quoted_literal_to_single_quoted`. Other double-quoted SQL tokens remain flagged as dialect-ambiguous.
 
+The fresh-database run exposed a PostgreSQL `BYTEA` resource returned by DBAL for a language UUID. One verified diagnostic method, `Migration1575021466AddCurrencies::fetchLanguageId()`, now reads stream resources with `stream_get_contents()` and maps failed or empty reads to `null` before its existing fallback logic. The manifest records this single application under `language_uuid_bytea_resource_to_nullable_string`. Other methods with similar names were not changed without an individually verified shape; the default migration registry remains opt-in.
+
 The generated classes and their registry mappings exist only to run one disposable PostgreSQL migration attempt and capture the first failure. The complete class-by-class mapping and unhandled-shape list is in [postgresql-v63-diagnostic-manifest.json](postgresql-v63-diagnostic-manifest.json). Each generated PHP file also carries a diagnostic-only header.
 
 Do not use these mappings for an installed shop. The generator remains fail closed in normal `--inventory` mode; `--diagnostic-inventory` is an explicit best-effort path.
