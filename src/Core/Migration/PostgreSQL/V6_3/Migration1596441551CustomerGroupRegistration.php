@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
@@ -42,19 +43,19 @@ class Migration1596441551CustomerGroupRegistration extends MigrationStep
         $types = ['customer.group.registration.accepted' => ['de-DE' => 'Kunden Gruppen Registrierung Akzeptiert', 'en-GB' => 'Customer Group Registration Accepted'], 'customer.group.registration.declined' => ['de-DE' => 'Kunden Gruppen Registrierung Abgelehnt', 'en-GB' => 'Customer Group Registration Declined']];
         foreach ($types as $typeName => $translations) {
             $typeId = Uuid::randomBytes();
-            $connection->insert('mail_template_type', ['id' => $typeId, 'technical_name' => $typeName, 'available_entities' => json_encode(['customer' => 'customer', 'customerGroup' => 'customer_group']), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('mail_template_type', ['id' => $typeId, 'technical_name' => $typeName, 'available_entities' => json_encode(['customer' => 'customer', 'customerGroup' => 'customer_group']), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
             $languageIds = [];
             if ($enLangId) {
-                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => $enLangId, 'name' => $translations['en-GB'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => $enLangId, 'name' => $translations['en-GB'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_type_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
                 $languageIds[] = Uuid::fromBytesToHex($enLangId);
             }
             if ($deLangId) {
-                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => $deLangId, 'name' => $translations['de-DE'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => $deLangId, 'name' => $translations['de-DE'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_type_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
                 $languageIds[] = Uuid::fromBytesToHex($deLangId);
             }
             // We don't have both en and de
             if (!\in_array(Defaults::LANGUAGE_SYSTEM, $languageIds, true)) {
-                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'name' => $translations['en-GB'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('mail_template_type_translation', ['mail_template_type_id' => $typeId, 'language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'name' => $translations['en-GB'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_type_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
             $this->createMailTemplates($connection, $translations, $typeName, $typeId, $enLangId, $deLangId);
         }
@@ -64,8 +65,7 @@ class Migration1596441551CustomerGroupRegistration extends MigrationStep
     {
         $connection->executeStatement('ALTER TABLE "customer"
 ADD "requested_customer_group_id" BYTEA CHECK (octet_length("requested_customer_group_id") = 16) NULL;');
-        $connection->executeStatement('ALTER TABLE "customer"
-ADD INDEX "fk.customer.requested_customer_group_id" ("requested_customer_group_id");');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "fk.customer.requested_customer_group_id" ON "customer" ("requested_customer_group_id");');
     }
 
     private function createTables(Connection $connection): void
@@ -108,20 +108,20 @@ ADD "registration_seo_meta_description" TEXT NULL;
     {
         $mailTemplateContent = require \dirname(__FILE__, 3) . '/Fixtures/MailTemplateContent.php';
         $mailTemplateId = Uuid::randomBytes();
-        $connection->insert('mail_template', ['id' => $mailTemplateId, 'mail_template_type_id' => $typeId, 'system_default' => 1, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('mail_template', ['id' => $mailTemplateId, 'mail_template_type_id' => $typeId, 'system_default' => 1, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY, 'mail_template_type_id' => ParameterType::BINARY]);
         $languageIds = [];
         if ($enLangId) {
-            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => $enLangId, 'subject' => $typeTranslations['en-GB'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['en-GB']['html'], 'content_plain' => $mailTemplateContent[$typeName]['en-GB']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => $enLangId, 'subject' => $typeTranslations['en-GB'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['en-GB']['html'], 'content_plain' => $mailTemplateContent[$typeName]['en-GB']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             $languageIds[] = Uuid::fromBytesToHex($enLangId);
         }
         if ($deLangId) {
-            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => $deLangId, 'subject' => $typeTranslations['de-DE'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['de-DE']['html'], 'content_plain' => $mailTemplateContent[$typeName]['de-DE']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => $deLangId, 'subject' => $typeTranslations['de-DE'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['de-DE']['html'], 'content_plain' => $mailTemplateContent[$typeName]['de-DE']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             $languageIds[] = Uuid::fromBytesToHex($deLangId);
         }
         // We don't have both en and de
         if (!\in_array(Defaults::LANGUAGE_SYSTEM, $languageIds, true)) {
-            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'subject' => $typeTranslations['en-GB'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['en-GB']['html'], 'content_plain' => $mailTemplateContent[$typeName]['en-GB']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('mail_template_translation', ['mail_template_id' => $mailTemplateId, 'language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'subject' => $typeTranslations['en-GB'], 'description' => '', 'sender_name' => 'Shop', 'content_html' => $mailTemplateContent[$typeName]['en-GB']['html'], 'content_plain' => $mailTemplateContent[$typeName]['en-GB']['plain'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
         }
-        $connection->insert('event_action', ['id' => Uuid::randomBytes(), 'event_name' => $typeName, 'action_name' => SendMailAction::ACTION_NAME, 'config' => json_encode(['mail_template_type_id' => Uuid::fromBytesToHex($typeId)], \JSON_THROW_ON_ERROR), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('event_action', ['id' => Uuid::randomBytes(), 'event_name' => $typeName, 'action_name' => SendMailAction::ACTION_NAME, 'config' => json_encode(['mail_template_type_id' => Uuid::fromBytesToHex($typeId)], \JSON_THROW_ON_ERROR), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
     }
 }
