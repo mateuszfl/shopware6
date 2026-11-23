@@ -8,6 +8,7 @@ namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Aggregate\ProductFeatureSet\ProductFeatureSetDefinition;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
@@ -88,7 +89,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
 
     private function insertDefaultFeatureSet(Connection $connection, string $featureSetId): void
     {
-        $connection->insert(ProductFeatureSetDefinition::ENTITY_NAME, $this->getDefaultFeatureSet($featureSetId));
+        $connection->insert(ProductFeatureSetDefinition::ENTITY_NAME, $this->getDefaultFeatureSet($featureSetId), ['id' => ParameterType::BINARY]);
     }
 
     private function insertDefaultFeatureSetTranslations(Connection $connection, string $featureSetId): void
@@ -97,15 +98,19 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         $languages[] = Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
         $languages = array_unique($languages);
         $sql = <<<'SQL'
-        REPLACE INTO `product_feature_set_translation` (`product_feature_set_id`, `language_id`, `name`, `description`, `created_at`)
-        VALUES (:product_feature_set_id, :language_id, :name, :description, :created_at);
+        INSERT INTO "product_feature_set_translation" ("product_feature_set_id", "language_id", "name", "description", "created_at")
+        VALUES (:product_feature_set_id, :language_id, :name, :description, :created_at)
+        ON CONFLICT ("product_feature_set_id", "language_id") DO UPDATE SET
+            "name" = EXCLUDED."name",
+            "description" = EXCLUDED."description",
+            "created_at" = EXCLUDED."created_at";
         SQL;
         foreach ($languages as $language) {
-            $connection->executeStatement($sql, $this->getDefaultFeatureSetTranslation($featureSetId, $language, self::TRANSLATIONS['en-GB']));
+            $connection->executeStatement($sql, $this->getDefaultFeatureSetTranslation($featureSetId, $language, self::TRANSLATIONS['en-GB']), ['product_feature_set_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
         }
         $languages = $this->fetchLanguageIds($connection, ['de-DE']);
         foreach ($languages as $language) {
-            $connection->executeStatement($sql, $this->getDefaultFeatureSetTranslation($featureSetId, $language, self::TRANSLATIONS['de-DE']));
+            $connection->executeStatement($sql, $this->getDefaultFeatureSetTranslation($featureSetId, $language, self::TRANSLATIONS['de-DE']), ['product_feature_set_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
         }
     }
 
@@ -114,7 +119,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         $sql = <<<'SQL'
         UPDATE "product" SET "product_feature_set_id" = :feature_set_id WHERE "product_feature_set_id" IS NULL;
         SQL;
-        $connection->executeStatement($sql, ['feature_set_id' => $featureSetId]);
+        $connection->executeStatement($sql, ['feature_set_id' => $featureSetId], ['feature_set_id' => ParameterType::BINARY]);
     }
 
     /**
