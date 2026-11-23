@@ -192,6 +192,13 @@ final class MigrationVariantRegistry
         [Core63\Migration1574258789ProductReviewLanguageKey::class, 1574258789, PostgreSQL63\Migration1574258789ProductReviewLanguageKey::class],
         [Core63\Migration1574520220AddSalesChannelMaintenance::class, 1574520220, PostgreSQL63\Migration1574520220AddSalesChannelMaintenance::class],
         [Core63\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable::class, 1574672450, PostgreSQL63\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable::class],
+        // These source classes use PostgreSQL-compatible SQL and DBAL operations.
+        [Core63\Migration1575883959ResetListingPrices::class, 1575883959, Core63\Migration1575883959ResetListingPrices::class],
+        [Core63\Migration1578470886FixPurchaseSteps::class, 1578470886, Core63\Migration1578470886FixPurchaseSteps::class],
+        [Core63\Migration1578485775UseStableUpdateChannel::class, 1578485775, Core63\Migration1578485775UseStableUpdateChannel::class],
+        [Core63\Migration1578648299ReindexSeoUrls::class, 1578648299, Core63\Migration1578648299ReindexSeoUrls::class],
+        [Core63\Migration1588144801TriggerIndexer::class, 1588144801, Core63\Migration1588144801TriggerIndexer::class],
+        [Core63\Migration1590566018RenameDefaultMediaFolders::class, 1590566018, Core63\Migration1590566018RenameDefaultMediaFolders::class],
     ];
 
     /**
