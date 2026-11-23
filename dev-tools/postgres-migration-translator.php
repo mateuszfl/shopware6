@@ -262,6 +262,48 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $rewritten;
             }
 
+            private function rewriteAlterTable(string $sql): string
+            {
+                $rewritten = '';
+                foreach ($this->splitSqlStatements($sql) as $statement) {
+                    if (!preg_match('/^\s*ALTER\s+TABLE\b/i', $statement)) {
+                        $rewritten .= $statement;
+
+                        continue;
+                    }
+
+                    $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                    $this->replace(
+                        'alter_binary16_to_bytea_with_length_check',
+                        '/\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?)\s+' . $identifier . '\s+BINARY\s*\(\s*16\s*\)/i',
+                        static function (array $matches): string {
+                            preg_match('/(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?)\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]+)/i', $matches[0], $columnMatch);
+                            $column = str_starts_with($columnMatch[1], '`') ? '"' . trim($columnMatch[1], '`') . '"' : $columnMatch[1];
+
+                            return preg_replace('/\bBINARY\s*\(\s*16\s*\)$/i', 'BYTEA CHECK (octet_length(' . $column . ') = 16)', $matches[0]) ?? $matches[0];
+                        },
+                        $statement
+                    );
+                    $this->replace(
+                        'alter_binary16_to_bytea_with_length_check',
+                        '/\bCHANGE(?:\s+COLUMN)?\s+' . $identifier . '\s+' . $identifier . '\s+BINARY\s*\(\s*16\s*\)/i',
+                        static function (array $matches): string {
+                            preg_match('/\bCHANGE(?:\s+COLUMN)?\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]+)\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]+)/i', $matches[0], $columnMatch);
+                            $column = str_starts_with($columnMatch[1], '`') ? '"' . trim($columnMatch[1], '`') . '"' : $columnMatch[1];
+
+                            return preg_replace('/\bBINARY\s*\(\s*16\s*\)$/i', 'BYTEA CHECK (octet_length(' . $column . ') = 16)', $matches[0]) ?? $matches[0];
+                        },
+                        $statement
+                    );
+                    $this->replace('alter_tinyint_to_smallint', '/\bTINYINT(?:\s*\(\s*\d+\s*\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $statement);
+                    $this->replace('alter_unsigned_removed', '/\s+UNSIGNED\b/i', '', $statement);
+                    $this->replace('alter_after_column_placement_removed', '/\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)/i', '', $statement);
+                    $rewritten .= $statement;
+                }
+
+                return $rewritten;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -370,6 +412,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
                 $originalSql = $node->value;
                 $sql = $this->rewriteCreateTable($originalSql);
+                if ($this->diagnosticMode) {
+                    $sql = $this->rewriteAlterTable($sql);
+                }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
                     $this->replace(
@@ -419,7 +464,6 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 }
                 $converted = preg_replace('/`([^`]+)`/', '"$1"', $sql);
                 $converted = preg_replace('/\\b(INT|INTEGER)\\s*\\(\\d+\\)/i', '$1', $converted);
-                $converted = preg_replace('/\\s+AFTER\\s+"?[_a-z0-9]+"?/i', '', $converted);
                 $converted = preg_replace('/\\bIFNULL\\s*\\(/i', 'COALESCE(', $converted);
                 $converted = preg_replace('/\\bCREATE\\s+TABLE\\s+(?!IF\\s+NOT\\s+EXISTS)/i', 'CREATE TABLE IF NOT EXISTS ', $converted);
                 if ($converted !== $sql || $sql !== $originalSql) {

@@ -5,11 +5,11 @@
   "summary": {
     "registered_variant": 170,
     "registered_portable_mapping": 9,
-    "diagnostic_emitted_with_unhandled_shapes": 148,
-    "diagnostic_emitted": 8
+    "diagnostic_emitted_with_unhandled_shapes": 146,
+    "diagnostic_emitted": 10
   },
   "blocker_summary": {
-    "diagnostic output retains unhandled SQL/runtime shapes": 148
+    "diagnostic output retains unhandled SQL/runtime shapes": 146
   },
   "applied_rule_totals": {
     "create_table_default_collation_to_sw_type_ci": 31,
@@ -19,10 +19,14 @@
     "create_table_datetime_to_timestamp_without_time_zone": 49,
     "alter_drop_foreign_key_to_drop_constraint": 19,
     "comparison_double_quoted_literal_to_single_quoted": 10,
-    "create_table_utf8mb4_collation_to_sw_type_ci": 2,
     "language_uuid_bytea_resource_to_nullable_string": 1,
     "check_json_valid_to_native_json_validation": 14,
-    "redundant_mysql_implicit_foreign_key_index_drop_removed": 1
+    "alter_after_column_placement_removed": 54,
+    "redundant_mysql_implicit_foreign_key_index_drop_removed": 1,
+    "alter_binary16_to_bytea_with_length_check": 21,
+    "alter_tinyint_to_smallint": 16,
+    "alter_unsigned_removed": 3,
+    "create_table_utf8mb4_collation_to_sw_type_ci": 2
   },
   "classes": [
     {
@@ -31,10 +35,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232600Language",
       "timestamp": 1536232600,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232600Language",
       "blocker_category": null
     },
     {
@@ -43,10 +47,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232610Locale",
       "timestamp": 1536232610,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232610Locale",
       "blocker_category": null
     },
     {
@@ -55,10 +59,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232620SalesChannelType",
       "timestamp": 1536232620,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232620SalesChannelType",
       "blocker_category": null
     },
     {
@@ -67,10 +71,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232630PropertyGroup",
       "timestamp": 1536232630,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232630PropertyGroup",
       "blocker_category": null
     },
     {
@@ -79,10 +83,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232640Currency",
       "timestamp": 1536232640,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232640Currency",
       "blocker_category": null
     },
     {
@@ -91,10 +95,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232650CustomerGroup",
       "timestamp": 1536232650,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232650CustomerGroup",
       "blocker_category": null
     },
     {
@@ -103,10 +107,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232660Tax",
       "timestamp": 1536232660,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232660Tax",
       "blocker_category": null
     },
     {
@@ -115,10 +119,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232670Unit",
       "timestamp": 1536232670,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232670Unit",
       "blocker_category": null
     },
     {
@@ -127,10 +131,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232680Rule",
       "timestamp": 1536232680,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232680Rule",
       "blocker_category": null
     },
     {
@@ -139,10 +143,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232690Version",
       "timestamp": 1536232690,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232690Version",
       "blocker_category": null
     },
     {
@@ -151,10 +155,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232700VersionCommit",
       "timestamp": 1536232700,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232700VersionCommit",
       "blocker_category": null
     },
     {
@@ -163,10 +167,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232710Integration",
       "timestamp": 1536232710,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232710Integration",
       "blocker_category": null
     },
     {
@@ -175,10 +179,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232720Country",
       "timestamp": 1536232720,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232720Country",
       "blocker_category": null
     },
     {
@@ -187,10 +191,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232730CountryState",
       "timestamp": 1536232730,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232730CountryState",
       "blocker_category": null
     },
     {
@@ -199,10 +203,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232740SnippetSet",
       "timestamp": 1536232740,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232740SnippetSet",
       "blocker_category": null
     },
     {
@@ -211,10 +215,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232750Snippet",
       "timestamp": 1536232750,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232750Snippet",
       "blocker_category": null
     },
     {
@@ -223,10 +227,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232760StateMachine",
       "timestamp": 1536232760,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232760StateMachine",
       "blocker_category": null
     },
     {
@@ -235,10 +239,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232770VersionCommitData",
       "timestamp": 1536232770,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232770VersionCommitData",
       "blocker_category": null
     },
     {
@@ -247,10 +251,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232790MailHeaderFooter",
       "timestamp": 1536232790,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232790MailHeaderFooter",
       "blocker_category": null
     },
     {
@@ -259,10 +263,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232800DeliveryTime",
       "timestamp": 1536232800,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232800DeliveryTime",
       "blocker_category": null
     },
     {
@@ -271,10 +275,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232810User",
       "timestamp": 1536232810,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232810User",
       "blocker_category": null
     },
     {
@@ -283,10 +287,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232820UserAccessKey",
       "timestamp": 1536232820,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232820UserAccessKey",
       "blocker_category": null
     },
     {
@@ -295,10 +299,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232830MediaDefaultFolder",
       "timestamp": 1536232830,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232830MediaDefaultFolder",
       "blocker_category": null
     },
     {
@@ -307,10 +311,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232840MediaFolder",
       "timestamp": 1536232840,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232840MediaFolder",
       "blocker_category": null
     },
     {
@@ -319,10 +323,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232850Media",
       "timestamp": 1536232850,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232850Media",
       "blocker_category": null
     },
     {
@@ -331,10 +335,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232860ShippingMethod",
       "timestamp": 1536232860,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232860ShippingMethod",
       "blocker_category": null
     },
     {
@@ -343,10 +347,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232870ShippingMethodPrice",
       "timestamp": 1536232870,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232870ShippingMethodPrice",
       "blocker_category": null
     },
     {
@@ -355,10 +359,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232880Category",
       "timestamp": 1536232880,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232880Category",
       "blocker_category": null
     },
     {
@@ -367,10 +371,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232890CmsPage",
       "timestamp": 1536232890,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232890CmsPage",
       "blocker_category": null
     },
     {
@@ -379,10 +383,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232900CmsBlock",
       "timestamp": 1536232900,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232900CmsBlock",
       "blocker_category": null
     },
     {
@@ -391,10 +395,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232910CmsSlot",
       "timestamp": 1536232910,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232910CmsSlot",
       "blocker_category": null
     },
     {
@@ -403,10 +407,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232920PaymentMethod",
       "timestamp": 1536232920,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232920PaymentMethod",
       "blocker_category": null
     },
     {
@@ -415,10 +419,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232930Navigation",
       "timestamp": 1536232930,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232930Navigation",
       "blocker_category": null
     },
     {
@@ -427,10 +431,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232940SalesChannel",
       "timestamp": 1536232940,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232940SalesChannel",
       "blocker_category": null
     },
     {
@@ -439,10 +443,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232950Salutation",
       "timestamp": 1536232950,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232950Salutation",
       "blocker_category": null
     },
     {
@@ -451,10 +455,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232960Customer",
       "timestamp": 1536232960,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232960Customer",
       "blocker_category": null
     },
     {
@@ -463,10 +467,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232970CustomerAddress",
       "timestamp": 1536232970,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232970CustomerAddress",
       "blocker_category": null
     },
     {
@@ -475,10 +479,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232980Cart",
       "timestamp": 1536232980,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232980Cart",
       "blocker_category": null
     },
     {
@@ -487,10 +491,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232990Order",
       "timestamp": 1536232990,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232990Order",
       "blocker_category": null
     },
     {
@@ -499,10 +503,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233000OrderCustomer",
       "timestamp": 1536233000,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233000OrderCustomer",
       "blocker_category": null
     },
     {
@@ -511,10 +515,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233010OrderAddress",
       "timestamp": 1536233010,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233010OrderAddress",
       "blocker_category": null
     },
     {
@@ -523,10 +527,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233020OrderDelivery",
       "timestamp": 1536233020,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233020OrderDelivery",
       "blocker_category": null
     },
     {
@@ -535,10 +539,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233030OrderLineItem",
       "timestamp": 1536233030,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233030OrderLineItem",
       "blocker_category": null
     },
     {
@@ -547,10 +551,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233040OrderDeliveryPosition",
       "timestamp": 1536233040,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233040OrderDeliveryPosition",
       "blocker_category": null
     },
     {
@@ -559,10 +563,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233050OrderTransaction",
       "timestamp": 1536233050,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233050OrderTransaction",
       "blocker_category": null
     },
     {
@@ -571,10 +575,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233060MediaFolderConfiguration",
       "timestamp": 1536233060,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233060MediaFolderConfiguration",
       "blocker_category": null
     },
     {
@@ -583,10 +587,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233070MediaThumbnailSize",
       "timestamp": 1536233070,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233070MediaThumbnailSize",
       "blocker_category": null
     },
     {
@@ -595,10 +599,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233080MediaFolderConfigurationMediaThumbnailSize",
       "timestamp": 1536233080,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233080MediaFolderConfigurationMediaThumbnailSize",
       "blocker_category": null
     },
     {
@@ -607,10 +611,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233090MediaThumbnail",
       "timestamp": 1536233090,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233090MediaThumbnail",
       "blocker_category": null
     },
     {
@@ -619,10 +623,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233100PropertyGroupOption",
       "timestamp": 1536233100,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233100PropertyGroupOption",
       "blocker_category": null
     },
     {
@@ -631,10 +635,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233110ProductManufacturer",
       "timestamp": 1536233110,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233110ProductManufacturer",
       "blocker_category": null
     },
     {
@@ -643,10 +647,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233120Product",
       "timestamp": 1536233120,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233120Product",
       "blocker_category": null
     },
     {
@@ -655,10 +659,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233130ProductMedia",
       "timestamp": 1536233130,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233130ProductMedia",
       "blocker_category": null
     },
     {
@@ -667,10 +671,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233140ProductProperty",
       "timestamp": 1536233140,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233140ProductProperty",
       "blocker_category": null
     },
     {
@@ -679,10 +683,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233150ProductOption",
       "timestamp": 1536233150,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233150ProductOption",
       "blocker_category": null
     },
     {
@@ -691,10 +695,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233160ProductConfigurator",
       "timestamp": 1536233160,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233160ProductConfigurator",
       "blocker_category": null
     },
     {
@@ -703,10 +707,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233170ProductCategoryTree",
       "timestamp": 1536233170,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233170ProductCategoryTree",
       "blocker_category": null
     },
     {
@@ -715,10 +719,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233180ProductCategory",
       "timestamp": 1536233180,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233180ProductCategory",
       "blocker_category": null
     },
     {
@@ -727,10 +731,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233190ProductPriceRule",
       "timestamp": 1536233190,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233190ProductPriceRule",
       "blocker_category": null
     },
     {
@@ -739,10 +743,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233200RuleCondition",
       "timestamp": 1536233200,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233200RuleCondition",
       "blocker_category": null
     },
     {
@@ -751,10 +755,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233210SalesChannelDomain",
       "timestamp": 1536233210,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233210SalesChannelDomain",
       "blocker_category": null
     },
     {
@@ -763,10 +767,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233220PluginTranslation",
       "timestamp": 1536233220,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233220PluginTranslation",
       "blocker_category": null
     },
     {
@@ -775,10 +779,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233230ProductStream",
       "timestamp": 1536233230,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233230ProductStream",
       "blocker_category": null
     },
     {
@@ -787,10 +791,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233240ProductStreamFilter",
       "timestamp": 1536233240,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233240ProductStreamFilter",
       "blocker_category": null
     },
     {
@@ -799,10 +803,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233250MessageQueueStats",
       "timestamp": 1536233250,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233250MessageQueueStats",
       "blocker_category": null
     },
     {
@@ -811,10 +815,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233260StateMachineHistory",
       "timestamp": 1536233260,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233260StateMachineHistory",
       "blocker_category": null
     },
     {
@@ -823,10 +827,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233270SystemConfig",
       "timestamp": 1536233270,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233270SystemConfig",
       "blocker_category": null
     },
     {
@@ -835,10 +839,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233280CustomFieldSet",
       "timestamp": 1536233280,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233280CustomFieldSet",
       "blocker_category": null
     },
     {
@@ -847,10 +851,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233290CustomFieldSetRelation",
       "timestamp": 1536233290,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233290CustomFieldSetRelation",
       "blocker_category": null
     },
     {
@@ -859,10 +863,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233300CustomField",
       "timestamp": 1536233300,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233300CustomField",
       "blocker_category": null
     },
     {
@@ -871,10 +875,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233310ScheduledTask",
       "timestamp": 1536233310,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233310ScheduledTask",
       "blocker_category": null
     },
     {
@@ -883,10 +887,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233320DeadMessage",
       "timestamp": 1536233320,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233320DeadMessage",
       "blocker_category": null
     },
     {
@@ -895,10 +899,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233330MailTemplate",
       "timestamp": 1536233330,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233330MailTemplate",
       "blocker_category": null
     },
     {
@@ -907,10 +911,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233340NumberRange",
       "timestamp": 1536233340,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233340NumberRange",
       "blocker_category": null
     },
     {
@@ -919,10 +923,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233350ProductVisibility",
       "timestamp": 1536233350,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233350ProductVisibility",
       "blocker_category": null
     },
     {
@@ -931,10 +935,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233360Document",
       "timestamp": 1536233360,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233360Document",
       "blocker_category": null
     },
     {
@@ -943,10 +947,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233370EventAction",
       "timestamp": 1536233370,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233370EventAction",
       "blocker_category": null
     },
     {
@@ -955,10 +959,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233380UserRecovery",
       "timestamp": 1536233380,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233380UserRecovery",
       "blocker_category": null
     },
     {
@@ -967,10 +971,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233390Promotion",
       "timestamp": 1536233390,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233390Promotion",
       "blocker_category": null
     },
     {
@@ -979,10 +983,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233400MailTemplateMedia",
       "timestamp": 1536233400,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233400MailTemplateMedia",
       "blocker_category": null
     },
     {
@@ -991,10 +995,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233410PromotionSalesChannel",
       "timestamp": 1536233410,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233410PromotionSalesChannel",
       "blocker_category": null
     },
     {
@@ -1003,10 +1007,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233420PromotionDiscount",
       "timestamp": 1536233420,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233420PromotionDiscount",
       "blocker_category": null
     },
     {
@@ -1015,10 +1019,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233430NewsletterRecipient",
       "timestamp": 1536233430,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233430NewsletterRecipient",
       "blocker_category": null
     },
     {
@@ -1027,10 +1031,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233440PromotionPersonaCustomer",
       "timestamp": 1536233440,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233440PromotionPersonaCustomer",
       "blocker_category": null
     },
     {
@@ -1039,10 +1043,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233450PromotionPersonaRules",
       "timestamp": 1536233450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233450PromotionPersonaRules",
       "blocker_category": null
     },
     {
@@ -1051,10 +1055,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1536233460NumberRangeTranslationAndConfiguration",
       "timestamp": 1536233460,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1536233460NumberRangeTranslationAndConfiguration",
       "blocker_category": null
     },
     {
@@ -1063,10 +1067,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233470PromotionOrderRule",
       "timestamp": 1536233470,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233470PromotionOrderRule",
       "blocker_category": null
     },
     {
@@ -1075,10 +1079,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233480SalesChannelApiContext",
       "timestamp": 1536233480,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233480SalesChannelApiContext",
       "blocker_category": null
     },
     {
@@ -1087,10 +1091,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233500PromotionDiscountRule",
       "timestamp": 1536233500,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233500PromotionDiscountRule",
       "blocker_category": null
     },
     {
@@ -1099,10 +1103,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233510DocumentConfiguration",
       "timestamp": 1536233510,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233510DocumentConfiguration",
       "blocker_category": null
     },
     {
@@ -1111,10 +1115,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233520PromotionCartRule",
       "timestamp": 1536233520,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233520PromotionCartRule",
       "blocker_category": null
     },
     {
@@ -1123,10 +1127,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233530SalesChannelCategoryId",
       "timestamp": 1536233530,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233530SalesChannelCategoryId",
       "blocker_category": null
     },
     {
@@ -1135,10 +1139,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233540ProductSearchKeyword",
       "timestamp": 1536233540,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233540ProductSearchKeyword",
       "blocker_category": null
     },
     {
@@ -1147,10 +1151,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233550Tag",
       "timestamp": 1536233550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233550Tag",
       "blocker_category": null
     },
     {
@@ -1159,10 +1163,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233560BasicData",
       "timestamp": 1536233560,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233560BasicData",
       "blocker_category": null
     },
     {
@@ -1171,10 +1175,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1552360944MediaFolderConfigurationNoAssoc",
       "timestamp": 1552360944,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1552360944MediaFolderConfigurationNoAssoc",
       "blocker_category": null
     },
     {
@@ -1183,10 +1187,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554199340AddImportExportProfile",
       "timestamp": 1554199340,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554199340AddImportExportProfile",
       "blocker_category": null
     },
     {
@@ -1195,10 +1199,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554200141ImportExportFile",
       "timestamp": 1554200141,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554200141ImportExportFile",
       "blocker_category": null
     },
     {
@@ -1207,10 +1211,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554203706AddImportExportLog",
       "timestamp": 1554203706,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554203706AddImportExportLog",
       "blocker_category": null
     },
     {
@@ -1219,10 +1223,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554900301AddReviewTable",
       "timestamp": 1554900301,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554900301AddReviewTable",
       "blocker_category": null
     },
     {
@@ -1231,10 +1235,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1556809270AddAverageRatingToProduct",
       "timestamp": 1556809270,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1556809270AddAverageRatingToProduct",
       "blocker_category": null
     },
     {
@@ -1243,10 +1247,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558082916AddBreadcrumb",
       "timestamp": 1558082916,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558082916AddBreadcrumb",
       "blocker_category": null
     },
     {
@@ -1255,10 +1259,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558105657CurrencyPrices",
       "timestamp": 1558105657,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558105657CurrencyPrices",
       "blocker_category": null
     },
     {
@@ -1267,10 +1271,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558443337PromotionSalesChannel",
       "timestamp": 1558443337,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558443337PromotionSalesChannel",
       "blocker_category": null
     },
     {
@@ -1279,10 +1283,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558505525Logging",
       "timestamp": 1558505525,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558505525Logging",
       "blocker_category": null
     },
     {
@@ -1291,10 +1295,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558594334PromotionDiscountPrice",
       "timestamp": 1558594334,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558594334PromotionDiscountPrice",
       "blocker_category": null
     },
     {
@@ -1303,10 +1307,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558938938ChangeGroupSortingColumn",
       "timestamp": 1558938938,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558938938ChangeGroupSortingColumn",
       "blocker_category": null
     },
     {
@@ -1315,10 +1319,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050088Promotion",
       "timestamp": 1559050088,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050088Promotion",
       "blocker_category": null
     },
     {
@@ -1327,10 +1331,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050903PromotionExclusion",
       "timestamp": 1559050903,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050903PromotionExclusion",
       "blocker_category": null
     },
     {
@@ -1339,10 +1343,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559134989Promotion",
       "timestamp": 1559134989,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559134989Promotion",
       "blocker_category": null
     },
     {
@@ -1351,10 +1355,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559306391PromotionIndividualCode",
       "timestamp": 1559306391,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559306391PromotionIndividualCode",
       "blocker_category": null
     },
     {
@@ -1363,10 +1367,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561370284AddImportExportProductProfile",
       "timestamp": 1561370284,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561370284AddImportExportProductProfile",
       "blocker_category": null
     },
     {
@@ -1375,10 +1379,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561377793AddAvailableAsShippingCountry",
       "timestamp": 1561377793,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561377793AddAvailableAsShippingCountry",
       "blocker_category": null
     },
     {
@@ -1387,10 +1391,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1561442979ElasticsearchIndexTask",
       "timestamp": 1561442979,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1561442979ElasticsearchIndexTask",
       "blocker_category": null
     },
     {
@@ -1399,10 +1403,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561452005Update",
       "timestamp": 1561452005,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561452005Update",
       "blocker_category": null
     },
     {
@@ -1411,10 +1415,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561712450NewSystemConfigsAndDefaultValues",
       "timestamp": 1561712450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561712450NewSystemConfigsAndDefaultValues",
       "blocker_category": null
     },
     {
@@ -1423,10 +1427,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562228335SetConfigDefaults",
       "timestamp": 1562228335,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562228335SetConfigDefaults",
       "blocker_category": null
     },
     {
@@ -1435,10 +1439,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562240231UserPasswordRecovery",
       "timestamp": 1562240231,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562240231UserPasswordRecovery",
       "blocker_category": null
     },
     {
@@ -1447,10 +1451,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562306893MakeCustomerFirstLoginDateTime",
       "timestamp": 1562306893,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562306893MakeCustomerFirstLoginDateTime",
       "blocker_category": null
     },
     {
@@ -1459,10 +1463,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562324772AddOrderDateToOrder",
       "timestamp": 1562324772,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562324772AddOrderDateToOrder",
       "blocker_category": null
     },
     {
@@ -1471,10 +1475,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562579120ProductAvailableFields",
       "timestamp": 1562579120,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562579120ProductAvailableFields",
       "blocker_category": null
     },
     {
@@ -1483,10 +1487,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562684474AddDeliveryTime",
       "timestamp": 1562684474,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562684474AddDeliveryTime",
       "blocker_category": null
     },
     {
@@ -1495,10 +1499,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562841035AddProductChildCount",
       "timestamp": 1562841035,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562841035AddProductChildCount",
       "blocker_category": null
     },
     {
@@ -1507,10 +1511,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562933907ContactForm",
       "timestamp": 1562933907,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562933907ContactForm",
       "blocker_category": null
     },
     {
@@ -1519,10 +1523,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563180880AddDefaultThumbnailSizes",
       "timestamp": 1563180880,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563180880AddDefaultThumbnailSizes",
       "blocker_category": null
     },
     {
@@ -1531,10 +1535,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563288227MarkAsNewConfig",
       "timestamp": 1563288227,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563288227MarkAsNewConfig",
       "blocker_category": null
     },
     {
@@ -1543,10 +1547,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563518181PromotionDiscount",
       "timestamp": 1563518181,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563518181PromotionDiscount",
       "blocker_category": null
     },
     {
@@ -1555,10 +1559,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563805586AddLanguageToOrder",
       "timestamp": 1563805586,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563805586AddLanguageToOrder",
       "blocker_category": null
     },
     {
@@ -1567,10 +1571,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563949275AddCompanyToOrderCustomer",
       "timestamp": 1563949275,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563949275AddCompanyToOrderCustomer",
       "blocker_category": null
     },
     {
@@ -1579,10 +1583,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1564475053RemoveSaveDocumentsConfig",
       "timestamp": 1564475053,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1564475053RemoveSaveDocumentsConfig",
       "blocker_category": null
     },
     {
@@ -1591,10 +1595,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565007156RemoveAutoIncrement",
       "timestamp": 1565007156,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565007156RemoveAutoIncrement",
       "blocker_category": null
     },
     {
@@ -1603,10 +1607,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565079228AddAclStructure",
       "timestamp": 1565079228,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565079228AddAclStructure",
       "blocker_category": null
     },
     {
@@ -1615,10 +1619,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270155PromotionSetGroup",
       "timestamp": 1565270155,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270155PromotionSetGroup",
       "blocker_category": null
     },
     {
@@ -1627,10 +1631,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270366PromotionSetGroupRule",
       "timestamp": 1565270366,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270366PromotionSetGroupRule",
       "blocker_category": null
     },
     {
@@ -1639,10 +1643,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565346846Promotion",
       "timestamp": 1565346846,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565346846Promotion",
       "blocker_category": null
     },
     {
@@ -1651,10 +1655,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565705280ProductExport",
       "timestamp": 1565705280,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565705280ProductExport",
       "blocker_category": null
     },
     {
@@ -1663,10 +1667,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566293076AddAutoIncrement",
       "timestamp": 1566293076,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566293076AddAutoIncrement",
       "blocker_category": null
     },
     {
@@ -1675,10 +1679,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566460168UpdateTexts",
       "timestamp": 1566460168,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566460168UpdateTexts",
       "blocker_category": null
     },
     {
@@ -1687,10 +1691,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566817701AddDisplayGroup",
       "timestamp": 1566817701,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566817701AddDisplayGroup",
       "blocker_category": null
     },
     {
@@ -1699,10 +1703,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1567431050ContactFormTemplate",
       "timestamp": 1567431050,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1567431050ContactFormTemplate",
       "blocker_category": null
     },
     {
@@ -1711,10 +1715,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120239CmsSection",
       "timestamp": 1568120239,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120239CmsSection",
       "blocker_category": null
     },
     {
@@ -1723,10 +1727,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120302CmsBlockUpdate",
       "timestamp": 1568120302,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120302CmsBlockUpdate",
       "blocker_category": null
     },
     {
@@ -1735,10 +1739,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568645037AddEnqueueDbal",
       "timestamp": 1568645037,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568645037AddEnqueueDbal",
       "blocker_category": null
     },
     {
@@ -1747,10 +1751,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568901713PromotionDiscount",
       "timestamp": 1568901713,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568901713PromotionDiscount",
       "blocker_category": null
     },
     {
@@ -1759,10 +1763,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1569403146ProductVisibilityUnique",
       "timestamp": 1569403146,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1569403146ProductVisibilityUnique",
       "blocker_category": null
     },
     {
@@ -1771,10 +1775,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570187167AddedAppConfig",
       "timestamp": 1570187167,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570187167AddedAppConfig",
       "blocker_category": null
     },
     {
@@ -1783,10 +1787,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570459127AddCmsSidebarLayout",
       "timestamp": 1570459127,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570459127AddCmsSidebarLayout",
       "blocker_category": null
     },
     {
@@ -1795,10 +1799,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570621541UpdateDefaultMailTemplates",
       "timestamp": 1570621541,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570621541UpdateDefaultMailTemplates",
       "blocker_category": null
     },
     {
@@ -1807,10 +1811,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570622696CustomerPasswordRecovery",
       "timestamp": 1570622696,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570622696CustomerPasswordRecovery",
       "blocker_category": null
     },
     {
@@ -1819,10 +1823,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570629862ClearCategoryBreadcrumbs",
       "timestamp": 1570629862,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570629862ClearCategoryBreadcrumbs",
       "blocker_category": null
     },
     {
@@ -1831,10 +1835,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570684913ScheduleIndexer",
       "timestamp": 1570684913,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570684913ScheduleIndexer",
       "blocker_category": null
     },
     {
@@ -1843,10 +1847,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571059598ChangeGreatBritainToUnitedKingdom",
       "timestamp": 1571059598,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571059598ChangeGreatBritainToUnitedKingdom",
       "blocker_category": null
     },
     {
@@ -1855,10 +1859,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571210820AddPaymentMethodIdsToSalesChannel",
       "timestamp": 1571210820,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571210820AddPaymentMethodIdsToSalesChannel",
       "blocker_category": null
     },
     {
@@ -1867,10 +1871,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571660203FixOrderDeliveryStateNames",
       "timestamp": 1571660203,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571660203FixOrderDeliveryStateNames",
       "blocker_category": null
     },
     {
@@ -1879,10 +1883,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571724915MultipleTrackingCodesInOrderDelivery",
       "timestamp": 1571724915,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571724915MultipleTrackingCodesInOrderDelivery",
       "blocker_category": null
     },
     {
@@ -1891,10 +1895,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571981437AddSeoColumns",
       "timestamp": 1571981437,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571981437AddSeoColumns",
       "blocker_category": null
     },
     {
@@ -1903,10 +1907,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571990395UpdateDefaultStatusMailTemplates",
       "timestamp": 1571990395,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571990395UpdateDefaultStatusMailTemplates",
       "blocker_category": null
     },
     {
@@ -1915,10 +1919,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572193798TaxRule",
       "timestamp": 1572193798,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572193798TaxRule",
       "blocker_category": null
     },
     {
@@ -1927,10 +1931,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572264837AddCacheId",
       "timestamp": 1572264837,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572264837AddCacheId",
       "blocker_category": null
     },
     {
@@ -1939,10 +1943,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType",
       "timestamp": 1572273565,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType",
       "blocker_category": null
     },
     {
@@ -1951,10 +1955,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572421282AddDoubleOptInRegistration",
       "timestamp": 1572421282,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572421282AddDoubleOptInRegistration",
       "blocker_category": null
     },
     {
@@ -1963,10 +1967,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572425108AddDoubleOptInRegistrationMailTemplate",
       "timestamp": 1572425108,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572425108AddDoubleOptInRegistrationMailTemplate",
       "blocker_category": null
     },
     {
@@ -1975,10 +1979,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572957455AddAffiliateTrackingColumns",
       "timestamp": 1572957455,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572957455AddAffiliateTrackingColumns",
       "blocker_category": null
     },
     {
@@ -1987,10 +1991,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573049297AddReopenTransitionToDeliveryStates",
       "timestamp": 1573049297,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573049297AddReopenTransitionToDeliveryStates",
       "blocker_category": null
     },
     {
@@ -1999,10 +2003,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573569685DoubleOptInGuestMailTemplate",
       "timestamp": 1573569685,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573569685DoubleOptInGuestMailTemplate",
       "blocker_category": null
     },
     {
@@ -2011,10 +2015,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573729158AddSitemapConfig",
       "timestamp": 1573729158,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573729158AddSitemapConfig",
       "blocker_category": null
     },
     {
@@ -2023,10 +2027,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574063550AddCurrencyToProductExport",
       "timestamp": 1574063550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574063550AddCurrencyToProductExport",
       "blocker_category": null
     },
     {
@@ -2035,10 +2039,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574082635AddOrderLineItemProductId",
       "timestamp": 1574082635,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574082635AddOrderLineItemProductId",
       "blocker_category": null
     },
     {
@@ -2047,10 +2051,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258787ProductSearchLanguageKey",
       "timestamp": 1574258787,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258787ProductSearchLanguageKey",
       "blocker_category": null
     },
     {
@@ -2059,10 +2063,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258788TaxRuleLanguageKey",
       "timestamp": 1574258788,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258788TaxRuleLanguageKey",
       "blocker_category": null
     },
     {
@@ -2071,10 +2075,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258789ProductReviewLanguageKey",
       "timestamp": 1574258789,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258789ProductReviewLanguageKey",
       "blocker_category": null
     },
     {
@@ -2083,10 +2087,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574520220AddSalesChannelMaintenance",
       "timestamp": 1574520220,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574520220AddSalesChannelMaintenance",
       "blocker_category": null
     },
     {
@@ -2095,10 +2099,10 @@
       "status": "registered_variant",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable",
       "timestamp": 1574672450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable",
       "blocker_category": null
     },
     {
@@ -2227,11 +2231,11 @@
       "translated_sql_literals": 2,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1575197543,
@@ -2263,7 +2267,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1575293069,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575293069OrderMailTemplates",
@@ -2275,10 +2279,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575451283,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575451283AddLimitToCrossSelling",
@@ -2292,7 +2297,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1575626180,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575626180RemoveSearchKeywordInheritance",
@@ -2304,10 +2309,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1575883959ResetListingPrices",
       "timestamp": 1575883959,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1575883959ResetListingPrices",
       "blocker_category": null
     },
     {
@@ -2316,10 +2321,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1576488398,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1576488398AddOrderLineItemPosition",
@@ -2331,8 +2337,7 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 4,
       "unhandled_shapes": [
-        "mixed-case MySQL identifier quoting needs review",
-        "mysql key/index alter syntax"
+        "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "alter_drop_foreign_key_to_drop_constraint": 2,
@@ -2352,7 +2357,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1578042218,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578042218DefaultPages",
@@ -2364,10 +2369,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1578044453,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578044453AddedNavigationDepth",
@@ -2379,10 +2385,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578470886FixPurchaseSteps",
       "timestamp": 1578470886,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578470886FixPurchaseSteps",
       "blocker_category": null
     },
     {
@@ -2407,10 +2413,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578485775UseStableUpdateChannel",
       "timestamp": 1578485775,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578485775UseStableUpdateChannel",
       "blocker_category": null
     },
     {
@@ -2419,13 +2425,15 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 4,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
-        "mixed-case MySQL identifier quoting needs review",
-        "tinyint type",
-        "unsigned numeric type"
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 3,
+        "alter_tinyint_to_smallint": 2,
+        "alter_unsigned_removed": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1578491480,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578491480Hreflang",
@@ -2437,10 +2445,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1578590702,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578590702AddedPropertyGroupPosition",
@@ -2452,10 +2461,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578648299ReindexSeoUrls",
       "timestamp": 1578648299,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578648299ReindexSeoUrls",
       "blocker_category": null
     },
     {
@@ -2465,16 +2474,16 @@
       "translated_sql_literals": 2,
       "unhandled_shapes": [
         "double-quoted SQL token is dialect-ambiguous",
-        "mixed-case MySQL identifier quoting needs review",
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order"
+        "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 1,
         "create_table_tinyint_to_smallint": 2,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1578650334,
@@ -2489,7 +2498,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1580202210,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580202210DefaultRule",
@@ -2501,15 +2510,16 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 3,
       "unhandled_shapes": [
-        "binary type/function",
         "json type/function",
         "mysql alter syntax",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
-        "trigger syntax",
-        "double-quoted SQL token is dialect-ambiguous"
+        "trigger syntax"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1580218617,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580218617RefactorShippingMethodPrice",
@@ -2524,7 +2534,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1580743279,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580743279UpdateDeliveryMailTemplates",
@@ -2539,7 +2549,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1580746806,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580746806AddPaymentStates",
@@ -2553,7 +2563,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1580808849,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580808849AddGermanContactFormTranslation",
@@ -2566,10 +2576,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "mysql text/blob type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1580819350,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580819350AddTrackingUrl",
@@ -2583,14 +2594,14 @@
       "unhandled_shapes": [
         "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
-        "MySQL AFTER column placement changes schema order",
-        "binary type/function",
         "mysql alter syntax"
       ],
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 4,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "alter_after_column_placement_removed": 2,
+        "alter_binary16_to_bytea_with_length_check": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1580827023,
@@ -2603,7 +2614,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1582011195,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1582011195FixCountryStateGermanTranslation",
@@ -2618,7 +2629,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1583142266,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay",
@@ -2633,7 +2644,7 @@
         "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1583416186,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583416186KeywordUniques",
@@ -2682,12 +2693,13 @@
       "translated_sql_literals": 6,
       "unhandled_shapes": [
         "json type/function",
-        "binary type/function",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "alter_binary16_to_bytea_with_length_check": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1584002637,
@@ -2704,7 +2716,7 @@
         "dynamic SQL concatenation",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1584953715,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1584953715UpdateMailTemplatesAfterOrderLink",
@@ -2716,11 +2728,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1585056571,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585056571AddLanguageToMailTemplateMedia",
@@ -2735,10 +2749,11 @@
         "mysql collation",
         "mysql text/blob type",
         "mysql collation with quoted name",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1585126355,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585126355AddOrderCommentField",
@@ -2753,7 +2768,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1585490020,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585490020ActivateHoneypotCaptcha",
@@ -2767,7 +2782,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1585744384,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585744384ChangeCategoryProfile",
@@ -2813,7 +2828,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1586173614,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586173614AddAdditionalImportExportProfiles",
@@ -2825,10 +2840,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1586260286,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586260286AddProductMainVariant",
@@ -2878,12 +2895,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order",
-        "mixed-case MySQL identifier quoting needs review",
-        "double-quoted SQL token is dialect-ambiguous"
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1587109484,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587109484AddAfterOrderPaymentFlag",
@@ -2892,16 +2910,16 @@
     {
       "class_file": "Migration1587111506AddPausedScheduleToProductExport.php",
       "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1587111506AddPausedScheduleToProductExport",
-      "status": "diagnostic_emitted_with_unhandled_shapes",
-      "translated_sql_literals": 0,
-      "unhandled_shapes": [
-        "tinyint type"
-      ],
-      "applied_rules": [],
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1587111506,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587111506AddPausedScheduleToProductExport",
-      "blocker_category": "diagnostic output retains unhandled SQL/runtime shapes"
+      "blocker_category": null
     },
     {
       "class_file": "Migration1587461582AddOpenToPaidTransition.php",
@@ -2912,7 +2930,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1587461582,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587461582AddOpenToPaidTransition",
@@ -2928,7 +2946,7 @@
         "dynamic SQL concatenation",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1588143272,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1588143272UpdateOrderStateChangeMailTemplates",
@@ -2940,10 +2958,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1588144801TriggerIndexer",
       "timestamp": 1588144801,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1588144801TriggerIndexer",
       "blocker_category": null
     },
     {
@@ -2955,7 +2973,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1588153272,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1588153272UpdateGermanMailTemplates",
@@ -2967,10 +2985,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1589178550,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589178550AddTaxCalculationType",
@@ -2984,7 +3003,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1589357321,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589357321AddCountries",
@@ -3014,7 +3033,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1589379060,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589379060AddVariantCharacteristicsToEmailTemplates",
@@ -3026,10 +3045,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "tinyint type",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1589447332,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589447332AddFilterableToPropertyGroup",
@@ -3043,7 +3063,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1589458026,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589458026SetDefaultReviewConfig",
@@ -3056,12 +3076,13 @@
       "translated_sql_literals": 5,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review",
         "mysql alter syntax",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1590408550,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590408550AclResources",
@@ -3077,7 +3098,7 @@
         "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1590409548,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590409548AddPackUnitPluralMigration",
@@ -3089,10 +3110,10 @@
       "status": "registered_portable_mapping",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
-      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1590566018RenameDefaultMediaFolders",
       "timestamp": 1590566018,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1590566018RenameDefaultMediaFolders",
       "blocker_category": null
     },
     {
@@ -3103,7 +3124,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1590566405,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590566405InvalidateSessionOnLogOut",
@@ -3135,8 +3156,6 @@
         "mysql text/blob type",
         "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
@@ -3144,7 +3163,9 @@
         "create_table_binary16_to_bytea_with_length_check": 3,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
         "create_table_default_collation_to_sw_type_ci": 2,
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1590758953,
@@ -3159,7 +3180,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1591052278,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591052278AddPropertyAndOptionIdsToProductProfile",
@@ -3173,10 +3194,11 @@
       "unhandled_shapes": [
         "mysql text/blob type",
         "mysql collation with quoted name",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1591167126,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591167126RoleDescription",
@@ -3191,7 +3213,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": true,
       "timestamp": 1591253089,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591253089OrderDeeplinkForMailTemplates",
@@ -3206,7 +3228,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1591259559,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591259559AddMissingCurrency",
@@ -3215,16 +3237,16 @@
     {
       "class_file": "Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn.php",
       "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn",
-      "status": "diagnostic_emitted_with_unhandled_shapes",
-      "translated_sql_literals": 0,
-      "unhandled_shapes": [
-        "tinyint type"
-      ],
-      "applied_rules": [],
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1591272594,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn",
-      "blocker_category": "diagnostic output retains unhandled SQL/runtime shapes"
+      "blocker_category": null
     },
     {
       "class_file": "Migration1591361320ChargebackAndAuthorized.php",
@@ -3235,7 +3257,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1591361320,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591361320ChargebackAndAuthorized",
@@ -3249,7 +3271,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1591683158,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591683158PromotionDiscount",
@@ -3281,7 +3303,7 @@
         "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1592466717,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1592466717AddKeywordIndex",
@@ -3293,11 +3315,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1592837424,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1592837424AddProductTypeToCategory",
@@ -3310,13 +3334,13 @@
       "translated_sql_literals": 2,
       "unhandled_shapes": [
         "double-quoted SQL token is dialect-ambiguous",
-        "mixed-case MySQL identifier quoting needs review",
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order"
+        "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
-        "create_table_binary16_to_bytea_with_length_check": 3
+        "create_table_binary16_to_bytea_with_length_check": 3,
+        "alter_tinyint_to_smallint": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1592978289,
@@ -3330,14 +3354,14 @@
       "translated_sql_literals": 3,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review",
         "double-quoted SQL token is dialect-ambiguous",
         "formatted dynamic SQL",
         "trigger syntax"
       ],
       "applied_rules": {
-        "comparison_double_quoted_literal_to_single_quoted": 1
+        "comparison_double_quoted_literal_to_single_quoted": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1593698606,
@@ -3352,7 +3376,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594650256,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594650256AddMailTemplateSalesChannelPK",
@@ -3366,7 +3390,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594885630,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594885630AddUserRecoveryPK",
@@ -3380,7 +3404,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594886106,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886106AddDocumentBaseConfigSalesChannelPK",
@@ -3394,7 +3418,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594886773,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886773LogEntryPK",
@@ -3408,7 +3432,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594886895,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886895CustomerRecoveryPK",
@@ -3422,7 +3446,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1594887027,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594887027AppConfigPK",
@@ -3434,10 +3458,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1595160327,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595160327AddPositionToCustomFieldSet",
@@ -3493,7 +3518,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1595480600,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595480600RemoveGoogleShoppingSalesChannel",
@@ -3507,7 +3532,7 @@
       "unhandled_shapes": [
         "trigger syntax"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1595489705,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595489705PreventOldListingPrices",
@@ -3564,7 +3589,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1595499689,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595499689RemoveGoogleShoppingRelatedTables",
@@ -3579,7 +3604,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "dynamic SQL concatenation"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": true,
       "timestamp": 1595553089,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595553089FixOrderConfirmationMailForAllPayloads",
@@ -3591,10 +3616,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "tinyint type",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1595578253,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595578253CustomFieldSetSelection",
@@ -3642,15 +3668,17 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 5,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax",
-        "tinyint type",
         "mysql text/blob type",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 6,
+        "alter_tinyint_to_smallint": 2
+      },
       "source_dir_references_rebased": true,
       "timestamp": 1596441551,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1596441551CustomerGroupRegistration",
@@ -3686,11 +3714,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1597394241,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597394241AddAppIdToCustomFieldSet",
@@ -3787,7 +3817,7 @@
         "mysql alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1598280548,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598280548NullableSeoUrlTemplate",
@@ -3818,7 +3848,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1598885384,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598885384RedirectToLatestSeoUrl",
@@ -3832,7 +3862,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1599112309,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599112309AddListingFilterSystemConfigOption",
@@ -3846,7 +3876,7 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1599134496,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599134496FixImportExportProfilesForGermanLanguage",
@@ -3858,11 +3888,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1599463278,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599463278AddCustomerIdIntoSalesChannelContext",
@@ -3874,7 +3906,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1599570560,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599570560FixSlovakiaDisplayedAsSlovenia",
@@ -3886,11 +3918,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1599720163,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599720163AddEventActiveColumn",
@@ -3940,7 +3973,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1599822061,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599822061MigrateOrderMails",
@@ -3969,10 +4002,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1600156989,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600156989AddProductSalesField",
@@ -3987,7 +4021,7 @@
         "json type/function",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1600253602,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600253602AddOrderRuleIds",
@@ -3999,13 +4033,14 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "tinyint type",
         "mysql alter syntax",
-        "unsigned numeric type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1,
+        "alter_unsigned_removed": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1600330846,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600330846ChangeActiveColumn",
@@ -4019,7 +4054,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1600338271,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600338271AddTopsellerSorting",
@@ -4033,7 +4068,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1600349343,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600349343AddDeliveryStateTransitions",
@@ -4063,7 +4098,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1600769357,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600769357AddTransition",
@@ -4075,7 +4110,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": true,
       "timestamp": 1600778848,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600778848AddOrderMails",
@@ -4106,13 +4141,13 @@
       "unhandled_shapes": [
         "double-quoted SQL token is dialect-ambiguous",
         "CREATE TABLE idempotency semantics need review",
-        "mixed-case MySQL identifier quoting needs review",
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order"
+        "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
-        "create_table_binary16_to_bytea_with_length_check": 2
+        "create_table_binary16_to_bytea_with_length_check": 2,
+        "alter_tinyint_to_smallint": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1601539530,
@@ -4125,10 +4160,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1601543829,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601543829AddBoundSalesChannelIdColumnIntoCustomer",
@@ -4140,10 +4177,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1601891339,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601891339EventActionTitle",
@@ -4158,7 +4196,7 @@
         "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1602062376,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602062376AddUniqueConstraintForEmailAndBoundSalesChannelIdIntoCustomerTable",
@@ -4170,11 +4208,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1602146868,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602146868AddTaxTypeToShippingMethod",
@@ -4188,11 +4228,12 @@
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax",
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order"
+        "double-quoted SQL token is dialect-ambiguous"
       ],
       "applied_rules": {
-        "alter_drop_foreign_key_to_drop_constraint": 1
+        "alter_drop_foreign_key_to_drop_constraint": 1,
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1602153572,
@@ -4207,7 +4248,7 @@
       "unhandled_shapes": [
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1602494493,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602494493AddDefaultSettingConfigValueForWishlist",
@@ -4222,7 +4263,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "quoted UPDATE value may be a MySQL string"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1602494495,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602494495SetUsersAsAdmins",
@@ -4232,16 +4273,18 @@
       "class_file": "Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer.php",
       "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer",
       "status": "diagnostic_emitted_with_unhandled_shapes",
-      "translated_sql_literals": 4,
+      "translated_sql_literals": 2,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review",
         "quoted UPDATE value may be a MySQL string",
         "trigger syntax",
-        "double-quoted SQL token is dialect-ambiguous"
+        "double-quoted SQL token is dialect-ambiguous",
+        "MySQL AFTER column placement changes schema order"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1602745374,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer",
@@ -4253,11 +4296,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 2,
+        "alter_after_column_placement_removed": 3
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1602822727,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602822727AddVatHandlingIntoCountryTable",
@@ -4272,7 +4316,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1603179023,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603179023AddDefaultSettingConfigValueForProductListingPerPage",
@@ -4284,7 +4328,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1603293043,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603293043FixCurrencyTypo",
@@ -4299,7 +4343,7 @@
         "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1603970276,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603970276RemoveCustomerEmailUniqueConstraint",
@@ -4351,11 +4395,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1604475913,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604475913AddCMSPageIdToProductTable",
@@ -4370,7 +4416,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1604499476,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604499476AddDefaultSettingConfigValueForContactForm",
@@ -4382,11 +4428,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "tinyint type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_tinyint_to_smallint": 1,
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1604568928,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604568928AddConfigurableToApp",
@@ -4398,7 +4445,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": true,
       "timestamp": 1604669773,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604669773UpdateMailTemplate",
@@ -4411,11 +4458,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1605103533,
@@ -4429,10 +4476,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "mysql text/blob type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1605530777,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605530777PrivacyPolicyExtensionsToAppTranslation",
@@ -4444,11 +4492,13 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 3,
       "unhandled_shapes": [
-        "binary type/function",
-        "MySQL AFTER column placement changes schema order",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 2,
+        "alter_after_column_placement_removed": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1605609309,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605609309AddCreatedByIdAndUpdatedByIdToOrder",
@@ -4494,10 +4544,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "binary type/function",
+        "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_binary16_to_bytea_with_length_check": 3
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1606310257,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1606310257AddCanonicalUrlProp",
@@ -4512,7 +4564,7 @@
         "mysql alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1607415095,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607415095PromotionRedemptionsNullable",
@@ -4524,7 +4576,7 @@
       "status": "diagnostic_emitted",
       "translated_sql_literals": 0,
       "unhandled_shapes": [],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1607500561,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607500561UpdateSignUpMailTemplateTranslation",
@@ -4539,7 +4591,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1607514878,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607514878AddOrderDeliveryRetourTransition",
@@ -4577,7 +4629,7 @@
         "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": true,
       "timestamp": 1607581276,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607581276AddProductSearchConfigurationDefaults",
@@ -4604,10 +4656,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "mysql datetime or medium integer type",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1609125144,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1609125144AddLastUpdatedPasswordAtColumnIntoUser",
@@ -4660,7 +4713,7 @@
         "trigger syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1610965670,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1610965670RemoveDeprecatedColumns",
@@ -4674,7 +4727,7 @@
       "unhandled_shapes": [
         "trigger syntax"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1610974673,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1610974673DropProductListingPriceTrigger",
@@ -4690,7 +4743,7 @@
         "mysql datetime or medium integer type",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {},
       "source_dir_references_rebased": false,
       "timestamp": 1611155140,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1611155140AddUpdatedAtToSalesChannelApiContext",
@@ -4703,10 +4756,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "json type/function",
-        "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "alter_after_column_placement_removed": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1614240671,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1614240671AddVatIdsToOrderCustomer",

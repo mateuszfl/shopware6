@@ -74,7 +74,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         if (!TableHelper::columnExists($connection, 'product', 'product_feature_set_id')) {
             $sql = <<<'SQL'
             ALTER TABLE "product"
-                ADD COLUMN "product_feature_set_id" BINARY(16) NULL;
+                ADD COLUMN "product_feature_set_id" BYTEA CHECK (octet_length("product_feature_set_id") = 16) NULL;
             ALTER TABLE "product"
                 ADD CONSTRAINT "fk.product.feature_set_id" FOREIGN KEY ("product_feature_set_id")
                     REFERENCES "product_feature_set" ("id") ON DELETE SET NULL ON UPDATE CASCADE;

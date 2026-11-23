@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1578650334AddGoogleAnalyticsTable extends MigrationStep
     {
         return 1578650334;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement(<<<'SQL'
@@ -33,10 +36,11 @@ class Migration1578650334AddGoogleAnalyticsTable extends MigrationStep
         SQL);
         $connection->executeStatement(<<<'SQL'
                     ALTER TABLE "sales_channel"
-                    ADD "analytics_id" binary(16) NULL,
+                    ADD "analytics_id" BYTEA CHECK (octet_length("analytics_id") = 16) NULL,
                     ADD CONSTRAINT "fk.sales_channel.analytics_id" FOREIGN KEY ("analytics_id") REFERENCES "sales_channel_analytics" ("id") ON DELETE CASCADE ON UPDATE CASCADE
         SQL);
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1601539530IntergrationRoleEntity extends MigrationStep
     {
         return 1601539530;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -31,8 +34,9 @@ class Migration1601539530IntergrationRoleEntity extends MigrationStep
                 REFERENCES "integration" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             );
         ');
-        $connection->executeStatement('ALTER TABLE "integration" ADD "admin" tinyint(1) NOT NULL DEFAULT \'1\';');
+        $connection->executeStatement('ALTER TABLE "integration" ADD "admin" SMALLINT NOT NULL DEFAULT \'1\';');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

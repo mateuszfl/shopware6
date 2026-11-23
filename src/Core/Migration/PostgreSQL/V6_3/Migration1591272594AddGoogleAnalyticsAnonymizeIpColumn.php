@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,11 +20,13 @@ class Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn extends MigrationSt
     {
         return 1591272594;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE sales_channel_analytics
-            ADD COLUMN anonymize_ip TINYINT(1) NOT NULL DEFAULT 1');
+            ADD COLUMN anonymize_ip SMALLINT NOT NULL DEFAULT 1');
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,16 +20,18 @@ class Migration1602146868AddTaxTypeToShippingMethod extends MigrationStep
     {
         return 1602146868;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
             ALTER TABLE "shipping_method"
             ADD "tax_type" varchar(50) NULL DEFAULT \'auto\',
-            ADD "tax_id" BINARY(16) NULL,
+            ADD "tax_id" BYTEA CHECK (octet_length("tax_id") = 16) NULL,
             ADD CONSTRAINT "fk.shipping_method.tax_id" FOREIGN KEY ("tax_id")
                 REFERENCES "tax" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

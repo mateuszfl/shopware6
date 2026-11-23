@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,24 +20,28 @@ class Migration1602822727AddVatHandlingIntoCountryTable extends MigrationStep
      * @var array<string, string>
      */
     private array $countryIds;
+
     public function getCreationTimestamp(): int
     {
         return 1602822727;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
             ALTER TABLE "country"
-            ADD COLUMN "company_tax_free" TINYINT (1) NOT NULL DEFAULT 0,
-            ADD COLUMN "check_vat_id_pattern" TINYINT (1) NOT NULL DEFAULT 0,
+            ADD COLUMN "company_tax_free" SMALLINT NOT NULL DEFAULT 0,
+            ADD COLUMN "check_vat_id_pattern" SMALLINT NOT NULL DEFAULT 0,
             ADD COLUMN "vat_id_pattern" VARCHAR (255) NULL;
         ');
         $this->addCountryVatPattern($connection);
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     private function addCountryVatPattern(Connection $connection): void
     {
         $this->fetchCountryIds($connection);
@@ -47,6 +53,7 @@ class Migration1602822727AddVatHandlingIntoCountryTable extends MigrationStep
             $connection->update('country', ['vat_id_pattern' => $countryVatPattern], ['id' => $this->countryIds[$isoCode]]);
         }
     }
+
     private function fetchCountryIds(Connection $connection): void
     {
         /** @var list<array{id: string, iso: string}> $countries */
@@ -55,6 +62,7 @@ class Migration1602822727AddVatHandlingIntoCountryTable extends MigrationStep
             $this->countryIds[$country['iso']] = $country['id'];
         }
     }
+
     /**
      * @return array<string, string>
      */

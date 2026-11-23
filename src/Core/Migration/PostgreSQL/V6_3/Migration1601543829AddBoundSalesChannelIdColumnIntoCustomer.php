@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,14 +20,16 @@ class Migration1601543829AddBoundSalesChannelIdColumnIntoCustomer extends Migrat
     {
         return 1601543829;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
             ALTER TABLE "customer"
-            ADD COLUMN "bound_sales_channel_id" BINARY(16) NULL DEFAULT NULL,
+            ADD COLUMN "bound_sales_channel_id" BYTEA CHECK (octet_length("bound_sales_channel_id") = 16) NULL DEFAULT NULL,
             ADD CONSTRAINT "fk.customer.bound_sales_channel_id" FOREIGN KEY ("bound_sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

@@ -71,7 +71,7 @@ class Migration1584002637NewImportExport extends MigrationStep
     private function addInvalidRecordsLog(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "import_export_log"
-            ADD COLUMN "invalid_records_log_id" BINARY(16),
+            ADD COLUMN "invalid_records_log_id" BYTEA CHECK (octet_length("invalid_records_log_id") = 16),
             ADD CONSTRAINT "fk.import_export_log.invalid_records_log_id"
                 FOREIGN KEY ("invalid_records_log_id")
                 REFERENCES "import_export_log" ("id")

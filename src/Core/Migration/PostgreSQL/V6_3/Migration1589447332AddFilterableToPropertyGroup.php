@@ -2,13 +2,15 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -19,6 +21,7 @@ class Migration1589447332AddFilterableToPropertyGroup extends MigrationStep
     {
         return 1589447332;
     }
+
     /**
      * @throws Exception
      */
@@ -26,9 +29,10 @@ class Migration1589447332AddFilterableToPropertyGroup extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "property_group"
-            ADD COLUMN "filterable" TINYINT(1) NOT NULL DEFAULT 1
+            ADD COLUMN "filterable" SMALLINT NOT NULL DEFAULT 1
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

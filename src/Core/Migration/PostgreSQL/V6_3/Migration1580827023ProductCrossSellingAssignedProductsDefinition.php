@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1580827023ProductCrossSellingAssignedProductsDefinition extends M
     {
         return 1580827023;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('CREATE TABLE IF NOT EXISTS "product_cross_selling_assigned_products" (
@@ -38,8 +41,9 @@ class Migration1580827023ProductCrossSellingAssignedProductsDefinition extends M
         $connection->executeStatement('ALTER TABLE "product_cross_selling"
 ADD "type" varchar(255) NOT NULL;');
         $connection->executeStatement('ALTER TABLE "product_cross_selling"
-CHANGE "product_stream_id" "product_stream_id" binary(16) NULL;');
+CHANGE "product_stream_id" "product_stream_id" BYTEA CHECK (octet_length("product_stream_id") = 16) NULL;');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

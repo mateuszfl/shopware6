@@ -2,7 +2,8 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,6 +12,7 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -21,15 +23,18 @@ class Migration1596441551CustomerGroupRegistration extends MigrationStep
     {
         return 1596441551;
     }
+
     public function update(Connection $connection): void
     {
         $this->updateCustomerTable($connection);
         $this->createTables($connection);
         $this->createMailTypes($connection);
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }
+
     public function createMailTypes(Connection $connection): void
     {
         $enLangId = $this->fetchLanguageId('en-GB', $connection);
@@ -54,27 +59,30 @@ class Migration1596441551CustomerGroupRegistration extends MigrationStep
             $this->createMailTemplates($connection, $translations, $typeName, $typeId, $enLangId, $deLangId);
         }
     }
+
     private function updateCustomerTable(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "customer"
-ADD "requested_customer_group_id" binary(16) NULL;');
+ADD "requested_customer_group_id" BYTEA CHECK (octet_length("requested_customer_group_id") = 16) NULL;');
         $connection->executeStatement('ALTER TABLE "customer"
 ADD INDEX "fk.customer.requested_customer_group_id" ("requested_customer_group_id");');
     }
+
     private function createTables(Connection $connection): void
     {
         $connection->executeStatement('
 ALTER TABLE "customer_group"
-ADD "registration_active" tinyint(1) NOT NULL DEFAULT \'0\';
+ADD "registration_active" SMALLINT NOT NULL DEFAULT \'0\';
 ');
         $connection->executeStatement('
 ALTER TABLE "customer_group_translation"
 ADD "registration_title" varchar(255) NULL,
 ADD "registration_introduction" longtext NULL,
-ADD "registration_only_company_registration" tinyint(1) NULL,
+ADD "registration_only_company_registration" SMALLINT NULL,
 ADD "registration_seo_meta_description" longtext NULL;
 ');
     }
+
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -89,14 +97,16 @@ ADD "registration_seo_meta_description" longtext NULL;
         if (!$langId) {
             return null;
         }
+
         return $langId;
     }
+
     /**
      * @param array{'en-GB': string, 'de-DE': string} $typeTranslations
      */
     private function createMailTemplates(Connection $connection, array $typeTranslations, string $typeName, string $typeId, ?string $enLangId, ?string $deLangId): void
     {
-        $mailTemplateContent = require dirname(__FILE__, 2) . '/V6_3' . '/../Fixtures/MailTemplateContent.php';
+        $mailTemplateContent = require \dirname(__FILE__, 2) . '/V6_3/../Fixtures/MailTemplateContent.php';
         $mailTemplateId = Uuid::randomBytes();
         $connection->insert('mail_template', ['id' => $mailTemplateId, 'mail_template_type_id' => $typeId, 'system_default' => 1, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
         $languageIds = [];
