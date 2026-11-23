@@ -71,18 +71,19 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
             FROM "import_export_profile";
         ');
         $insertGermanLabelsStatement = $connection->prepare('
-            CREATE TEMPORARY TABLE "temp_import_export_profile_translation" (id int NOT NULL, PRIMARY KEY (id));
-            SELECT "id", "name" AS "label" FROM import_export_profile;
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Kategorie\' WHERE "label" = \'Default category\';
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Medien\' WHERE "label" = \'Default media\';
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Variantenkonfiguration\' WHERE "label" = \'Default variant configuration settings\';
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Newsletter-Empfänger\' WHERE "label" = \'Default newsletter recipient\';
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Eigenschaften\' WHERE "label" = \'Default properties\';
-            UPDATE "temp_import_export_profile_translation" SET "label" = \'Standardprofil Produkt\' WHERE "label" = \'Default product\';
-
             INSERT INTO "import_export_profile_translation" ("import_export_profile_id", "language_id", "label", "created_at")
-            SELECT "id", :languageId, "label", NOW()
-            FROM "temp_import_export_profile_translation";
+            SELECT "id", :languageId,
+                CASE "name"
+                    WHEN \'Default category\' THEN \'Standardprofil Kategorie\'
+                    WHEN \'Default media\' THEN \'Standardprofil Medien\'
+                    WHEN \'Default variant configuration settings\' THEN \'Standardprofil Variantenkonfiguration\'
+                    WHEN \'Default newsletter recipient\' THEN \'Standardprofil Newsletter-Empfänger\'
+                    WHEN \'Default properties\' THEN \'Standardprofil Eigenschaften\'
+                    WHEN \'Default product\' THEN \'Standardprofil Produkt\'
+                    ELSE "name"
+                END,
+                NOW()
+            FROM "import_export_profile";
         ');
         if (!\in_array($defaultLanguageId, [$englishLanguageId, $germanLanguageId], true)) {
             StatementHelper::executeStatement($insertNamesAsLabelsStatement, ['languageId' => $defaultLanguageId], ['languageId' => ParameterType::BINARY]);
