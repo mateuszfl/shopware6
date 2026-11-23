@@ -29,9 +29,9 @@ class Migration1595492052SeoUrl extends MigrationStep
                         "language_id" BYTEA CHECK (octet_length("language_id") = 16) NOT NULL,
                         "sales_channel_id" BYTEA CHECK (octet_length("sales_channel_id") = 16) NULL,
                         "foreign_key" BYTEA CHECK (octet_length("foreign_key") = 16) NOT NULL,
-                        "route_name" VARCHAR(50) COLLATE sw_type_ciNOT NULL,
-                        "path_info" VARCHAR(750) COLLATE 'utf8mb4_unicode_ci' NOT NULL,
-                        "seo_path_info" VARCHAR(750) COLLATE 'utf8mb4_unicode_ci' NOT NULL,
+                        "route_name" VARCHAR(50) COLLATE sw_type_ci NOT NULL,
+                        "path_info" VARCHAR(750) COLLATE sw_type_ci NOT NULL,
+                        "seo_path_info" VARCHAR(750) COLLATE sw_type_ci NOT NULL,
                         "is_canonical" SMALLINT NULL DEFAULT NULL,
                         "is_modified" SMALLINT NOT NULL DEFAULT 0,
                         "is_deleted" SMALLINT NOT NULL DEFAULT 0,
@@ -45,12 +45,12 @@ class Migration1595492052SeoUrl extends MigrationStep
                         CONSTRAINT "fk.seo_url.language_id" FOREIGN KEY ("language_id")
                             REFERENCES "language" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                         CONSTRAINT "uniq.seo_url.seo_path_info" UNIQUE ("language_id", "sales_channel_id", "seo_path_info"),
-                        CONSTRAINT "uniq.seo_url.foreign_key" UNIQUE ("language_id", "sales_channel_id", "foreign_key", "route_name", "is_canonical"),
-                        INDEX "idx.foreign_key" ("language_id", "foreign_key", "sales_channel_id", "is_canonical"),
-                        INDEX "idx.path_info" ("language_id", "sales_channel_id", "is_canonical", "path_info")
+                        CONSTRAINT "uniq.seo_url.foreign_key" UNIQUE ("language_id", "sales_channel_id", "foreign_key", "route_name", "is_canonical")
                     )
         SQL;
         $connection->executeStatement($sql);
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "idx.foreign_key" ON "seo_url" ("language_id", "foreign_key", "sales_channel_id", "is_canonical")');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "idx.path_info" ON "seo_url" ("language_id", "sales_channel_id", "is_canonical", "path_info")');
     }
 
     public function updateDestructive(Connection $connection): void
