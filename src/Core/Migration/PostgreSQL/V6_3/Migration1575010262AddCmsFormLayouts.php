@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
@@ -48,17 +49,29 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
         $page = ['id' => Uuid::randomBytes(), 'type' => 'page', 'locked' => 1, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
         $pageEng = ['cms_page_id' => $page['id'], 'language_id' => $languageEn, 'name' => 'Default shop page layout with ' . $formType . ' form', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
         $pageDeu = ['cms_page_id' => $page['id'], 'language_id' => $languageDe, 'name' => 'Standard Shopseiten-Layout mit ' . $formTypeDe . 'formular', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
-        $connection->insert('cms_page', $page);
-        $connection->insert('cms_page_translation', $pageEng);
+        $connection->insert('cms_page', $page, ['id' => ParameterType::BINARY]);
+        $connection->insert('cms_page_translation', $pageEng, [
+            'cms_page_id' => ParameterType::BINARY,
+            'language_id' => ParameterType::BINARY,
+        ]);
         if ($languageDe) {
-            $connection->insert('cms_page_translation', $pageDeu);
+            $connection->insert('cms_page_translation', $pageDeu, [
+                'cms_page_id' => ParameterType::BINARY,
+                'language_id' => ParameterType::BINARY,
+            ]);
         }
         $section = ['id' => Uuid::randomBytes(), 'cms_page_id' => $page['id'], 'position' => 0, 'type' => 'default', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
-        $connection->insert('cms_section', $section);
+        $connection->insert('cms_section', $section, [
+            'id' => ParameterType::BINARY,
+            'cms_page_id' => ParameterType::BINARY,
+        ]);
         // cms block
         $name = ucfirst($formType) . ' form';
         $block = ['id' => Uuid::randomBytes(), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), 'cms_section_id' => $section['id'], 'locked' => 1, 'position' => 1, 'type' => 'form', 'name' => $name, 'margin_top' => '20px', 'margin_bottom' => '20px', 'margin_left' => '20px', 'margin_right' => '20px', 'background_media_mode' => 'cover'];
-        $connection->insert('cms_block', $block);
+        $connection->insert('cms_block', $block, [
+            'id' => ParameterType::BINARY,
+            'cms_section_id' => ParameterType::BINARY,
+        ]);
         // cms slot
         $slot = ['id' => Uuid::randomBytes(), 'locked' => 1, 'cms_block_id' => $block['id'], 'type' => 'form', 'slot' => 'content', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), 'version_id' => $versionId];
         $slotTranslationData = ['cms_slot_id' => $slot['id'], 'cms_slot_version_id' => $versionId, 'language_id' => $languageEn, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), 'config' => json_encode(['type' => ['source' => 'static', 'value' => $formType], 'mailReceiver' => ['source' => 'static', 'value' => []], 'confirmationText' => ['source' => 'static', 'value' => '']])];
@@ -68,9 +81,17 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
             $slotTranslationData['language_id'] = $languageDe;
             $slotTranslations[] = $slotTranslationData;
         }
-        $connection->insert('cms_slot', $slot);
+        $connection->insert('cms_slot', $slot, [
+            'id' => ParameterType::BINARY,
+            'cms_block_id' => ParameterType::BINARY,
+            'version_id' => ParameterType::BINARY,
+        ]);
         foreach ($slotTranslations as $translation) {
-            $connection->insert('cms_slot_translation', $translation);
+            $connection->insert('cms_slot_translation', $translation, [
+                'cms_slot_id' => ParameterType::BINARY,
+                'cms_slot_version_id' => ParameterType::BINARY,
+                'language_id' => ParameterType::BINARY,
+            ]);
         }
     }
 
