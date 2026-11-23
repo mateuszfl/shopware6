@@ -57,12 +57,12 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
             SET "purchase_prices" = CASE
                 WHEN product."purchase_price" IS NULL THEN NULL
                 ELSE jsonb_build_object(
-                    :currencyKey,
+                    CAST(:currencyKey AS text),
                     jsonb_build_object(
                         \'net\', product."purchase_price" / (1 + (tax_data."tax_rate" / 100)),
                         \'gross\', product."purchase_price",
                         \'linked\', TRUE,
-                        \'currencyId\', :currencyId
+                        \'currencyId\', CAST(:currencyId AS text)
                     )
                 )::json
             END
