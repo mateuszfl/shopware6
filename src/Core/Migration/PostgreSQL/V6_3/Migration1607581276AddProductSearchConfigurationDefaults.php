@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\Aggregate\ProductSearchConfig\ProductSearchConfigDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductSearchConfigField\ProductSearchConfigFieldDefinition;
 use Shopware\Core\Defaults;
@@ -44,8 +45,8 @@ class Migration1607581276AddProductSearchConfigurationDefaults extends Migration
     {
         $enLanguageId = $this->fetchLanguageIdByName('en-GB', $connection);
         $deLanguageId = $this->fetchLanguageIdByName('de-DE', $connection);
-        $searchConfigEnId = $connection->fetchOne('SELECT id FROM product_search_config WHERE language_id = :language_id', ['language_id' => $enLanguageId]) ?: Uuid::randomBytes();
-        $searchConfigDeId = $connection->fetchOne('SELECT id FROM product_search_config WHERE language_id = :language_id', ['language_id' => $deLanguageId]) ?: Uuid::randomBytes();
+        $searchConfigEnId = $this->fetchSearchConfigId($enLanguageId, $connection) ?? Uuid::randomBytes();
+        $searchConfigDeId = $this->fetchSearchConfigId($deLanguageId, $connection) ?? Uuid::randomBytes();
         $enStopwords = require \dirname(__FILE__, 3) . '/Fixtures/stopwords/en.php';
         $deStopwords = require \dirname(__FILE__, 3) . '/Fixtures/stopwords/de.php';
         $translations = new Translations(['id' => $searchConfigDeId, 'and_logic' => '1', 'min_search_length' => '2', 'excluded_terms' => json_encode($deStopwords, \JSON_THROW_ON_ERROR)], ['id' => $searchConfigEnId, 'and_logic' => '1', 'min_search_length' => '2', 'excluded_terms' => $enLanguageId ? json_encode($enStopwords, \JSON_THROW_ON_ERROR) : null]);
@@ -62,7 +63,10 @@ class Migration1607581276AddProductSearchConfigurationDefaults extends Migration
         foreach ($defaultSearchData as $searchData) {
             $entityName = $searchData['table'];
             unset($searchData['table']);
-            $queue->addInsert($entityName, $searchData);
+            $queue->addInsert($entityName, $searchData, [
+                'id' => ParameterType::BINARY,
+                'product_search_config_id' => ParameterType::BINARY,
+            ]);
         }
         $queue->execute();
     }
@@ -84,6 +88,26 @@ class Migration1607581276AddProductSearchConfigurationDefaults extends Migration
             INNER JOIN locale ON language.translation_code_id = locale.id
             WHERE "code" = :code', ['code' => $isoCode]);
 
-        return $languageId === false ? null : $languageId;
+        return $languageId === false ? null : $this->normalizeBinaryId($languageId);
+    }
+
+    private function fetchSearchConfigId(?string $languageId, Connection $connection): ?string
+    {
+        if ($languageId === null) {
+            return null;
+        }
+
+        $id = $connection->fetchOne(
+            'SELECT id FROM product_search_config WHERE language_id = :language_id',
+            ['language_id' => $languageId],
+            ['language_id' => ParameterType::BINARY]
+        );
+
+        return $id === false ? null : $this->normalizeBinaryId($id);
+    }
+
+    private function normalizeBinaryId(mixed $id): string
+    {
+        return \is_resource($id) ? (string) stream_get_contents($id) : (string) $id;
     }
 }
