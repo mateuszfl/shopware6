@@ -26,8 +26,7 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
     {
         $this->migrateProductPurchasePriceField($connection);
         $this->migrateCartLineItemPurchasePriceRuleCondition($connection);
-        // The original migration's trigger bodies use MySQL procedural SQL. Their PostgreSQL equivalents need
-        // PL/pgSQL functions and are not safe to approximate here.
+        $this->addPurchasePriceTriggers($connection);
     }
 
     public function updateDestructive(Connection $connection): void
@@ -75,5 +74,52 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
             WHERE product."id" = tax_data."id"',
             ['currencyKey' => \sprintf('c%s', $defaultCurrencyId), 'currencyId' => $defaultCurrencyId]
         );
+    }
+
+    private function addPurchasePriceTriggers(Connection $connection): void
+    {
+        $body = \sprintf(
+            <<<'SQL'
+            DECLARE
+                previous_purchase_prices jsonb;
+                previous_purchase_price double precision;
+                effective_tax_id bytea := NEW.tax_id;
+                product_tax_rate numeric;
+            BEGIN
+                IF TG_OP = 'UPDATE' THEN
+                    previous_purchase_prices := OLD.purchase_prices::jsonb;
+                    previous_purchase_price := OLD.purchase_price;
+                    effective_tax_id := COALESCE(effective_tax_id, OLD.tax_id);
+                END IF;
+
+                IF NEW.purchase_prices IS NOT NULL AND NEW.purchase_prices::jsonb IS DISTINCT FROM previous_purchase_prices THEN
+                    -- Compare normalized JSON, but read the first price in the stored key order.
+                    NEW.purchase_price := CASE WHEN json_typeof(NEW.purchase_prices) = 'object' THEN (
+                        SELECT (price.value ->> 'gross')::double precision
+                        FROM json_each(NEW.purchase_prices) WITH ORDINALITY AS price
+                        WHERE price.ordinality = 1
+                    ) END;
+                ELSIF NEW.purchase_price IS NOT NULL AND (NEW.purchase_price <> previous_purchase_price OR NEW.purchase_prices IS NULL) THEN
+                    SELECT tax.tax_rate INTO product_tax_rate FROM tax WHERE tax.id = effective_tax_id;
+
+                    NEW.purchase_prices := CASE WHEN product_tax_rate IS NOT NULL THEN json_build_object(
+                        'c%1$s', json_build_object(
+                            'net', NEW.purchase_price / (1 + product_tax_rate / 100),
+                            'gross', NEW.purchase_price,
+                            'linked', TRUE,
+                            'currencyId', '%1$s'
+                        )
+                    ) END;
+                END IF;
+
+                RETURN NEW;
+            END;
+            SQL,
+            Defaults::CURRENCY
+        );
+
+        $this->createTriggerFunction($connection, 'sync_product_purchase_prices', $body);
+        $this->createTrigger($connection, 'CREATE TRIGGER product_purchase_prices_insert BEFORE INSERT ON product FOR EACH ROW EXECUTE FUNCTION sync_product_purchase_prices()');
+        $this->createTrigger($connection, 'CREATE TRIGGER product_purchase_prices_update BEFORE UPDATE ON product FOR EACH ROW EXECUTE FUNCTION sync_product_purchase_prices()');
     }
 }
