@@ -26,7 +26,7 @@ class Migration1600676671OrderLineItemCoverMedia extends MigrationStep
              WHERE media.id IS NULL');
         $sql = <<<'SQL'
                     ALTER TABLE "order_line_item"
-                    DROP FOREIGN KEY "fk.order_line_item.cover_id"
+                    DROP CONSTRAINT "fk.order_line_item.cover_id"
         SQL;
         $connection->executeStatement($sql);
         $sql = <<<'SQL'

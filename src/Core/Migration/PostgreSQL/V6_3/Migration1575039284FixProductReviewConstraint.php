@@ -21,7 +21,7 @@ class Migration1575039284FixProductReviewConstraint extends MigrationStep
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "product_review" DROP FOREIGN KEY "fk.product_review.customer_id"
+            ALTER TABLE "product_review" DROP CONSTRAINT "fk.product_review.customer_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "product_review"
@@ -30,7 +30,7 @@ class Migration1575039284FixProductReviewConstraint extends MigrationStep
             REFERENCES "customer" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
         ');
         $connection->executeStatement('
-            ALTER TABLE "product_review" DROP FOREIGN KEY "fk.product_review.language_id"
+            ALTER TABLE "product_review" DROP CONSTRAINT "fk.product_review.language_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "product_review"

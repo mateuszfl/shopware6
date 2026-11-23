@@ -17,6 +17,7 @@
     "create_table_binary16_to_bytea_with_length_check": 71,
     "create_table_tinyint_to_smallint": 15,
     "create_table_datetime_to_timestamp_without_time_zone": 49,
+    "alter_drop_foreign_key_to_drop_constraint": 19,
     "create_table_utf8mb4_collation_to_sw_type_ci": 2
   },
   "classes": [
@@ -2124,10 +2125,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1574925962,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574925962FixTaxConstraint",
@@ -2169,10 +2171,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575034234,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575034234FixOrderDeliveryAddressConstraint",
@@ -2184,10 +2187,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575036586,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575036586FixProductConfiguratorSettingsConstraint",
@@ -2199,10 +2203,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 4,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575039284,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575039284FixProductReviewConstraint",
@@ -2230,10 +2235,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575274700,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575274700FixSalesChannelMailHeaderFooterConstraint",
@@ -2316,11 +2322,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 5,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1576590301,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1576590301FixSalesChannelDomainLanguageFk",
@@ -2627,10 +2634,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1583756864,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583756864FixDeliveryForeignKey",
@@ -3090,10 +3098,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1590579986,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590579986DropMailHeaderFooterConstraint",
@@ -3418,10 +3427,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 7,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1595321666,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595321666v3",
@@ -3761,10 +3771,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1598520424,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598520424UpdateProductReviewConstraint",
@@ -4004,10 +4015,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1600676671,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600676671OrderLineItemCoverMedia",
@@ -4142,13 +4154,14 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 5,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax",
         "binary type/function",
         "MySQL AFTER column placement changes schema order"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1602153572,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable",
@@ -4413,10 +4426,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1605609477,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605609477RemoveDeleteCascadeConstraintInDocumentBaseConfigTable",
@@ -4428,10 +4442,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 6,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
-        "mixed-case MySQL identifier quoting needs review"
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql foreign key alter syntax"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1605861407,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605861407RuleAssociationsToRestrict",
@@ -4567,10 +4583,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql foreign key alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_drop_foreign_key_to_drop_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1609857999,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1609857999FixStateMachineHistoryUserConstraint",

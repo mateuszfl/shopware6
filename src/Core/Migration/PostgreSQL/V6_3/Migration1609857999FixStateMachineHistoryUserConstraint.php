@@ -21,7 +21,7 @@ class Migration1609857999FixStateMachineHistoryUserConstraint extends MigrationS
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "state_machine_history" DROP FOREIGN KEY "fk.state_machine_history.user_id";
+            ALTER TABLE "state_machine_history" DROP CONSTRAINT "fk.state_machine_history.user_id";
         ');
         $connection->executeStatement('
             ALTER TABLE "state_machine_history"

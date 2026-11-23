@@ -22,12 +22,12 @@ class Migration1576590301FixSalesChannelDomainLanguageFk extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "sales_channel_domain"
-            DROP FOREIGN KEY "fk.sales_channel_domain.language_id";
+            DROP CONSTRAINT "fk.sales_channel_domain.language_id";
         ');
         // Remove SalesChannelFk too, because it somehow relies on the same index as the wrong FK
         $connection->executeStatement('
             ALTER TABLE "sales_channel_domain"
-            DROP FOREIGN KEY "fk.sales_channel_domain.sales_channel_id";
+            DROP CONSTRAINT "fk.sales_channel_domain.sales_channel_id";
         ');
         $connection->executeStatement('
             ALTER TABLE "sales_channel_domain"

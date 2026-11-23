@@ -22,7 +22,7 @@ class Migration1590579986DropMailHeaderFooterConstraint extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "sales_channel"
-            DROP FOREIGN KEY "fk.sales_channel.header_footer_id";
+            DROP CONSTRAINT "fk.sales_channel.header_footer_id";
 
             ALTER TABLE "sales_channel"
             ADD CONSTRAINT "fk.sales_channel.header_footer_id"

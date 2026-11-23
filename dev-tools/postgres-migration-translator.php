@@ -232,6 +232,24 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $rewritten;
             }
 
+            private function rewriteSingleDropForeignKey(string $sql): string
+            {
+                $rewritten = '';
+                foreach ($this->splitSqlStatements($sql) as $statement) {
+                    $this->replace(
+                        'alter_drop_foreign_key_to_drop_constraint',
+                        '/^(\\s*ALTER\\s+TABLE\\s+)(`[^`]+`|"[^"]+"|[A-Za-z_][A-Za-z0-9_$]*)(\\s+DROP\\s+)FOREIGN\\s+KEY(\\s+)(`[^`]+`|"[^"]+"|[A-Za-z_][A-Za-z0-9_$]*)(\\s*;?\\s*)$/i',
+                        static function (array $matches): string {
+                            return $matches[1] . $matches[2] . $matches[3] . 'CONSTRAINT' . $matches[4] . $matches[5] . $matches[6];
+                        },
+                        $statement
+                    );
+                    $rewritten .= $statement;
+                }
+
+                return $rewritten;
+            }
+
             public function enterNode(Node $node): ?Node
             {
                 if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name && strtolower($node->name->toString()) === 'sprintf') {
@@ -267,7 +285,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 }
                 ++$this->sqlLiterals;
 
-                $sql = $this->rewriteCreateTable($node->value);
+                $originalSql = $node->value;
+                $sql = $this->rewriteCreateTable($originalSql);
+                $sql = $this->rewriteSingleDropForeignKey($sql);
                 $patterns = [
                     'binary type/function' => '/\\bBINARY\\s*\\(/i',
                     'json type/function' => '/\\bJSON\\b|JSON_(?:EXTRACT|UNQUOTE|VALID)/i',
@@ -302,7 +322,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $converted = preg_replace('/\\s+AFTER\\s+"?[_a-z0-9]+"?/i', '', $converted);
                 $converted = preg_replace('/\\bIFNULL\\s*\\(/i', 'COALESCE(', $converted);
                 $converted = preg_replace('/\\bCREATE\\s+TABLE\\s+(?!IF\\s+NOT\\s+EXISTS)/i', 'CREATE TABLE IF NOT EXISTS ', $converted);
-                if ($converted !== $sql) {
+                if ($converted !== $sql || $sql !== $originalSql) {
                     ++$this->translated;
                     $node->value = $converted;
                 }

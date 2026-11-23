@@ -22,7 +22,7 @@ class Migration1605861407RuleAssociationsToRestrict extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "product_price"
-                DROP FOREIGN KEY "fk.product_price.rule_id";
+                DROP CONSTRAINT "fk.product_price.rule_id";
         ');
         $connection->executeStatement('
             ALTER TABLE product_price
@@ -43,7 +43,7 @@ class Migration1605861407RuleAssociationsToRestrict extends MigrationStep
         ');
         $connection->executeStatement('
             ALTER TABLE "payment_method"
-              DROP FOREIGN KEY "fk.payment_method.availability_rule_id";
+              DROP CONSTRAINT "fk.payment_method.availability_rule_id";
         ');
         $connection->executeStatement('
             ALTER TABLE payment_method

@@ -22,7 +22,7 @@ class Migration1598520424UpdateProductReviewConstraint extends MigrationStep
     {
         $connection->executeStatement('
             ALTER TABLE "product_review"
-            DROP FOREIGN KEY "fk.product_review.customer_id"
+            DROP CONSTRAINT "fk.product_review.customer_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "product_review"

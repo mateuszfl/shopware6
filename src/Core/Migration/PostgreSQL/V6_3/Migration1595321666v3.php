@@ -27,11 +27,11 @@ class Migration1595321666v3 extends MigrationStep
         $this->removeTrigger($connection, 'shipping_method_price_new_price_insert');
         $connection->executeStatement('
             ALTER TABLE "shipping_method_price"
-              DROP FOREIGN KEY "fk.shipping_method_price.currency_id";
+              DROP CONSTRAINT "fk.shipping_method_price.currency_id";
         ');
         $connection->executeStatement('
             ALTER TABLE shipping_method_price
-                DROP FOREIGN KEY "fk.shipping_method_price.shipping_method_id";
+                DROP CONSTRAINT "fk.shipping_method_price.shipping_method_id";
         ');
         $connection->executeStatement('
             DROP INDEX "fk.shipping_method_price.currency_id" ON shipping_method_price;

@@ -20,7 +20,7 @@ class Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable 
     }
     public function update(Connection $connection): void
     {
-        $connection->executeStatement('ALTER TABLE "sales_channel_api_context" DROP FOREIGN KEY "fk.sales_channel_api_context.customer_id";');
+        $connection->executeStatement('ALTER TABLE "sales_channel_api_context" DROP CONSTRAINT "fk.sales_channel_api_context.customer_id";');
         $connection->executeStatement('ALTER TABLE "sales_channel_api_context" DROP INDEX "customer_id";');
         $connection->executeStatement('ALTER TABLE "sales_channel_api_context" ADD "sales_channel_id" BINARY(16) NULL DEFAULT NULL;');
         $connection->executeStatement('

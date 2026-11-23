@@ -21,7 +21,7 @@ class Migration1575034234FixOrderDeliveryAddressConstraint extends MigrationStep
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "order_delivery" DROP FOREIGN KEY "fk.order_delivery.shipping_order_address_id"
+            ALTER TABLE "order_delivery" DROP CONSTRAINT "fk.order_delivery.shipping_order_address_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "order_delivery"

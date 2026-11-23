@@ -21,7 +21,7 @@ class Migration1574925962FixTaxConstraint extends MigrationStep
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "tax_rule_type_translation" DROP FOREIGN KEY "fk.tax_rule_type_translation.tax_rule_type_id"
+            ALTER TABLE "tax_rule_type_translation" DROP CONSTRAINT "fk.tax_rule_type_translation.tax_rule_type_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "tax_rule_type_translation"

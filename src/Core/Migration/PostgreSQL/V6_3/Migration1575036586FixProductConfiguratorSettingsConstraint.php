@@ -21,7 +21,7 @@ class Migration1575036586FixProductConfiguratorSettingsConstraint extends Migrat
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "product_configurator_setting" DROP FOREIGN KEY "fk.product_configurator_setting.property_group_option_id"
+            ALTER TABLE "product_configurator_setting" DROP CONSTRAINT "fk.product_configurator_setting.property_group_option_id"
         ');
         $connection->executeStatement('
             ALTER TABLE "product_configurator_setting"

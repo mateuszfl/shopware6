@@ -21,7 +21,7 @@ class Migration1575274700FixSalesChannelMailHeaderFooterConstraint extends Migra
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
-            ALTER TABLE "sales_channel" DROP FOREIGN KEY "fk.sales_channel.id"
+            ALTER TABLE "sales_channel" DROP CONSTRAINT "fk.sales_channel.id"
         ');
         $connection->executeStatement('
             ALTER TABLE "sales_channel"
