@@ -37,9 +37,10 @@ class Migration1604056421CustomerWishlistProducts extends MigrationStep
               CONSTRAINT "fk.customer_wishlist_product.product_id" FOREIGN KEY ("product_id", "product_version_id") REFERENCES "product" ("id", "version_id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.customer_wishlist_product.customer_wishlist_id" FOREIGN KEY ("customer_wishlist_id") REFERENCES "customer_wishlist" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
+        ');
 
-CREATE INDEX "fk.customer_wishlist_product.product_id" ON "customer_wishlist_product" ("product_id","product_version_id");
-CREATE INDEX "fk.customer_wishlist_product.customer_wishlist_id" ON "customer_wishlist_product" ("customer_wishlist_id");');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "fk.customer_wishlist_product.product_id" ON "customer_wishlist_product" ("product_id", "product_version_id")');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "fk.customer_wishlist_product.customer_wishlist_id" ON "customer_wishlist_product" ("customer_wishlist_id")');
     }
 
     public function updateDestructive(Connection $connection): void
