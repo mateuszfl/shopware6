@@ -34,7 +34,7 @@ class Migration1597391970App extends MigrationStep
                 "privacy" VARCHAR(255) COLLATE "sw_type_ci" NULL,
                 "version" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
                 "active" SMALLINT DEFAULT 0 NOT NULL,
-                "icon" MEDIUMBLOB NULL,
+                "icon" BYTEA NULL,
                 "app_secret" VARCHAR(255) COLLATE "sw_type_ci" NULL,
                 "modules" JSON NULL,
                 "integration_id" BYTEA CHECK (octet_length("integration_id") = 16) NOT NULL,
@@ -53,16 +53,15 @@ class Migration1597391970App extends MigrationStep
                 "app_id" BYTEA CHECK (octet_length("app_id") = 16) NOT NULL,
                 "language_id" BYTEA CHECK (octet_length("language_id") = 16) NOT NULL,
                 "label" VARCHAR(255) COLLATE "sw_type_ci" NOT NULL,
-                "description" LONGTEXT COLLATE "sw_type_ci" NULL,
+                "description" TEXT NULL,
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("app_id","language_id"),
                 CONSTRAINT "fk.app_translation.app_id" FOREIGN KEY ("app_id") REFERENCES "app" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT "fk.app_translation.language_id" FOREIGN KEY ("language_id") REFERENCES "language" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             );
-CREATE INDEX "fk.app_translation.app_id" ON "app_translation" ("app_id");
-CREATE INDEX "fk.app_translation.language_id" ON "app_translation" ("language_id");
         ');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "fk.app_translation.language_id" ON "app_translation" ("language_id")');
     }
 
     public function updateDestructive(Connection $connection): void
