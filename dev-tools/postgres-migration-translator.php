@@ -250,6 +250,64 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $rewritten;
             }
 
+            private function hasMultiActionDropForeignKey(string $sql): bool
+            {
+                foreach ($this->splitSqlStatements($sql) as $statement) {
+                    $visibleSql = '';
+                    $quote = null;
+                    $length = strlen($statement);
+
+                    for ($index = 0; $index < $length; ++$index) {
+                        $character = $statement[$index];
+                        $next = $statement[$index + 1] ?? '';
+                        if ($quote !== null) {
+                            $visibleSql .= ' ';
+                            if ($character === '\\' && $quote !== '`' && $next !== '') {
+                                $visibleSql .= ' ';
+                                ++$index;
+
+                                continue;
+                            }
+                            if ($character === $quote) {
+                                if ($next === $quote) {
+                                    $visibleSql .= ' ';
+                                    ++$index;
+
+                                    continue;
+                                }
+                                $quote = null;
+                            }
+
+                            continue;
+                        }
+                        if (($character === '-' && $next === '-') || ($character === '/' && $next === '*')) {
+                            $endMarker = $character === '-' ? "\n" : '*/';
+                            $end = strpos($statement, $endMarker, $index + 2);
+                            if ($end === false) {
+                                break;
+                            }
+                            $visibleSql .= str_repeat(' ', $end + strlen($endMarker) - $index);
+                            $index = $end + strlen($endMarker) - 1;
+
+                            continue;
+                        }
+                        if ($character === "'" || $character === '"' || $character === '`') {
+                            $quote = $character;
+                            $visibleSql .= ' ';
+
+                            continue;
+                        }
+                        $visibleSql .= $character;
+                    }
+
+                    if (preg_match('/\\bALTER\\s+TABLE\\b[\\s\\S]*?\\bDROP\\s+FOREIGN\\s+KEY\\b[^;]*,\\s*DROP\\s+FOREIGN\\s+KEY\\b/i', $visibleSql)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             public function enterNode(Node $node): ?Node
             {
                 if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name && strtolower($node->name->toString()) === 'sprintf') {
@@ -288,6 +346,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $originalSql = $node->value;
                 $sql = $this->rewriteCreateTable($originalSql);
                 $sql = $this->rewriteSingleDropForeignKey($sql);
+                if ($this->hasMultiActionDropForeignKey($sql)) {
+                    $this->unsupported[] = 'multi-action ALTER TABLE DROP FOREIGN KEY grouping is retained; splitting changes statement atomicity';
+                }
                 $patterns = [
                     'binary type/function' => '/\\bBINARY\\s*\\(/i',
                     'json type/function' => '/\\bJSON\\b|JSON_(?:EXTRACT|UNQUOTE|VALID)/i',

@@ -4443,6 +4443,7 @@
       "translated_sql_literals": 6,
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review",
+        "multi-action ALTER TABLE DROP FOREIGN KEY grouping is retained; splitting changes statement atomicity",
         "mysql foreign key alter syntax"
       ],
       "applied_rules": {
