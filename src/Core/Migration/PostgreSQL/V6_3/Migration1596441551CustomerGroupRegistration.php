@@ -106,7 +106,7 @@ ADD "registration_seo_meta_description" TEXT NULL;
      */
     private function createMailTemplates(Connection $connection, array $typeTranslations, string $typeName, string $typeId, ?string $enLangId, ?string $deLangId): void
     {
-        $mailTemplateContent = require \dirname(__FILE__, 2) . '/V6_3/../Fixtures/MailTemplateContent.php';
+        $mailTemplateContent = require \dirname(__FILE__, 3) . '/Fixtures/MailTemplateContent.php';
         $mailTemplateId = Uuid::randomBytes();
         $connection->insert('mail_template', ['id' => $mailTemplateId, 'mail_template_type_id' => $typeId, 'system_default' => 1, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
         $languageIds = [];

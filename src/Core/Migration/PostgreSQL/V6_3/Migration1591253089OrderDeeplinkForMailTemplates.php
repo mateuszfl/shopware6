@@ -24,7 +24,7 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
         // implement update
         $enLangId = $this->fetchLanguageId('en-GB', $connection);
         $deLangId = $this->fetchLanguageId('de-DE', $connection);
-        $mailTemplateContent = require dirname(__FILE__, 2) . '/V6_3' . '/../Fixtures/MailTemplateContent.php';
+        $mailTemplateContent = require \dirname(__FILE__, 3) . '/Fixtures/MailTemplateContent.php';
         // update order confirmation email templates
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_ORDER_CONFIRM, $connection, $enLangId, $deLangId, $mailTemplateContent['OrderConfirmation']['en-GB']['html'], $mailTemplateContent['OrderConfirmation']['en-GB']['plain'], $mailTemplateContent['OrderConfirmation']['de-DE']['html'], $mailTemplateContent['OrderConfirmation']['de-DE']['plain']);
         // update delivery email templates
