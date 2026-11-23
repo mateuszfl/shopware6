@@ -69,6 +69,7 @@ use Shopware\Core\Migration\V6_3\Migration1570622696CustomerPasswordRecovery;
 use Shopware\Core\Migration\V6_3\Migration1570629862ClearCategoryBreadcrumbs;
 use Shopware\Core\Migration\V6_3\Migration1570684913ScheduleIndexer;
 use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKingdom;
+use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesChannel;
 
 /**
  * @internal
@@ -77,7 +78,7 @@ use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKi
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571059598;
+    private const LAST_TIMESTAMP = 1571210820;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -90,7 +91,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(57, $pending);
+        static::assertCount(58, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -223,6 +224,31 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant = (new MigrationVariantRegistry())->resolve(Migration1571059598ChangeGreatBritainToUnitedKingdom::class, 1571059598);
                 $variant->update($connection);
                 static::assertSame($names, $connection->fetchFirstColumn('SELECT name FROM country_translation WHERE name IN (\'United Kingdom\', \'Vereinigtes Königreich\') ORDER BY name'));
+            }
+        }
+    }
+
+    public function testSalesChannelPaymentMethodsAreAddedAndIndexerRegistered(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571059598);
+
+            static::assertSame([Migration1571210820AddPaymentMethodIdsToSalesChannel::class], $collection->migrateInPlace(1571210820));
+            $columns = array_column($this->columns($connection)['sales_channel'], null, 'name');
+            static::assertArrayHasKey('payment_method_ids', $columns);
+            static::assertSame('YES', $columns['payment_method_ids']['nullable']);
+            $indexerConfig = $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.scheduled_indexers\' AND sales_channel_id IS NULL');
+            static::assertIsString($indexerConfig);
+            static::assertArrayHasKey('sales_channel.indexer', json_decode($indexerConfig, true, 512, \JSON_THROW_ON_ERROR)['_value']);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1571210820AddPaymentMethodIdsToSalesChannel::class, 1571210820);
+                $schema = $this->schema($connection)['sales_channel'];
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['sales_channel']);
+                static::assertSame($indexerConfig, $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.scheduled_indexers\' AND sales_channel_id IS NULL'));
             }
         }
     }

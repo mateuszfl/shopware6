@@ -171,6 +171,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1570629862ClearCategoryBreadcrumbs::class, 1570629862, PostgreSQL63\Migration1570629862ClearCategoryBreadcrumbs::class],
         [Core63\Migration1570684913ScheduleIndexer::class, 1570684913, PostgreSQL63\Migration1570684913ScheduleIndexer::class],
         [Core63\Migration1571059598ChangeGreatBritainToUnitedKingdom::class, 1571059598, PostgreSQL63\Migration1571059598ChangeGreatBritainToUnitedKingdom::class],
+        [Core63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class, 1571210820, PostgreSQL63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class],
     ];
 
     /**
