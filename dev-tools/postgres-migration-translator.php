@@ -253,6 +253,10 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         $statement
                     );
 
+                    if ($indexes !== [] && !preg_match('/;\s*$/', $statement)) {
+                        $statement = rtrim($statement) . ';';
+                    }
+
                     $rewritten .= $statement;
                     foreach ($indexes as [$name, $table, $columns]) {
                         $rewritten .= "\nCREATE INDEX " . $name . ' ON ' . $table . ' (' . $columns . ');';
