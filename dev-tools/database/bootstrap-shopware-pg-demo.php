@@ -123,6 +123,11 @@ try {
         ADD COLUMN prices BYTEA NULL
             CONSTRAINT chk_sw_product_prices_uuid CHECK (octet_length(prices) = 16)
         SQL);
+    $connection->executeStatement(<<<'SQL'
+        ALTER TABLE product
+        ADD COLUMN media BYTEA NULL
+            CONSTRAINT chk_sw_product_media_uuid CHECK (octet_length(media) = 16)
+        SQL);
     // Product manufacturer cache invalidation reads this denormalized table before the first full indexer run.
     $connection->executeStatement(<<<'SQL'
         CREATE TABLE product_category_tree (
