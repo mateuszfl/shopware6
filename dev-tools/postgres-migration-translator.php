@@ -196,6 +196,11 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         continue;
                     }
 
+                    $indexes = [];
+                    if ($this->diagnosticMode) {
+                        [$statement, $indexes] = $this->extractTableLevelKeys($statement);
+                    }
+
                     if (preg_match('/\\bCOLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+/i', $statement)) {
                         $this->replace(
                             'create_table_default_collation_to_sw_type_ci',
@@ -239,9 +244,79 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     );
 
                     $rewritten .= $statement;
+                    foreach ($indexes as [$name, $table, $columns]) {
+                        $rewritten .= "\nCREATE INDEX " . $name . ' ON ' . $table . ' (' . $columns . ');';
+                        $this->appliedRules['create_table_key_to_create_index'] = ($this->appliedRules['create_table_key_to_create_index'] ?? 0) + 1;
+                    }
                 }
 
                 return $rewritten;
+            }
+
+            /** @return array{string, list<array{string, string, string}>} */
+            private function extractTableLevelKeys(string $statement): array
+            {
+                if (!preg_match('/^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\(/i', $statement, $tableMatch, PREG_OFFSET_CAPTURE)) {
+                    return [$statement, []];
+                }
+
+                $table = $tableMatch[1][0];
+                $open = strpos($statement, '(', $tableMatch[0][1]);
+                $depth = 0;
+                $quote = null;
+                $close = null;
+                for ($index = $open; $index < strlen($statement); ++$index) {
+                    $character = $statement[$index];
+                    if ($quote !== null) {
+                        if ($character === $quote) {
+                            if (($statement[$index + 1] ?? '') === $quote) { ++$index; continue; }
+                            $quote = null;
+                        }
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') { $quote = $character; continue; }
+                    if ($character === '(') { ++$depth; continue; }
+                    if ($character === ')' && --$depth === 0) { $close = $index; break; }
+                }
+                if ($close === null) { return [$statement, []]; }
+
+                $body = substr($statement, $open + 1, $close - $open - 1);
+                $clauses = [];
+                $start = 0;
+                $depth = 0;
+                $quote = null;
+                for ($index = 0; $index < strlen($body); ++$index) {
+                    $character = $body[$index];
+                    if ($quote !== null) {
+                        if ($character === $quote) {
+                            if (($body[$index + 1] ?? '') === $quote) { ++$index; continue; }
+                            $quote = null;
+                        }
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') { $quote = $character; continue; }
+                    if ($character === '(') { ++$depth; continue; }
+                    if ($character === ')') { --$depth; continue; }
+                    if ($character === ',' && $depth === 0) { $clauses[] = substr($body, $start, $index - $start); $start = $index + 1; }
+                }
+                $clauses[] = substr($body, $start);
+                $indexes = [];
+                $kept = [];
+                foreach ($clauses as $clause) {
+                    if (!preg_match('/^\\s*KEY\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $match)) {
+                        $kept[] = $clause;
+                        continue;
+                    }
+                    $columns = trim($match[2]);
+                    if (!preg_match('/^(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)(?:\\s*\\(\\s*\\d+\\s*\\))?(?:\\s*,\\s*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)(?:\\s*\\(\\s*\\d+\\s*\\))?)*$/', $columns)) {
+                        $this->unsupported[] = 'table-level KEY has unsupported column expression';
+                        $kept[] = $clause;
+                        continue;
+                    }
+                    $indexes[] = [$match[1], $table, $columns];
+                }
+                if ($indexes === []) { return [$statement, []]; }
+                return [substr($statement, 0, $open + 1) . implode(',', $kept) . substr($statement, $close), $indexes];
             }
 
             private function rewriteSingleDropForeignKey(string $sql): string

@@ -29,7 +29,8 @@
     "alter_modify_binary16_to_bytea_with_length_check": 1,
     "alter_modify_column_to_alter_column": 5,
     "alter_text_type_to_postgresql_type": 6,
-    "alter_blob_type_to_bytea": 0
+    "alter_blob_type_to_bytea": 0,
+    "create_table_key_to_create_index": 14
   },
   "classes": [
     {
@@ -2604,7 +2605,8 @@
         "create_table_binary16_to_bytea_with_length_check": 4,
         "create_table_datetime_to_timestamp_without_time_zone": 2,
         "alter_after_column_placement_removed": 2,
-        "alter_binary16_to_bytea_with_length_check": 1
+        "alter_binary16_to_bytea_with_length_check": 1,
+        "create_table_key_to_create_index": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1580827023,
@@ -3743,7 +3745,8 @@
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 4,
         "create_table_tinyint_to_smallint": 1,
-        "create_table_datetime_to_timestamp_without_time_zone": 4
+        "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "create_table_key_to_create_index": 3
       },
       "source_dir_references_rebased": false,
       "timestamp": 1597657689,
@@ -3804,7 +3807,8 @@
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
-        "create_table_datetime_to_timestamp_without_time_zone": 1
+        "create_table_datetime_to_timestamp_without_time_zone": 1,
+        "create_table_key_to_create_index": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1597930227,
@@ -3944,7 +3948,8 @@
       ],
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
-        "create_table_binary16_to_bytea_with_length_check": 2
+        "create_table_binary16_to_bytea_with_length_check": 2,
+        "create_table_key_to_create_index": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1599806584,
@@ -3962,7 +3967,8 @@
       ],
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
-        "create_table_binary16_to_bytea_with_length_check": 2
+        "create_table_binary16_to_bytea_with_length_check": 2,
+        "create_table_key_to_create_index": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1599806595,
@@ -4366,7 +4372,8 @@
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 3,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "create_table_key_to_create_index": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1604056363,
@@ -4386,7 +4393,8 @@
       "applied_rules": {
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 4,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "create_table_key_to_create_index": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1604056421,
