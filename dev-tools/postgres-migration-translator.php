@@ -9,7 +9,8 @@ use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-if ($argc === 5 && $argv[1] === '--inventory') {
+$diagnosticMode = ($argv[1] ?? '') === '--diagnostic-inventory';
+if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory'], true)) {
     $sourceDirectory = rtrim($argv[2], '/');
     $variantDirectory = rtrim($argv[3], '/');
     $outputDirectory = rtrim($argv[4], '/');
@@ -17,14 +18,18 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         fwrite(STDERR, "Source, variant, and output directories must exist\n");
         exit(2);
     }
-    if (glob($outputDirectory . '/Migration*.php') !== []) {
+    if (!$diagnosticMode && glob($outputDirectory . '/Migration*.php') !== []) {
         fwrite(STDERR, "Output directory must be empty to prevent stale candidate files\n");
+        exit(2);
+    }
+    if ($diagnosticMode && (glob($outputDirectory . '/Migration*.php') !== [] || is_file($outputDirectory . '/registry-manifest.json') || is_file($outputDirectory . '/registry-entries.php'))) {
+        fwrite(STDERR, "Diagnostic output directory must be fresh and empty\n");
         exit(2);
     }
 
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $printer = new Standard();
-    $registry = new MigrationVariantRegistry();
+    $registry = new MigrationVariantRegistry(includeDiagnosticVariants: $diagnosticMode);
     $report = [];
     foreach (glob($sourceDirectory . '/Migration*.php') ?: [] as $path) {
         $name = basename($path);
@@ -38,14 +43,23 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         try {
             $implementation = $registry->resolve($logicalClass, $timestamp);
             $isPortableMapping = $implementation::class === $logicalClass;
+            $variantPath = $variantDirectory . '/' . $name;
+            $diagnosticImplementation = !$isPortableMapping && is_file($variantPath)
+                && str_contains((string) file_get_contents($variantPath), 'Diagnostic best-effort PostgreSQL variant');
             $report[] = [
                 'class_file' => $name,
                 'source' => $path,
-                'status' => $isPortableMapping ? 'registered_portable_mapping' : 'registered_variant',
-                'blocker_category' => null,
+                'status' => $isPortableMapping ? 'registered_portable_mapping' : ($diagnosticImplementation ? 'diagnostic_variant_unhandled' : 'registered_variant'),
+                'blocker_category' => $diagnosticImplementation ? 'diagnostic-only mapping; semantics remain unverified' : null,
+                'logical_class' => $logicalClass,
+                'creation_timestamp' => $timestamp,
                 'implementation' => $implementation::class,
-                'variant_file_present' => is_file($variantDirectory . '/' . $name),
+                'variant_file_present' => is_file($variantPath),
             ];
+            if ($diagnosticMode && $implementation::class !== $logicalClass && !is_file($variantDirectory . '/' . $name)) {
+                $report[array_key_last($report)]['status'] = 'registered_variant_file_missing';
+                $report[array_key_last($report)]['blocker_category'] = 'registry points to a missing implementation file';
+            }
             continue;
         } catch (Throwable $exception) {
             $missingVariantMessage = 'No PostgreSQL migration variant for ' . $logicalClass . ' (timestamp ' . $timestamp . ').';
@@ -180,6 +194,27 @@ if ($argc === 5 && $argv[1] === '--inventory') {
             ++$namespaceCount;
             $statement->name = new Node\Name('Shopware\\Core\\Migration\\PostgreSQL\\V6_3');
         }
+        if ($diagnosticMode && preg_match('/\\b__DIR__\\b/', $source)) {
+            $dirTraverser = new NodeTraverser();
+            $dirTraverser->addVisitor(new class extends NodeVisitorAbstract {
+                public function enterNode(Node $node): ?Node
+                {
+                    if (!$node instanceof Node\Scalar\MagicConst\Dir) {
+                        return null;
+                    }
+
+                    return new Node\Expr\BinaryOp\Concat(
+                        new Node\Expr\FuncCall(new Node\Name('dirname'), [
+                                new Node\Arg(new Node\Scalar\MagicConst\File()),
+                            new Node\Arg(new Node\Scalar\LNumber(2)),
+                        ]),
+                        new Node\Scalar\String_('/V6_3')
+                    );
+                }
+            });
+            $translated = $dirTraverser->traverse($translated);
+            $entry['source_dir_references_rebased'] = true;
+        }
         $entry['translated_sql_literals'] = $visitor->translated;
         $entry['static_sql_literals'] = $visitor->sqlLiterals;
         $entry['unsupported_shapes'] = array_values(array_unique($visitor->unsupported));
@@ -191,6 +226,30 @@ if ($argc === 5 && $argv[1] === '--inventory') {
             $entry['status'] = 'rejected_namespace_shape';
             $entry['blocker_category'] = 'PHP namespace shape';
             $entry['unsupported_shapes'][] = 'expected exactly one namespace declaration';
+        } elseif ($diagnosticMode) {
+            $entry['status'] = $entry['unsupported_shapes'] === [] ? 'diagnostic_emitted' : 'diagnostic_emitted_with_unhandled_shapes';
+            $entry['blocker_category'] = $entry['unsupported_shapes'] === [] ? null : 'diagnostic output retains unhandled SQL/runtime shapes';
+            $entry['unhandled_semantics'] = 'Diagnostic best effort only. SQLGlot is unavailable in this environment; PostgreSQL syntax and semantics remain unverified.';
+            $target = $outputDirectory . '/' . $name;
+            if (is_file($target)) {
+                $entry['status'] = 'rejected_output_collision';
+                $entry['blocker_category'] = 'diagnostic output collision';
+                $entry['unsupported_shapes'][] = 'refusing to overwrite an existing PostgreSQL migration file';
+            } else {
+                $diagnosticOutput = $printer->prettyPrintFile($translated);
+                $diagnosticOutput = preg_replace(
+                    '/^<\\?php\\b/',
+                    "<?php\n\n// Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.",
+                    $diagnosticOutput,
+                    1
+                ) ?? $diagnosticOutput;
+                if (file_put_contents($target, $diagnosticOutput . "\n") === false) {
+                $entry['status'] = 'rejected_write_error';
+                $entry['blocker_category'] = 'diagnostic output write error';
+                } else {
+                    $entry['output'] = $target;
+                }
+            }
         } elseif ($entry['unsupported_shapes'] !== []) {
             $entry['status'] = 'custom_semantic_review';
             $entry['blocker_category'] = 'custom SQL semantics or runtime-generated SQL';
@@ -217,12 +276,63 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         }
         $report[] = $entry;
     }
-    echo json_encode(['source_directory' => $sourceDirectory, 'variant_directory' => $variantDirectory, 'count' => count($report), 'summary' => array_count_values(array_column($report, 'status')), 'blocker_summary' => array_count_values(array_filter(array_column($report, 'blocker_category'))), 'classes' => $report], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";
+    $registryManifest = [];
+    foreach ($report as $entry) {
+        if (isset($entry['implementation'], $entry['logical_class'], $entry['creation_timestamp'])) {
+            $registryManifest[] = [
+                'logical_class' => $entry['logical_class'],
+                'timestamp' => $entry['creation_timestamp'],
+                'implementation' => $entry['implementation'],
+            ];
+            continue;
+        }
+        if (isset($entry['proposed_implementation'], $entry['logical_class'], $entry['proposed_timestamp'])
+            && str_starts_with($entry['status'], 'diagnostic_emitted')) {
+            $registryManifest[] = [
+                'logical_class' => $entry['logical_class'],
+                'timestamp' => $entry['proposed_timestamp'],
+                'implementation' => $entry['proposed_implementation'],
+            ];
+        }
+    }
+    if ($diagnosticMode) {
+        $manifestPath = $outputDirectory . '/registry-manifest.json';
+        file_put_contents($manifestPath, json_encode($registryManifest, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n");
+        $registryPatchLines = [];
+        foreach ($report as $entry) {
+            if (!isset($entry['logical_class'], $entry['proposed_implementation'], $entry['proposed_timestamp'])
+                || !str_starts_with($entry['status'], 'diagnostic_emitted')) {
+                continue;
+            }
+
+            $registryPatchLines[] = '    [' . $entry['logical_class'] . '::class, ' . $entry['proposed_timestamp'] . ', ' . $entry['proposed_implementation'] . '::class],';
+        }
+        $registryEntries = "<?php declare(strict_types=1);\n\nreturn [\n" . implode("\n", $registryPatchLines) . "\n];\n";
+        file_put_contents($outputDirectory . '/registry-entries.php', $registryEntries);
+    }
+    echo json_encode([
+        'mode' => $diagnosticMode ? 'diagnostic' : 'fail_closed',
+        'source_directory' => $sourceDirectory,
+        'variant_directory' => $variantDirectory,
+        'count' => count($report),
+        'sql_transpiler' => 'PHP AST literal substitutions; SQLGlot not invoked',
+        'registry_manifest_count' => count($registryManifest),
+        'registry_manifest' => $registryManifest,
+        'summary' => array_count_values(array_column($report, 'status')),
+        'blocker_summary' => array_count_values(array_filter(array_column($report, 'blocker_category'))),
+        'classes' => $report,
+    ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";
+    if ($diagnosticMode) {
+        $completedDiagnosticStatuses = ['registered_variant', 'registered_portable_mapping', 'diagnostic_variant_unhandled', 'diagnostic_emitted', 'diagnostic_emitted_with_unhandled_shapes'];
+
+        exit(array_filter($report, static fn (array $entry): bool => !\in_array($entry['status'], $completedDiagnosticStatuses, true)) === [] ? 0 : 4);
+    }
+
     exit(array_filter($report, static fn (array $entry): bool => !str_starts_with($entry['status'], 'registered_') && $entry['status'] !== 'basic_sql_rewrite_candidate') === [] ? 0 : 3);
 }
 
 if ($argc < 3) {
-    fwrite(STDERR, "Usage: php dev-tools/postgres-migration-translator.php --inventory <source-dir> <existing-variant-dir> <existing-output-dir>\n");
+    fwrite(STDERR, "Usage: php dev-tools/postgres-migration-translator.php --inventory|--diagnostic-inventory <source-dir> <existing-variant-dir> <existing-output-dir>\n");
     exit(2);
 }
 

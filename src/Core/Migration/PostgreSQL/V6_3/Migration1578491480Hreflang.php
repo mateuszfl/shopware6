@@ -1,0 +1,40 @@
+<?php
+
+// Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
+
+declare(strict_types=1);
+
+namespace Shopware\Core\Migration\PostgreSQL\V6_3;
+
+use Doctrine\DBAL\Connection;
+use Shopware\Core\Framework\Log\Package;
+use Shopware\Core\Framework\Migration\MigrationStep;
+
+/**
+ * @internal
+ */
+#[Package('framework')]
+class Migration1578491480Hreflang extends MigrationStep
+{
+    public function getCreationTimestamp(): int
+    {
+        return 1578491480;
+    }
+
+    public function update(Connection $connection): void
+    {
+        $connection->executeStatement('ALTER TABLE "sales_channel" ADD "hreflang_default_domain_id" BINARY(16) NULL;');
+        $connection->executeStatement('
+            ALTER TABLE "sales_channel"
+            ADD CONSTRAINT "fk.sales_channel.hreflang_default_domain_id"
+            FOREIGN KEY ("hreflang_default_domain_id")
+            REFERENCES "sales_channel_domain" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        ');
+        $connection->executeStatement('ALTER TABLE "sales_channel" ADD "hreflang_active" tinyint(1) unsigned DEFAULT 0;');
+        $connection->executeStatement('ALTER TABLE "sales_channel_domain" ADD "hreflang_use_only_locale" tinyint(1) unsigned DEFAULT 0;');
+    }
+
+    public function updateDestructive(Connection $connection): void
+    {
+    }
+}

@@ -1,0 +1,3924 @@
+{
+  "mode": "diagnostic-best-effort",
+  "source_migrations": 335,
+  "sql_transpiler": "PHP AST literal substitutions; SQLGlot not invoked",
+  "summary": {
+    "registered_variant": 170,
+    "registered_portable_mapping": 9,
+    "diagnostic_emitted_with_unhandled_shapes": 149,
+    "diagnostic_emitted": 7
+  },
+  "blocker_summary": {
+    "diagnostic output retains unhandled SQL/runtime shapes": 149
+  },
+  "classes": [
+    {
+      "class_file": "Migration1536232600Language.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232600Language",
+      "timestamp": 1536232600,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232600Language",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232610Locale.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232610Locale",
+      "timestamp": 1536232610,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232610Locale",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232620SalesChannelType.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232620SalesChannelType",
+      "timestamp": 1536232620,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232620SalesChannelType",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232630PropertyGroup.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232630PropertyGroup",
+      "timestamp": 1536232630,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232630PropertyGroup",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232640Currency.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232640Currency",
+      "timestamp": 1536232640,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232640Currency",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232650CustomerGroup.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232650CustomerGroup",
+      "timestamp": 1536232650,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232650CustomerGroup",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232660Tax.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232660Tax",
+      "timestamp": 1536232660,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232660Tax",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232670Unit.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232670Unit",
+      "timestamp": 1536232670,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232670Unit",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232680Rule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232680Rule",
+      "timestamp": 1536232680,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232680Rule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232690Version.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232690Version",
+      "timestamp": 1536232690,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232690Version",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232700VersionCommit.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232700VersionCommit",
+      "timestamp": 1536232700,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232700VersionCommit",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232710Integration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232710Integration",
+      "timestamp": 1536232710,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232710Integration",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232720Country.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232720Country",
+      "timestamp": 1536232720,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232720Country",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232730CountryState.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232730CountryState",
+      "timestamp": 1536232730,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232730CountryState",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232740SnippetSet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232740SnippetSet",
+      "timestamp": 1536232740,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232740SnippetSet",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232750Snippet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232750Snippet",
+      "timestamp": 1536232750,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232750Snippet",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232760StateMachine.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232760StateMachine",
+      "timestamp": 1536232760,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232760StateMachine",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232770VersionCommitData.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232770VersionCommitData",
+      "timestamp": 1536232770,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232770VersionCommitData",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232790MailHeaderFooter.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232790MailHeaderFooter",
+      "timestamp": 1536232790,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232790MailHeaderFooter",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232800DeliveryTime.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232800DeliveryTime",
+      "timestamp": 1536232800,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232800DeliveryTime",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232810User.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232810User",
+      "timestamp": 1536232810,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232810User",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232820UserAccessKey.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232820UserAccessKey",
+      "timestamp": 1536232820,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232820UserAccessKey",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232830MediaDefaultFolder.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232830MediaDefaultFolder",
+      "timestamp": 1536232830,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232830MediaDefaultFolder",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232840MediaFolder.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232840MediaFolder",
+      "timestamp": 1536232840,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232840MediaFolder",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232850Media.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232850Media",
+      "timestamp": 1536232850,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232850Media",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232860ShippingMethod.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232860ShippingMethod",
+      "timestamp": 1536232860,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232860ShippingMethod",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232870ShippingMethodPrice.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232870ShippingMethodPrice",
+      "timestamp": 1536232870,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232870ShippingMethodPrice",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232880Category.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232880Category",
+      "timestamp": 1536232880,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232880Category",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232890CmsPage.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232890CmsPage",
+      "timestamp": 1536232890,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232890CmsPage",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232900CmsBlock.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232900CmsBlock",
+      "timestamp": 1536232900,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232900CmsBlock",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232910CmsSlot.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232910CmsSlot",
+      "timestamp": 1536232910,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232910CmsSlot",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232920PaymentMethod.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232920PaymentMethod",
+      "timestamp": 1536232920,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232920PaymentMethod",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232930Navigation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232930Navigation",
+      "timestamp": 1536232930,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232930Navigation",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232940SalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232940SalesChannel",
+      "timestamp": 1536232940,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232940SalesChannel",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232950Salutation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232950Salutation",
+      "timestamp": 1536232950,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232950Salutation",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232960Customer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232960Customer",
+      "timestamp": 1536232960,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232960Customer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232970CustomerAddress.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232970CustomerAddress",
+      "timestamp": 1536232970,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232970CustomerAddress",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232980Cart.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232980Cart",
+      "timestamp": 1536232980,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232980Cart",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536232990Order.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536232990Order",
+      "timestamp": 1536232990,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536232990Order",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233000OrderCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233000OrderCustomer",
+      "timestamp": 1536233000,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233000OrderCustomer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233010OrderAddress.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233010OrderAddress",
+      "timestamp": 1536233010,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233010OrderAddress",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233020OrderDelivery.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233020OrderDelivery",
+      "timestamp": 1536233020,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233020OrderDelivery",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233030OrderLineItem.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233030OrderLineItem",
+      "timestamp": 1536233030,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233030OrderLineItem",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233040OrderDeliveryPosition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233040OrderDeliveryPosition",
+      "timestamp": 1536233040,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233040OrderDeliveryPosition",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233050OrderTransaction.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233050OrderTransaction",
+      "timestamp": 1536233050,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233050OrderTransaction",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233060MediaFolderConfiguration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233060MediaFolderConfiguration",
+      "timestamp": 1536233060,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233060MediaFolderConfiguration",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233070MediaThumbnailSize.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233070MediaThumbnailSize",
+      "timestamp": 1536233070,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233070MediaThumbnailSize",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233080MediaFolderConfigurationMediaThumbnailSize.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233080MediaFolderConfigurationMediaThumbnailSize",
+      "timestamp": 1536233080,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233080MediaFolderConfigurationMediaThumbnailSize",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233090MediaThumbnail.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233090MediaThumbnail",
+      "timestamp": 1536233090,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233090MediaThumbnail",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233100PropertyGroupOption.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233100PropertyGroupOption",
+      "timestamp": 1536233100,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233100PropertyGroupOption",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233110ProductManufacturer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233110ProductManufacturer",
+      "timestamp": 1536233110,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233110ProductManufacturer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233120Product.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233120Product",
+      "timestamp": 1536233120,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233120Product",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233130ProductMedia.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233130ProductMedia",
+      "timestamp": 1536233130,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233130ProductMedia",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233140ProductProperty.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233140ProductProperty",
+      "timestamp": 1536233140,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233140ProductProperty",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233150ProductOption.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233150ProductOption",
+      "timestamp": 1536233150,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233150ProductOption",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233160ProductConfigurator.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233160ProductConfigurator",
+      "timestamp": 1536233160,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233160ProductConfigurator",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233170ProductCategoryTree.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233170ProductCategoryTree",
+      "timestamp": 1536233170,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233170ProductCategoryTree",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233180ProductCategory.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233180ProductCategory",
+      "timestamp": 1536233180,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233180ProductCategory",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233190ProductPriceRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233190ProductPriceRule",
+      "timestamp": 1536233190,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233190ProductPriceRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233200RuleCondition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233200RuleCondition",
+      "timestamp": 1536233200,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233200RuleCondition",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233210SalesChannelDomain.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233210SalesChannelDomain",
+      "timestamp": 1536233210,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233210SalesChannelDomain",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233220PluginTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233220PluginTranslation",
+      "timestamp": 1536233220,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233220PluginTranslation",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233230ProductStream.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233230ProductStream",
+      "timestamp": 1536233230,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233230ProductStream",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233240ProductStreamFilter.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233240ProductStreamFilter",
+      "timestamp": 1536233240,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233240ProductStreamFilter",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233250MessageQueueStats.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233250MessageQueueStats",
+      "timestamp": 1536233250,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233250MessageQueueStats",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233260StateMachineHistory.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233260StateMachineHistory",
+      "timestamp": 1536233260,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233260StateMachineHistory",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233270SystemConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233270SystemConfig",
+      "timestamp": 1536233270,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233270SystemConfig",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233280CustomFieldSet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233280CustomFieldSet",
+      "timestamp": 1536233280,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233280CustomFieldSet",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233290CustomFieldSetRelation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233290CustomFieldSetRelation",
+      "timestamp": 1536233290,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233290CustomFieldSetRelation",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233300CustomField.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233300CustomField",
+      "timestamp": 1536233300,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233300CustomField",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233310ScheduledTask.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233310ScheduledTask",
+      "timestamp": 1536233310,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233310ScheduledTask",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233320DeadMessage.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233320DeadMessage",
+      "timestamp": 1536233320,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233320DeadMessage",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233330MailTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233330MailTemplate",
+      "timestamp": 1536233330,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233330MailTemplate",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233340NumberRange.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233340NumberRange",
+      "timestamp": 1536233340,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233340NumberRange",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233350ProductVisibility.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233350ProductVisibility",
+      "timestamp": 1536233350,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233350ProductVisibility",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233360Document.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233360Document",
+      "timestamp": 1536233360,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233360Document",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233370EventAction.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233370EventAction",
+      "timestamp": 1536233370,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233370EventAction",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233380UserRecovery.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233380UserRecovery",
+      "timestamp": 1536233380,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233380UserRecovery",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233390Promotion.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233390Promotion",
+      "timestamp": 1536233390,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233390Promotion",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233400MailTemplateMedia.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233400MailTemplateMedia",
+      "timestamp": 1536233400,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233400MailTemplateMedia",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233410PromotionSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233410PromotionSalesChannel",
+      "timestamp": 1536233410,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233410PromotionSalesChannel",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233420PromotionDiscount.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233420PromotionDiscount",
+      "timestamp": 1536233420,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233420PromotionDiscount",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233430NewsletterRecipient.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233430NewsletterRecipient",
+      "timestamp": 1536233430,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233430NewsletterRecipient",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233440PromotionPersonaCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233440PromotionPersonaCustomer",
+      "timestamp": 1536233440,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233440PromotionPersonaCustomer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233450PromotionPersonaRules.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233450PromotionPersonaRules",
+      "timestamp": 1536233450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233450PromotionPersonaRules",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233460NumberRangeTranslationAndConfiguration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233460NumberRangeTranslationAndConfiguration",
+      "timestamp": 1536233460,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1536233460NumberRangeTranslationAndConfiguration",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233470PromotionOrderRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233470PromotionOrderRule",
+      "timestamp": 1536233470,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233470PromotionOrderRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233480SalesChannelApiContext.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233480SalesChannelApiContext",
+      "timestamp": 1536233480,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233480SalesChannelApiContext",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233500PromotionDiscountRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233500PromotionDiscountRule",
+      "timestamp": 1536233500,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233500PromotionDiscountRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233510DocumentConfiguration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233510DocumentConfiguration",
+      "timestamp": 1536233510,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233510DocumentConfiguration",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233520PromotionCartRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233520PromotionCartRule",
+      "timestamp": 1536233520,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233520PromotionCartRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233530SalesChannelCategoryId.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233530SalesChannelCategoryId",
+      "timestamp": 1536233530,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233530SalesChannelCategoryId",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233540ProductSearchKeyword.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233540ProductSearchKeyword",
+      "timestamp": 1536233540,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233540ProductSearchKeyword",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233550Tag.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233550Tag",
+      "timestamp": 1536233550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233550Tag",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1536233560BasicData.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1536233560BasicData",
+      "timestamp": 1536233560,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1536233560BasicData",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1552360944MediaFolderConfigurationNoAssoc.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1552360944MediaFolderConfigurationNoAssoc",
+      "timestamp": 1552360944,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1552360944MediaFolderConfigurationNoAssoc",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1554199340AddImportExportProfile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1554199340AddImportExportProfile",
+      "timestamp": 1554199340,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554199340AddImportExportProfile",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1554200141ImportExportFile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1554200141ImportExportFile",
+      "timestamp": 1554200141,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554200141ImportExportFile",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1554203706AddImportExportLog.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1554203706AddImportExportLog",
+      "timestamp": 1554203706,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554203706AddImportExportLog",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1554900301AddReviewTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1554900301AddReviewTable",
+      "timestamp": 1554900301,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1554900301AddReviewTable",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1556809270AddAverageRatingToProduct.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1556809270AddAverageRatingToProduct",
+      "timestamp": 1556809270,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1556809270AddAverageRatingToProduct",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558082916AddBreadcrumb.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558082916AddBreadcrumb",
+      "timestamp": 1558082916,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558082916AddBreadcrumb",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558105657CurrencyPrices.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558105657CurrencyPrices",
+      "timestamp": 1558105657,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558105657CurrencyPrices",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558443337PromotionSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558443337PromotionSalesChannel",
+      "timestamp": 1558443337,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558443337PromotionSalesChannel",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558505525Logging.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558505525Logging",
+      "timestamp": 1558505525,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558505525Logging",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558594334PromotionDiscountPrice.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558594334PromotionDiscountPrice",
+      "timestamp": 1558594334,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558594334PromotionDiscountPrice",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1558938938ChangeGroupSortingColumn.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1558938938ChangeGroupSortingColumn",
+      "timestamp": 1558938938,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1558938938ChangeGroupSortingColumn",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1559050088Promotion.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1559050088Promotion",
+      "timestamp": 1559050088,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050088Promotion",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1559050903PromotionExclusion.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1559050903PromotionExclusion",
+      "timestamp": 1559050903,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559050903PromotionExclusion",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1559134989Promotion.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1559134989Promotion",
+      "timestamp": 1559134989,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559134989Promotion",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1559306391PromotionIndividualCode.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1559306391PromotionIndividualCode",
+      "timestamp": 1559306391,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1559306391PromotionIndividualCode",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1561370284AddImportExportProductProfile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1561370284AddImportExportProductProfile",
+      "timestamp": 1561370284,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561370284AddImportExportProductProfile",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1561377793AddAvailableAsShippingCountry.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1561377793AddAvailableAsShippingCountry",
+      "timestamp": 1561377793,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561377793AddAvailableAsShippingCountry",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1561442979ElasticsearchIndexTask.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1561442979ElasticsearchIndexTask",
+      "timestamp": 1561442979,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1561442979ElasticsearchIndexTask",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1561452005Update.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1561452005Update",
+      "timestamp": 1561452005,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561452005Update",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1561712450NewSystemConfigsAndDefaultValues.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1561712450NewSystemConfigsAndDefaultValues",
+      "timestamp": 1561712450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1561712450NewSystemConfigsAndDefaultValues",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562228335SetConfigDefaults.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562228335SetConfigDefaults",
+      "timestamp": 1562228335,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562228335SetConfigDefaults",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562240231UserPasswordRecovery.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562240231UserPasswordRecovery",
+      "timestamp": 1562240231,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562240231UserPasswordRecovery",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562306893MakeCustomerFirstLoginDateTime.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562306893MakeCustomerFirstLoginDateTime",
+      "timestamp": 1562306893,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562306893MakeCustomerFirstLoginDateTime",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562324772AddOrderDateToOrder.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562324772AddOrderDateToOrder",
+      "timestamp": 1562324772,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562324772AddOrderDateToOrder",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562579120ProductAvailableFields.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562579120ProductAvailableFields",
+      "timestamp": 1562579120,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562579120ProductAvailableFields",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562684474AddDeliveryTime.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562684474AddDeliveryTime",
+      "timestamp": 1562684474,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562684474AddDeliveryTime",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562841035AddProductChildCount.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562841035AddProductChildCount",
+      "timestamp": 1562841035,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562841035AddProductChildCount",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1562933907ContactForm.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1562933907ContactForm",
+      "timestamp": 1562933907,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1562933907ContactForm",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1563180880AddDefaultThumbnailSizes.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1563180880AddDefaultThumbnailSizes",
+      "timestamp": 1563180880,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563180880AddDefaultThumbnailSizes",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1563288227MarkAsNewConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1563288227MarkAsNewConfig",
+      "timestamp": 1563288227,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563288227MarkAsNewConfig",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1563518181PromotionDiscount.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1563518181PromotionDiscount",
+      "timestamp": 1563518181,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563518181PromotionDiscount",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1563805586AddLanguageToOrder.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1563805586AddLanguageToOrder",
+      "timestamp": 1563805586,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563805586AddLanguageToOrder",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1563949275AddCompanyToOrderCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1563949275AddCompanyToOrderCustomer",
+      "timestamp": 1563949275,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1563949275AddCompanyToOrderCustomer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1564475053RemoveSaveDocumentsConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1564475053RemoveSaveDocumentsConfig",
+      "timestamp": 1564475053,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1564475053RemoveSaveDocumentsConfig",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565007156RemoveAutoIncrement.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565007156RemoveAutoIncrement",
+      "timestamp": 1565007156,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565007156RemoveAutoIncrement",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565079228AddAclStructure.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565079228AddAclStructure",
+      "timestamp": 1565079228,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565079228AddAclStructure",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565270155PromotionSetGroup.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565270155PromotionSetGroup",
+      "timestamp": 1565270155,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270155PromotionSetGroup",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565270366PromotionSetGroupRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565270366PromotionSetGroupRule",
+      "timestamp": 1565270366,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565270366PromotionSetGroupRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565346846Promotion.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565346846Promotion",
+      "timestamp": 1565346846,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565346846Promotion",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1565705280ProductExport.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1565705280ProductExport",
+      "timestamp": 1565705280,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1565705280ProductExport",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1566293076AddAutoIncrement.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1566293076AddAutoIncrement",
+      "timestamp": 1566293076,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566293076AddAutoIncrement",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1566460168UpdateTexts.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1566460168UpdateTexts",
+      "timestamp": 1566460168,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566460168UpdateTexts",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1566817701AddDisplayGroup.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1566817701AddDisplayGroup",
+      "timestamp": 1566817701,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1566817701AddDisplayGroup",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1567431050ContactFormTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1567431050ContactFormTemplate",
+      "timestamp": 1567431050,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1567431050ContactFormTemplate",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1568120239CmsSection.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1568120239CmsSection",
+      "timestamp": 1568120239,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120239CmsSection",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1568120302CmsBlockUpdate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1568120302CmsBlockUpdate",
+      "timestamp": 1568120302,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568120302CmsBlockUpdate",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1568645037AddEnqueueDbal.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1568645037AddEnqueueDbal",
+      "timestamp": 1568645037,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568645037AddEnqueueDbal",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1568901713PromotionDiscount.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1568901713PromotionDiscount",
+      "timestamp": 1568901713,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1568901713PromotionDiscount",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1569403146ProductVisibilityUnique.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1569403146ProductVisibilityUnique",
+      "timestamp": 1569403146,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1569403146ProductVisibilityUnique",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570187167AddedAppConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570187167AddedAppConfig",
+      "timestamp": 1570187167,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570187167AddedAppConfig",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570459127AddCmsSidebarLayout.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570459127AddCmsSidebarLayout",
+      "timestamp": 1570459127,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570459127AddCmsSidebarLayout",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570621541UpdateDefaultMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570621541UpdateDefaultMailTemplates",
+      "timestamp": 1570621541,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570621541UpdateDefaultMailTemplates",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570622696CustomerPasswordRecovery.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570622696CustomerPasswordRecovery",
+      "timestamp": 1570622696,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570622696CustomerPasswordRecovery",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570629862ClearCategoryBreadcrumbs.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570629862ClearCategoryBreadcrumbs",
+      "timestamp": 1570629862,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570629862ClearCategoryBreadcrumbs",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1570684913ScheduleIndexer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1570684913ScheduleIndexer",
+      "timestamp": 1570684913,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1570684913ScheduleIndexer",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571059598ChangeGreatBritainToUnitedKingdom.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571059598ChangeGreatBritainToUnitedKingdom",
+      "timestamp": 1571059598,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571059598ChangeGreatBritainToUnitedKingdom",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571210820AddPaymentMethodIdsToSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571210820AddPaymentMethodIdsToSalesChannel",
+      "timestamp": 1571210820,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571210820AddPaymentMethodIdsToSalesChannel",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571660203FixOrderDeliveryStateNames.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571660203FixOrderDeliveryStateNames",
+      "timestamp": 1571660203,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571660203FixOrderDeliveryStateNames",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571724915MultipleTrackingCodesInOrderDelivery.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571724915MultipleTrackingCodesInOrderDelivery",
+      "timestamp": 1571724915,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571724915MultipleTrackingCodesInOrderDelivery",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571981437AddSeoColumns.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571981437AddSeoColumns",
+      "timestamp": 1571981437,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571981437AddSeoColumns",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1571990395UpdateDefaultStatusMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1571990395UpdateDefaultStatusMailTemplates",
+      "timestamp": 1571990395,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1571990395UpdateDefaultStatusMailTemplates",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572193798TaxRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572193798TaxRule",
+      "timestamp": 1572193798,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572193798TaxRule",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572264837AddCacheId.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572264837AddCacheId",
+      "timestamp": 1572264837,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572264837AddCacheId",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType",
+      "timestamp": 1572273565,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572421282AddDoubleOptInRegistration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572421282AddDoubleOptInRegistration",
+      "timestamp": 1572421282,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572421282AddDoubleOptInRegistration",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572425108AddDoubleOptInRegistrationMailTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572425108AddDoubleOptInRegistrationMailTemplate",
+      "timestamp": 1572425108,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572425108AddDoubleOptInRegistrationMailTemplate",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1572957455AddAffiliateTrackingColumns.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1572957455AddAffiliateTrackingColumns",
+      "timestamp": 1572957455,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1572957455AddAffiliateTrackingColumns",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1573049297AddReopenTransitionToDeliveryStates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1573049297AddReopenTransitionToDeliveryStates",
+      "timestamp": 1573049297,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573049297AddReopenTransitionToDeliveryStates",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1573569685DoubleOptInGuestMailTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1573569685DoubleOptInGuestMailTemplate",
+      "timestamp": 1573569685,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573569685DoubleOptInGuestMailTemplate",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1573729158AddSitemapConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1573729158AddSitemapConfig",
+      "timestamp": 1573729158,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1573729158AddSitemapConfig",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574063550AddCurrencyToProductExport.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574063550AddCurrencyToProductExport",
+      "timestamp": 1574063550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574063550AddCurrencyToProductExport",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574082635AddOrderLineItemProductId.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574082635AddOrderLineItemProductId",
+      "timestamp": 1574082635,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574082635AddOrderLineItemProductId",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574258787ProductSearchLanguageKey.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574258787ProductSearchLanguageKey",
+      "timestamp": 1574258787,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258787ProductSearchLanguageKey",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574258788TaxRuleLanguageKey.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574258788TaxRuleLanguageKey",
+      "timestamp": 1574258788,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258788TaxRuleLanguageKey",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574258789ProductReviewLanguageKey.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574258789ProductReviewLanguageKey",
+      "timestamp": 1574258789,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574258789ProductReviewLanguageKey",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574520220AddSalesChannelMaintenance.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574520220AddSalesChannelMaintenance",
+      "timestamp": 1574520220,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574520220AddSalesChannelMaintenance",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable",
+      "timestamp": 1574672450,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable",
+      "status": "registered_variant",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574695657ProductCrossSelling.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574695657ProductCrossSelling",
+      "timestamp": 1574695657,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574695657ProductCrossSelling",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "CREATE TABLE idempotency semantics need review",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1574925962FixTaxConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1574925962FixTaxConstraint",
+      "timestamp": 1574925962,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1574925962FixTaxConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575010262AddCmsFormLayouts.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575010262AddCmsFormLayouts",
+      "timestamp": 1575010262,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575010262AddCmsFormLayouts",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575021466AddCurrencies.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575021466AddCurrencies",
+      "timestamp": 1575021466,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575021466AddCurrencies",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575034234FixOrderDeliveryAddressConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575034234FixOrderDeliveryAddressConstraint",
+      "timestamp": 1575034234,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575034234FixOrderDeliveryAddressConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575036586FixProductConfiguratorSettingsConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575036586FixProductConfiguratorSettingsConstraint",
+      "timestamp": 1575036586,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575036586FixProductConfiguratorSettingsConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575039284FixProductReviewConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575039284FixProductReviewConstraint",
+      "timestamp": 1575039284,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575039284FixProductReviewConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575197543MailTemplateCustomFields.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575197543MailTemplateCustomFields",
+      "timestamp": 1575197543,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575197543MailTemplateCustomFields",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575274700FixSalesChannelMailHeaderFooterConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575274700FixSalesChannelMailHeaderFooterConstraint",
+      "timestamp": 1575274700,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575274700FixSalesChannelMailHeaderFooterConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575293069OrderMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575293069OrderMailTemplates",
+      "timestamp": 1575293069,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575293069OrderMailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575451283AddLimitToCrossSelling.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575451283AddLimitToCrossSelling",
+      "timestamp": 1575451283,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575451283AddLimitToCrossSelling",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575626180RemoveSearchKeywordInheritance.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575626180RemoveSearchKeywordInheritance",
+      "timestamp": 1575626180,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575626180RemoveSearchKeywordInheritance",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1575883959ResetListingPrices.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1575883959ResetListingPrices",
+      "timestamp": 1575883959,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1575883959ResetListingPrices",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1576488398AddOrderLineItemPosition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1576488398AddOrderLineItemPosition",
+      "timestamp": 1576488398,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1576488398AddOrderLineItemPosition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1576590301FixSalesChannelDomainLanguageFk.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1576590301FixSalesChannelDomainLanguageFk",
+      "timestamp": 1576590301,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1576590301FixSalesChannelDomainLanguageFk",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 5,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql key/index alter syntax"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578042218DefaultPages.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578042218DefaultPages",
+      "timestamp": 1578042218,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578042218DefaultPages",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578044453AddedNavigationDepth.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578044453AddedNavigationDepth",
+      "timestamp": 1578044453,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578044453AddedNavigationDepth",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578470886FixPurchaseSteps.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578470886FixPurchaseSteps",
+      "timestamp": 1578470886,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578470886FixPurchaseSteps",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578475268FixSloveneLocale.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578475268FixSloveneLocale",
+      "timestamp": 1578475268,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578475268FixSloveneLocale",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578485775UseStableUpdateChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578485775UseStableUpdateChannel",
+      "timestamp": 1578485775,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578485775UseStableUpdateChannel",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578491480Hreflang.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578491480Hreflang",
+      "timestamp": 1578491480,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578491480Hreflang",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "tinyint type",
+        "unsigned numeric type"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578590702AddedPropertyGroupPosition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578590702AddedPropertyGroupPosition",
+      "timestamp": 1578590702,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578590702AddedPropertyGroupPosition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578648299ReindexSeoUrls.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578648299ReindexSeoUrls",
+      "timestamp": 1578648299,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1578648299ReindexSeoUrls",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1578650334AddGoogleAnalyticsTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1578650334AddGoogleAnalyticsTable",
+      "timestamp": 1578650334,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1578650334AddGoogleAnalyticsTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review",
+        "MySQL AFTER column placement changes schema order"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580202210DefaultRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580202210DefaultRule",
+      "timestamp": 1580202210,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580202210DefaultRule",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580218617RefactorShippingMethodPrice.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580218617RefactorShippingMethodPrice",
+      "timestamp": 1580218617,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580218617RefactorShippingMethodPrice",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "mysql alter syntax",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "trigger syntax",
+        "double-quoted SQL token is dialect-ambiguous"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580743279UpdateDeliveryMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580743279UpdateDeliveryMailTemplates",
+      "timestamp": 1580743279,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580743279UpdateDeliveryMailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580746806AddPaymentStates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580746806AddPaymentStates",
+      "timestamp": 1580746806,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580746806AddPaymentStates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580808849AddGermanContactFormTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580808849AddGermanContactFormTranslation",
+      "timestamp": 1580808849,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580808849AddGermanContactFormTranslation",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580819350AddTrackingUrl.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580819350AddTrackingUrl",
+      "timestamp": 1580819350,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580819350AddTrackingUrl",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql text/blob type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1580827023ProductCrossSellingAssignedProductsDefinition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1580827023ProductCrossSellingAssignedProductsDefinition",
+      "timestamp": 1580827023,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1580827023ProductCrossSellingAssignedProductsDefinition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review",
+        "MySQL AFTER column placement changes schema order",
+        "mysql alter syntax"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1582011195FixCountryStateGermanTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1582011195FixCountryStateGermanTranslation",
+      "timestamp": 1582011195,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1582011195FixCountryStateGermanTranslation",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay",
+      "timestamp": 1583142266,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1583416186KeywordUniques.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1583416186KeywordUniques",
+      "timestamp": 1583416186,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583416186KeywordUniques",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql key/index alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1583756864FixDeliveryForeignKey.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1583756864FixDeliveryForeignKey",
+      "timestamp": 1583756864,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583756864FixDeliveryForeignKey",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1583844433AddRefreshTokenTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1583844433AddRefreshTokenTable",
+      "timestamp": 1583844433,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583844433AddRefreshTokenTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1584002637NewImportExport.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1584002637NewImportExport",
+      "timestamp": 1584002637,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1584002637NewImportExport",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "json type/function",
+        "mixed-case MySQL identifier quoting needs review",
+        "binary type/function",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1584953715UpdateMailTemplatesAfterOrderLink.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1584953715UpdateMailTemplatesAfterOrderLink",
+      "timestamp": 1584953715,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1584953715UpdateMailTemplatesAfterOrderLink",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1585056571AddLanguageToMailTemplateMedia.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1585056571AddLanguageToMailTemplateMedia",
+      "timestamp": 1585056571,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585056571AddLanguageToMailTemplateMedia",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1585126355AddOrderCommentField.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1585126355AddOrderCommentField",
+      "timestamp": 1585126355,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585126355AddOrderCommentField",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql collation",
+        "mysql text/blob type",
+        "mysql collation with quoted name",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1585490020ActivateHoneypotCaptcha.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1585490020ActivateHoneypotCaptcha",
+      "timestamp": 1585490020,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585490020ActivateHoneypotCaptcha",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1585744384ChangeCategoryProfile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1585744384ChangeCategoryProfile",
+      "timestamp": 1585744384,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585744384ChangeCategoryProfile",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1585816139FixMediaMapping.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1585816139FixMediaMapping",
+      "timestamp": 1585816139,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1585816139FixMediaMapping",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1586158920AddImportExportProfileConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1586158920AddImportExportProfileConfig",
+      "timestamp": 1586158920,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586158920AddImportExportProfileConfig",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1586173614AddAdditionalImportExportProfiles.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1586173614AddAdditionalImportExportProfiles",
+      "timestamp": 1586173614,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586173614AddAdditionalImportExportProfiles",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1586260286AddProductMainVariant.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1586260286AddProductMainVariant",
+      "timestamp": 1586260286,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586260286AddProductMainVariant",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1586334003AddParentIdToProductProfile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1586334003AddParentIdToProductProfile",
+      "timestamp": 1586334003,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586334003AddParentIdToProductProfile",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1587039363AddImportExportLabelField.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1587039363AddImportExportLabelField",
+      "timestamp": 1587039363,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587039363AddImportExportLabelField",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 5,
+      "unhandled_shapes": [
+        "mysql alter syntax",
+        "mixed-case MySQL identifier quoting needs review",
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1587109484AddAfterOrderPaymentFlag.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1587109484AddAfterOrderPaymentFlag",
+      "timestamp": 1587109484,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587109484AddAfterOrderPaymentFlag",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "double-quoted SQL token is dialect-ambiguous"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1587111506AddPausedScheduleToProductExport.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1587111506AddPausedScheduleToProductExport",
+      "timestamp": 1587111506,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587111506AddPausedScheduleToProductExport",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "tinyint type"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1587461582AddOpenToPaidTransition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1587461582AddOpenToPaidTransition",
+      "timestamp": 1587461582,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1587461582AddOpenToPaidTransition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1588143272UpdateOrderStateChangeMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1588143272UpdateOrderStateChangeMailTemplates",
+      "timestamp": 1588143272,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1588143272UpdateOrderStateChangeMailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1588144801TriggerIndexer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1588144801TriggerIndexer",
+      "timestamp": 1588144801,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1588144801TriggerIndexer",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1588153272UpdateGermanMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1588153272UpdateGermanMailTemplates",
+      "timestamp": 1588153272,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1588153272UpdateGermanMailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589178550AddTaxCalculationType.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589178550AddTaxCalculationType",
+      "timestamp": 1589178550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589178550AddTaxCalculationType",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589357321AddCountries.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589357321AddCountries",
+      "timestamp": 1589357321,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589357321AddCountries",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589359936AddTaxCountryRules.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589359936AddTaxCountryRules",
+      "timestamp": 1589359936,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589359936AddTaxCountryRules",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589379060AddVariantCharacteristicsToEmailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589379060AddVariantCharacteristicsToEmailTemplates",
+      "timestamp": 1589379060,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589379060AddVariantCharacteristicsToEmailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589447332AddFilterableToPropertyGroup.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589447332AddFilterableToPropertyGroup",
+      "timestamp": 1589447332,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589447332AddFilterableToPropertyGroup",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "tinyint type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1589458026SetDefaultReviewConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1589458026SetDefaultReviewConfig",
+      "timestamp": 1589458026,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1589458026SetDefaultReviewConfig",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590408550AclResources.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590408550AclResources",
+      "timestamp": 1590408550,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590408550AclResources",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 5,
+      "unhandled_shapes": [
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql alter syntax",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590409548AddPackUnitPluralMigration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590409548AddPackUnitPluralMigration",
+      "timestamp": 1590409548,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590409548AddPackUnitPluralMigration",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql collation",
+        "mysql collation with quoted name",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590566018RenameDefaultMediaFolders.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590566018RenameDefaultMediaFolders",
+      "timestamp": 1590566018,
+      "implementation": "Shopware\\Core\\Migration\\V6_3\\Migration1590566018RenameDefaultMediaFolders",
+      "status": "registered_portable_mapping",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590566405InvalidateSessionOnLogOut.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590566405InvalidateSessionOnLogOut",
+      "timestamp": 1590566405,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590566405InvalidateSessionOnLogOut",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590579986DropMailHeaderFooterConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590579986DropMailHeaderFooterConstraint",
+      "timestamp": 1590579986,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590579986DropMailHeaderFooterConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1590758953ProductFeatureSet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1590758953ProductFeatureSet",
+      "timestamp": 1590758953,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1590758953ProductFeatureSet",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "mysql storage or charset clause",
+        "mysql text/blob type",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review",
+        "MySQL AFTER column placement changes schema order",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591052278AddPropertyAndOptionIdsToProductProfile.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591052278AddPropertyAndOptionIdsToProductProfile",
+      "timestamp": 1591052278,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591052278AddPropertyAndOptionIdsToProductProfile",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591167126RoleDescription.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591167126RoleDescription",
+      "timestamp": 1591167126,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591167126RoleDescription",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql text/blob type",
+        "mysql collation with quoted name",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591253089OrderDeeplinkForMailTemplates.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591253089OrderDeeplinkForMailTemplates",
+      "timestamp": 1591253089,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591253089OrderDeeplinkForMailTemplates",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1591259559AddMissingCurrency.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591259559AddMissingCurrency",
+      "timestamp": 1591259559,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591259559AddMissingCurrency",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn",
+      "timestamp": 1591272594,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591272594AddGoogleAnalyticsAnonymizeIpColumn",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "tinyint type"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591361320ChargebackAndAuthorized.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591361320ChargebackAndAuthorized",
+      "timestamp": 1591361320,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591361320ChargebackAndAuthorized",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591683158PromotionDiscount.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591683158PromotionDiscount",
+      "timestamp": 1591683158,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591683158PromotionDiscount",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1591817370AddCustomerTagsManyToManyIdField.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1591817370AddCustomerTagsManyToManyIdField",
+      "timestamp": 1591817370,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591817370AddCustomerTagsManyToManyIdField",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1592466717AddKeywordIndex.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1592466717AddKeywordIndex",
+      "timestamp": 1592466717,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1592466717AddKeywordIndex",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql key/index alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1592837424AddProductTypeToCategory.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1592837424AddProductTypeToCategory",
+      "timestamp": 1592837424,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1592837424AddProductTypeToCategory",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1592978289ProductCustomFieldSets.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1592978289ProductCustomFieldSets",
+      "timestamp": 1592978289,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1592978289ProductCustomFieldSets",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mixed-case MySQL identifier quoting needs review",
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1593698606AddNetAndGrossPurchasePrices.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1593698606AddNetAndGrossPurchasePrices",
+      "timestamp": 1593698606,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1593698606AddNetAndGrossPurchasePrices",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "formatted dynamic SQL",
+        "trigger syntax"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594650256AddMailTemplateSalesChannelPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594650256AddMailTemplateSalesChannelPK",
+      "timestamp": 1594650256,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594650256AddMailTemplateSalesChannelPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594885630AddUserRecoveryPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594885630AddUserRecoveryPK",
+      "timestamp": 1594885630,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594885630AddUserRecoveryPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594886106AddDocumentBaseConfigSalesChannelPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594886106AddDocumentBaseConfigSalesChannelPK",
+      "timestamp": 1594886106,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886106AddDocumentBaseConfigSalesChannelPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594886773LogEntryPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594886773LogEntryPK",
+      "timestamp": 1594886773,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886773LogEntryPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594886895CustomerRecoveryPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594886895CustomerRecoveryPK",
+      "timestamp": 1594886895,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594886895CustomerRecoveryPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1594887027AppConfigPK.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1594887027AppConfigPK",
+      "timestamp": 1594887027,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1594887027AppConfigPK",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595160327AddPositionToCustomFieldSet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595160327AddPositionToCustomFieldSet",
+      "timestamp": 1595160327,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595160327AddPositionToCustomFieldSet",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595321666v3.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595321666v3",
+      "timestamp": 1595321666,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595321666v3",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 7,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595422169AddProductSorting.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595422169AddProductSorting",
+      "timestamp": 1595422169,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595422169AddProductSorting",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "unsigned numeric type",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql collation",
+        "mysql collation with quoted name",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595480600RemoveGoogleShoppingSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595480600RemoveGoogleShoppingSalesChannel",
+      "timestamp": 1595480600,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595480600RemoveGoogleShoppingSalesChannel",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595489705PreventOldListingPrices.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595489705PreventOldListingPrices",
+      "timestamp": 1595489705,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595489705PreventOldListingPrices",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "trigger syntax"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595492052SeoUrl.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595492052SeoUrl",
+      "timestamp": 1595492052,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595492052SeoUrl",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "tinyint type",
+        "mysql collation",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mysql collation with quoted name",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595492053SeoUrlTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595492053SeoUrlTemplate",
+      "timestamp": 1595492053,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595492053SeoUrlTemplate",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "tinyint type",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595499689RemoveGoogleShoppingRelatedTables.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595499689RemoveGoogleShoppingRelatedTables",
+      "timestamp": 1595499689,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595499689RemoveGoogleShoppingRelatedTables",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595553089FixOrderConfirmationMailForAllPayloads.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595553089FixOrderConfirmationMailForAllPayloads",
+      "timestamp": 1595553089,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595553089FixOrderConfirmationMailForAllPayloads",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "dynamic SQL concatenation"
+      ],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1595578253CustomFieldSetSelection.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595578253CustomFieldSetSelection",
+      "timestamp": 1595578253,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595578253CustomFieldSetSelection",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "tinyint type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1595919251MainCategory.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1595919251MainCategory",
+      "timestamp": 1595919251,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1595919251MainCategory",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1596091744UseHomeAsRootCategoryName.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1596091744UseHomeAsRootCategoryName",
+      "timestamp": 1596091744,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1596091744UseHomeAsRootCategoryName",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1596441551CustomerGroupRegistration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1596441551CustomerGroupRegistration",
+      "timestamp": 1596441551,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1596441551CustomerGroupRegistration",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 5,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql key/index alter syntax",
+        "tinyint type",
+        "mysql text/blob type",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1597391970App.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597391970App",
+      "timestamp": 1597391970,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597391970App",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql text/blob type",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1597394241AddAppIdToCustomFieldSet.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597394241AddAppIdToCustomFieldSet",
+      "timestamp": 1597394241,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597394241AddAppIdToCustomFieldSet",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1597657689ActionButton.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597657689ActionButton",
+      "timestamp": 1597657689,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597657689ActionButton",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1597762808Webhook.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597762808Webhook",
+      "timestamp": 1597762808,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597762808Webhook",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1597830237Template.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597830237Template",
+      "timestamp": 1597830237,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597830237Template",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql text/blob type",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1597930227CustomerGroupRegistrationSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1597930227CustomerGroupRegistrationSalesChannel",
+      "timestamp": 1597930227,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1597930227CustomerGroupRegistrationSalesChannel",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1598280548NullableSeoUrlTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1598280548NullableSeoUrlTemplate",
+      "timestamp": 1598280548,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598280548NullableSeoUrlTemplate",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1598520424UpdateProductReviewConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1598520424UpdateProductReviewConstraint",
+      "timestamp": 1598520424,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598520424UpdateProductReviewConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1598885384RedirectToLatestSeoUrl.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1598885384RedirectToLatestSeoUrl",
+      "timestamp": 1598885384,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598885384RedirectToLatestSeoUrl",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599112309AddListingFilterSystemConfigOption.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599112309AddListingFilterSystemConfigOption",
+      "timestamp": 1599112309,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599112309AddListingFilterSystemConfigOption",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599134496FixImportExportProfilesForGermanLanguage.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599134496FixImportExportProfilesForGermanLanguage",
+      "timestamp": 1599134496,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599134496FixImportExportProfilesForGermanLanguage",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599463278AddCustomerIdIntoSalesChannelContext.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599463278AddCustomerIdIntoSalesChannelContext",
+      "timestamp": 1599463278,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599463278AddCustomerIdIntoSalesChannelContext",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599570560FixSlovakiaDisplayedAsSlovenia.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599570560FixSlovakiaDisplayedAsSlovenia",
+      "timestamp": 1599570560,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599570560FixSlovakiaDisplayedAsSlovenia",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599720163AddEventActiveColumn.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599720163AddEventActiveColumn",
+      "timestamp": 1599720163,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599720163AddEventActiveColumn",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599806584AddEventActionRule.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599806584AddEventActionRule",
+      "timestamp": 1599806584,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599806584AddEventActionRule",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599806595AddEventActionSalesChannel.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599806595AddEventActionSalesChannel",
+      "timestamp": 1599806595,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599806595AddEventActionSalesChannel",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1599822061MigrateOrderMails.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1599822061MigrateOrderMails",
+      "timestamp": 1599822061,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1599822061MigrateOrderMails",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600072779AddSearchKeywordsToProductTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600072779AddSearchKeywordsToProductTranslation",
+      "timestamp": 1600072779,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600072779AddSearchKeywordsToProductTranslation",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600156989AddProductSalesField.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600156989AddProductSalesField",
+      "timestamp": 1600156989,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600156989AddProductSalesField",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600253602AddOrderRuleIds.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600253602AddOrderRuleIds",
+      "timestamp": 1600253602,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600253602AddOrderRuleIds",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600330846ChangeActiveColumn.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600330846ChangeActiveColumn",
+      "timestamp": 1600330846,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600330846ChangeActiveColumn",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "tinyint type",
+        "mysql alter syntax",
+        "unsigned numeric type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600338271AddTopsellerSorting.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600338271AddTopsellerSorting",
+      "timestamp": 1600338271,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600338271AddTopsellerSorting",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600349343AddDeliveryStateTransitions.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600349343AddDeliveryStateTransitions",
+      "timestamp": 1600349343,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600349343AddDeliveryStateTransitions",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600676671OrderLineItemCoverMedia.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600676671OrderLineItemCoverMedia",
+      "timestamp": 1600676671,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600676671OrderLineItemCoverMedia",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600769357AddTransition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600769357AddTransition",
+      "timestamp": 1600769357,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600769357AddTransition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1600778848AddOrderMails.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1600778848AddOrderMails",
+      "timestamp": 1600778848,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600778848AddOrderMails",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1601451838ChangeSearchKeywordColumnToProductTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1601451838ChangeSearchKeywordColumnToProductTranslation",
+      "timestamp": 1601451838,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601451838ChangeSearchKeywordColumnToProductTranslation",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "json type/function"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1601539530IntergrationRoleEntity.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1601539530IntergrationRoleEntity",
+      "timestamp": 1601539530,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601539530IntergrationRoleEntity",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mysql storage or charset clause",
+        "CREATE TABLE idempotency semantics need review",
+        "mixed-case MySQL identifier quoting needs review",
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1601543829AddBoundSalesChannelIdColumnIntoCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1601543829AddBoundSalesChannelIdColumnIntoCustomer",
+      "timestamp": 1601543829,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601543829AddBoundSalesChannelIdColumnIntoCustomer",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1601891339EventActionTitle.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1601891339EventActionTitle",
+      "timestamp": 1601891339,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601891339EventActionTitle",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602062376AddUniqueConstraintForEmailAndBoundSalesChannelIdIntoCustomerTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602062376AddUniqueConstraintForEmailAndBoundSalesChannelIdIntoCustomerTable",
+      "timestamp": 1602062376,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602062376AddUniqueConstraintForEmailAndBoundSalesChannelIdIntoCustomerTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql key/index alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602146868AddTaxTypeToShippingMethod.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602146868AddTaxTypeToShippingMethod",
+      "timestamp": 1602146868,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602146868AddTaxTypeToShippingMethod",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable",
+      "timestamp": 1602153572,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 5,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review",
+        "mysql key/index alter syntax",
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602494493AddDefaultSettingConfigValueForWishlist.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602494493AddDefaultSettingConfigValueForWishlist",
+      "timestamp": 1602494493,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602494493AddDefaultSettingConfigValueForWishlist",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602494495SetUsersAsAdmins.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602494495SetUsersAsAdmins",
+      "timestamp": 1602494495,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602494495SetUsersAsAdmins",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "quoted UPDATE value may be a MySQL string"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer",
+      "timestamp": 1602745374,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoCustomer",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 4,
+      "unhandled_shapes": [
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review",
+        "quoted UPDATE value may be a MySQL string",
+        "trigger syntax",
+        "double-quoted SQL token is dialect-ambiguous"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1602822727AddVatHandlingIntoCountryTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1602822727AddVatHandlingIntoCountryTable",
+      "timestamp": 1602822727,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602822727AddVatHandlingIntoCountryTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1603179023AddDefaultSettingConfigValueForProductListingPerPage.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1603179023AddDefaultSettingConfigValueForProductListingPerPage",
+      "timestamp": 1603179023,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603179023AddDefaultSettingConfigValueForProductListingPerPage",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1603293043FixCurrencyTypo.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1603293043FixCurrencyTypo",
+      "timestamp": 1603293043,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603293043FixCurrencyTypo",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1603970276RemoveCustomerEmailUniqueConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1603970276RemoveCustomerEmailUniqueConstraint",
+      "timestamp": 1603970276,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1603970276RemoveCustomerEmailUniqueConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql key/index alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604056363CustomerWishlist.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604056363CustomerWishlist",
+      "timestamp": 1604056363,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604056363CustomerWishlist",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604056421CustomerWishlistProducts.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604056421CustomerWishlistProducts",
+      "timestamp": 1604056421,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604056421CustomerWishlistProducts",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604475913AddCMSPageIdToProductTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604475913AddCMSPageIdToProductTable",
+      "timestamp": 1604475913,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604475913AddCMSPageIdToProductTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604499476AddDefaultSettingConfigValueForContactForm.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604499476AddDefaultSettingConfigValueForContactForm",
+      "timestamp": 1604499476,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604499476AddDefaultSettingConfigValueForContactForm",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604568928AddConfigurableToApp.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604568928AddConfigurableToApp",
+      "timestamp": 1604568928,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604568928AddConfigurableToApp",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "tinyint type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1604669773UpdateMailTemplate.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1604669773UpdateMailTemplate",
+      "timestamp": 1604669773,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1604669773UpdateMailTemplate",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1605103533AddCookiesToAppEntity.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1605103533AddCookiesToAppEntity",
+      "timestamp": 1605103533,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605103533AddCookiesToAppEntity",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1605530777PrivacyPolicyExtensionsToAppTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1605530777PrivacyPolicyExtensionsToAppTranslation",
+      "timestamp": 1605530777,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605530777PrivacyPolicyExtensionsToAppTranslation",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql text/blob type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1605609309AddCreatedByIdAndUpdatedByIdToOrder.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1605609309AddCreatedByIdAndUpdatedByIdToOrder",
+      "timestamp": 1605609309,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605609309AddCreatedByIdAndUpdatedByIdToOrder",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 3,
+      "unhandled_shapes": [
+        "binary type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1605609477RemoveDeleteCascadeConstraintInDocumentBaseConfigTable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1605609477RemoveDeleteCascadeConstraintInDocumentBaseConfigTable",
+      "timestamp": 1605609477,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605609477RemoveDeleteCascadeConstraintInDocumentBaseConfigTable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1605861407RuleAssociationsToRestrict.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1605861407RuleAssociationsToRestrict",
+      "timestamp": 1605861407,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605861407RuleAssociationsToRestrict",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 6,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1606310257AddCanonicalUrlProp.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1606310257AddCanonicalUrlProp",
+      "timestamp": 1606310257,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1606310257AddCanonicalUrlProp",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1607415095PromotionRedemptionsNullable.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1607415095PromotionRedemptionsNullable",
+      "timestamp": 1607415095,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607415095PromotionRedemptionsNullable",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1607500561UpdateSignUpMailTemplateTranslation.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1607500561UpdateSignUpMailTemplateTranslation",
+      "timestamp": 1607500561,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607500561UpdateSignUpMailTemplateTranslation",
+      "status": "diagnostic_emitted",
+      "translated_sql_literals": 0,
+      "unhandled_shapes": [],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1607514878AddOrderDeliveryRetourTransition.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1607514878AddOrderDeliveryRetourTransition",
+      "timestamp": 1607514878,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607514878AddOrderDeliveryRetourTransition",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1607581275AddProductSearchConfiguration.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1607581275AddProductSearchConfiguration",
+      "timestamp": 1607581275,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607581275AddProductSearchConfiguration",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "tinyint type",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1607581276AddProductSearchConfigurationDefaults.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1607581276AddProductSearchConfigurationDefaults",
+      "timestamp": 1607581276,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607581276AddProductSearchConfigurationDefaults",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mixed-case MySQL identifier quoting needs review",
+        "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
+      ],
+      "source_dir_references_rebased": true
+    },
+    {
+      "class_file": "Migration1608624028RemoveDefaultSalesChannelAssignmentForCustomerRecoveryEvent.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1608624028RemoveDefaultSalesChannelAssignmentForCustomerRecoveryEvent",
+      "timestamp": 1608624028,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1608624028RemoveDefaultSalesChannelAssignmentForCustomerRecoveryEvent",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "double-quoted SQL token is dialect-ambiguous"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1609125144AddLastUpdatedPasswordAtColumnIntoUser.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1609125144AddLastUpdatedPasswordAtColumnIntoUser",
+      "timestamp": 1609125144,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1609125144AddLastUpdatedPasswordAtColumnIntoUser",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "mysql datetime or medium integer type",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1609857999FixStateMachineHistoryUserConstraint.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1609857999FixStateMachineHistoryUserConstraint",
+      "timestamp": 1609857999,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1609857999FixStateMachineHistoryUserConstraint",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 2,
+      "unhandled_shapes": [
+        "mysql foreign key alter syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1610531188AddUserConfig.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1610531188AddUserConfig",
+      "timestamp": 1610531188,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1610531188AddUserConfig",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "binary type/function",
+        "json type/function",
+        "mysql storage or charset clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1610965670RemoveDeprecatedColumns.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1610965670RemoveDeprecatedColumns",
+      "timestamp": 1610965670,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1610965670RemoveDeprecatedColumns",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 7,
+      "unhandled_shapes": [
+        "trigger syntax",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1610974673DropProductListingPriceTrigger.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1610974673DropProductListingPriceTrigger",
+      "timestamp": 1610974673,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1610974673DropProductListingPriceTrigger",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "trigger syntax"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1611155140AddUpdatedAtToSalesChannelApiContext.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1611155140AddUpdatedAtToSalesChannelApiContext",
+      "timestamp": 1611155140,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1611155140AddUpdatedAtToSalesChannelApiContext",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "on update column clause",
+        "mysql datetime or medium integer type",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    },
+    {
+      "class_file": "Migration1614240671AddVatIdsToOrderCustomer.php",
+      "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1614240671AddVatIdsToOrderCustomer",
+      "timestamp": 1614240671,
+      "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1614240671AddVatIdsToOrderCustomer",
+      "status": "diagnostic_emitted_with_unhandled_shapes",
+      "translated_sql_literals": 1,
+      "unhandled_shapes": [
+        "json type/function",
+        "MySQL AFTER column placement changes schema order",
+        "mixed-case MySQL identifier quoting needs review"
+      ],
+      "source_dir_references_rebased": false
+    }
+  ]
+}
