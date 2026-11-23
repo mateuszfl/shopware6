@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
@@ -64,7 +65,7 @@ class Migration1584002637NewImportExport extends MigrationStep
             $profile['enclosure'] = '"';
             $profile['mapping'] = json_encode($profile['mapping'], \JSON_THROW_ON_ERROR);
             $profile['created_at'] = (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT);
-            $connection->insert('import_export_profile', $profile);
+            $connection->insert('import_export_profile', $profile, ['id' => ParameterType::BINARY]);
         }
     }
 
@@ -82,18 +83,19 @@ class Migration1584002637NewImportExport extends MigrationStep
     {
         $defaultFolderId = Uuid::randomBytes();
         $configurationId = Uuid::randomBytes();
-        $connection->insert('media_default_folder', ['id' => $defaultFolderId, 'entity' => 'import_export_profile', 'association_fields' => '[]', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('media_default_folder', ['id' => $defaultFolderId, 'entity' => 'import_export_profile', 'association_fields' => '[]', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
         $connection->executeStatement('
                 INSERT INTO "media_folder_configuration" ("id", "thumbnail_quality", "create_thumbnails", "private", created_at)
                 VALUES (:id, 80, 1, :private, :createdAt)
-            ', ['id' => $configurationId, 'createdAt' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), 'private' => 0]);
+            ', ['id' => $configurationId, 'createdAt' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT), 'private' => 0], ['id' => ParameterType::BINARY]);
         foreach ($this->getThumbnailSizes($connection) as $thumbnailSize) {
             $connection->executeStatement('
-                    REPLACE INTO `media_folder_configuration_media_thumbnail_size` (`media_folder_configuration_id`, `media_thumbnail_size_id`)
+                    INSERT INTO media_folder_configuration_media_thumbnail_size (media_folder_configuration_id, media_thumbnail_size_id)
                     VALUES (:folderConfigurationId, :thumbnailSizeId)
-                ', ['folderConfigurationId' => $configurationId, 'thumbnailSizeId' => $thumbnailSize['id']]);
+                    ON CONFLICT (media_folder_configuration_id, media_thumbnail_size_id) DO NOTHING
+                ', ['folderConfigurationId' => $configurationId, 'thumbnailSizeId' => $thumbnailSize['id']], ['folderConfigurationId' => ParameterType::BINARY, 'thumbnailSizeId' => ParameterType::BINARY]);
         }
-        $connection->insert('media_folder', ['id' => Uuid::randomBytes(), 'default_folder_id' => $defaultFolderId, 'name' => 'Import Media', 'media_folder_configuration_id' => $configurationId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('media_folder', ['id' => Uuid::randomBytes(), 'default_folder_id' => $defaultFolderId, 'name' => 'Import Media', 'media_folder_configuration_id' => $configurationId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY, 'default_folder_id' => ParameterType::BINARY, 'media_folder_configuration_id' => ParameterType::BINARY]);
     }
 
     /**
@@ -105,6 +107,9 @@ class Migration1584002637NewImportExport extends MigrationStep
         $sizes = [];
         foreach ($thumbnailSizes as $thumbnailSize) {
             $id = $connection->fetchOne('SELECT id FROM media_thumbnail_size WHERE width = :width AND height = :height', ['width' => $thumbnailSize['width'], 'height' => $thumbnailSize['height']]);
+            if (\is_resource($id)) {
+                $id = stream_get_contents($id);
+            }
             if (!$id) {
                 continue;
             }
