@@ -65,7 +65,7 @@ try {
         'customer_group', 'customer_group_translation', 'delivery_time', 'delivery_time_translation', 'integration',
         'language', 'locale', 'locale_translation', 'media', 'payment_method',
         'acl_role', 'acl_user_role', 'integration_role', 'app_payment_method', 'app_shipping_method', 'app_translation', 'payment_method_translation', 'plugin', 'plugin_translation', 'product', 'product_manufacturer', 'product_manufacturer_translation', 'product_media', 'product_price',
-        'product_translation', 'product_visibility', 'sales_channel', 'sales_channel_currency', 'sales_channel_language',
+        'product_cross_selling', 'product_translation', 'product_visibility', 'sales_channel', 'sales_channel_currency', 'sales_channel_language',
         'sales_channel_country', 'sales_channel_payment_method', 'sales_channel_shipping_method', 'sales_channel_domain', 'sales_channel_type',
         'sales_channel_type_translation', 'sales_channel_translation', 'shipping_method',
         'shipping_method_translation', 'snippet_set', 'system_config', 'tax', 'unit', 'unit_translation', 'user', 'user_access_key',
@@ -160,6 +160,17 @@ try {
             family_id BYTEA,
             revoked_at TIMESTAMP(3) WITHOUT TIME ZONE,
             PRIMARY KEY (id)
+        )
+        SQL);
+    // The context persister writes these fields although the base PostgreSQL migration only creates token/payload.
+    $connection->executeStatement(<<<'SQL'
+        CREATE TABLE sales_channel_api_context (
+            token VARCHAR(255) COLLATE sw_type_ci NOT NULL,
+            payload JSONB NOT NULL,
+            sales_channel_id BYTEA NULL CONSTRAINT chk_sw_sales_channel_api_context_sales_channel_id_uuid CHECK (octet_length(sales_channel_id) = 16),
+            customer_id BYTEA NULL CONSTRAINT chk_sw_sales_channel_api_context_customer_id_uuid CHECK (octet_length(customer_id) = 16),
+            updated_at TIMESTAMP(3) WITHOUT TIME ZONE NULL,
+            PRIMARY KEY (token)
         )
         SQL);
     // Product cache invalidation reads this migration-created mapping even for an empty stream.
