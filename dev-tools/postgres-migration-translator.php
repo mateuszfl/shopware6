@@ -621,6 +621,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
                     $this->replace(
+                        'mysql_order_currency_multi_table_update_to_postgresql_update_from',
+                        '/^\s*UPDATE\s+`order`\s*,\s*`currency`\s+SET\s+`order`\s*\.\s*`item_rounding`\s*=\s*`currency`\s*\.\s*`item_rounding`\s+WHERE\s+`order`\s*\.\s*`currency_id`\s*=\s*`currency`\s*\.\s*`id`\s*;?\s*$/i',
+                        'UPDATE `order` SET `item_rounding` = `currency`.`item_rounding` FROM `currency` WHERE `order`.`currency_id` = `currency`.`id`',
+                        $sql
+                    );
+                    $this->replace(
                         'check_json_valid_to_native_json_validation',
                         '/\bCHECK\s*\(\s*JSON_VALID\s*\(\s*(?:"[^"\r\n]+"|`[^`\r\n]+`)\s*\)\s*\)/i',
                         'CHECK (TRUE)',
