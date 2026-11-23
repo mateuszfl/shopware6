@@ -2,16 +2,19 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -22,6 +25,7 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
     {
         return 1599822061;
     }
+
     public function update(Connection $connection): void
     {
         // migrate existing event_actions
@@ -45,9 +49,11 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         $states = $this->prefix($states, 'state_enter.');
         $this->insertMails($connection, $states);
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }
+
     /**
      * @param array<string> $ids
      *
@@ -55,19 +61,21 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
      */
     private function fetchMails(Connection $connection, array $ids): array
     {
-        $mails = $connection->createQueryBuilder()->select('LOWER(HEX(mail_template.id)) as mail_template_id', 'NULL as sales_channel_id', 'mail_template_type.technical_name', 'LOWER(HEX(mail_template_type.id)) as mail_template_type_id')->from('mail_template')->innerJoin('mail_template', 'mail_template_type', 'mail_template_type', 'mail_template.mail_template_type_id = mail_template_type.id')->andWhere('mail_template_type.id IN (:ids)')->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY)->executeQuery()->fetchAllAssociative();
+        $mails = $connection->createQueryBuilder()->select('LOWER(encode(mail_template.id, \'hex\')) as mail_template_id', 'NULL as sales_channel_id', 'mail_template_type.technical_name', 'LOWER(encode(mail_template_type.id, \'hex\')) as mail_template_type_id')->from('mail_template')->innerJoin('mail_template', 'mail_template_type', 'mail_template_type', 'mail_template.mail_template_type_id = mail_template_type.id')->andWhere('mail_template_type.id IN (:ids)')->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY)->executeQuery()->fetchAllAssociative();
         $mapping = [];
         foreach ($mails as $mail) {
             $key = $mail['mail_template_id'] . '.' . $mail['technical_name'];
             $mapping[$key] = $mail;
         }
-        $mails = $connection->createQueryBuilder()->select('LOWER(HEX(mail_template_sales_channel.mail_template_id)) as mail_template_id', 'mail_template_sales_channel.sales_channel_id', 'mail_template_type.technical_name', 'LOWER(HEX(mail_template_type.id)) as mail_template_type_id')->from('mail_template_sales_channel')->innerJoin('mail_template_sales_channel', 'mail_template_type', 'mail_template_type', 'mail_template_sales_channel.mail_template_type_id = mail_template_type.id')->andWhere('mail_template_type.id IN (:ids)')->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY)->executeQuery()->fetchAllAssociative();
+        $mails = $connection->createQueryBuilder()->select('LOWER(encode(mail_template_sales_channel.mail_template_id, \'hex\')) as mail_template_id', 'LOWER(encode(mail_template_sales_channel.sales_channel_id, \'hex\')) as sales_channel_id', 'mail_template_type.technical_name', 'LOWER(encode(mail_template_type.id, \'hex\')) as mail_template_type_id')->from('mail_template_sales_channel')->innerJoin('mail_template_sales_channel', 'mail_template_type', 'mail_template_type', 'mail_template_sales_channel.mail_template_type_id = mail_template_type.id')->andWhere('mail_template_type.id IN (:ids)')->setParameter('ids', Uuid::fromHexToBytesList($ids), ArrayParameterType::BINARY)->executeQuery()->fetchAllAssociative();
         foreach ($mails as $mail) {
             $key = $mail['mail_template_id'] . '.' . $mail['technical_name'];
             $mapping[$key] = $mail;
         }
+
         return $mapping;
     }
+
     /**
      * @param list<string> $names
      *
@@ -75,8 +83,9 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
      */
     private function getTypeIds(Connection $connection, array $names): array
     {
-        return $connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM mail_template_type WHERE technical_name IN (:names)', ['names' => $names], ['names' => ArrayParameterType::STRING]);
+        return $connection->fetchFirstColumn('SELECT LOWER(encode(id, \'hex\')) as id FROM mail_template_type WHERE technical_name IN (:names)', ['names' => $names], ['names' => ArrayParameterType::STRING]);
     }
+
     /**
      * @param array<string, array<string, string>> $mails
      */
@@ -98,12 +107,13 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
                 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
                 'updated_at' => null,
             ];
-            $connection->insert('event_action', $insert);
+            $connection->insert('event_action', $insert, ['id' => ParameterType::BINARY]);
             if (isset($mail['sales_channel_id'])) {
-                $connection->insert('event_action_sales_channel', ['event_action_id' => $id, 'sales_channel_id' => $mail['sales_channel_id']]);
+                $connection->insert('event_action_sales_channel', ['event_action_id' => $id, 'sales_channel_id' => Uuid::fromHexToBytes($mail['sales_channel_id'])], ['event_action_id' => ParameterType::BINARY, 'sales_channel_id' => ParameterType::BINARY]);
             }
         }
     }
+
     /**
      * @param array<string, array<string, string>> $mails
      *
@@ -114,8 +124,10 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         foreach ($mails as &$mail) {
             $mail['technical_name'] = $prefix . $mail['technical_name'];
         }
+
         return $mails;
     }
+
     /**
      * @param list<array<string, string>> $events
      * @param array<string, array<string, string>> $mails
@@ -127,13 +139,14 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         $exploded = [];
         foreach ($events as $event) {
             $typeId = $event['typeId'];
-            $typeMails = array_filter($mails, static fn($mail) => $mail['mail_template_type_id'] === $typeId);
+            $typeMails = array_filter($mails, static fn ($mail) => $mail['mail_template_type_id'] === $typeId);
             foreach ($typeMails as &$mail) {
                 $mail['technical_name'] = $event['event_name'];
             }
             unset($mail);
             $exploded = [...$exploded, ...$typeMails];
         }
+
         return $exploded;
     }
 }
