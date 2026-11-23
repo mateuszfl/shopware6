@@ -33,6 +33,7 @@ class Migration1675082889DropUnusedTables extends MigrationStep
 
         $this->removeTrigger($connection, 'customer_address_vat_id_insert');
         $this->removeTrigger($connection, 'customer_address_vat_id_update');
+        $this->dropTriggerFunctionIfExists($connection, 'sync_customer_address_vat_id');
         $this->removeTrigger($connection, 'order_cash_rounding_insert');
     }
 }

@@ -1,13 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
-// Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
-
-declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,58 +16,54 @@ class Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoC
     {
         return 1602745374;
     }
+
     public function update(Connection $connection): void
     {
-        $connection->executeStatement('
-            ALTER TABLE "customer"
-            ADD COLUMN "vat_ids" JSON NULL DEFAULT NULL;
-        ');
-        $this->addInsertTrigger($connection);
-        $this->addUpdateTrigger($connection);
-        $connection->executeStatement('
-            UPDATE "customer", "customer_address"
-            SET "customer"."vat_ids" = JSON_ARRAY("customer_address"."vat_id")
-            WHERE "customer"."default_billing_address_id" = "customer_address"."id" AND "customer_address"."vat_id" IS NOT NULL;
-        ');
+        if (!$this->addColumn($connection, 'customer', 'vat_ids', 'JSON')) {
+            return;
+        }
+
+        $this->addVatIdTriggers($connection);
+
+        $connection->executeStatement(<<<'SQL'
+            UPDATE customer
+            SET vat_ids = json_build_array(customer_address.vat_id)
+            FROM customer_address
+            WHERE customer.default_billing_address_id = customer_address.id
+              AND customer_address.vat_id IS NOT NULL
+            SQL);
     }
-    public function updateDestructive(Connection $connection): void
+
+    private function addVatIdTriggers(Connection $connection): void
     {
-        // implement update destructive
-    }
-    /**
-     * Adds a database trigger that keeps the fields 'vat_ids' in `customer` and 'vat_id' in `customer_address` in sync.
-     * That means inserting either value will update the other.
-     */
-    private function addInsertTrigger(Connection $connection): void
-    {
-        $query = 'CREATE TRIGGER customer_address_vat_id_insert ON customer_address
-            FOR EACH ROW BEGIN
+        $body = <<<'SQL'
+            BEGIN
+                IF TG_OP = 'UPDATE' THEN
+                    IF OLD.vat_id COLLATE "C" IS NOT DISTINCT FROM NEW.vat_id COLLATE "C" THEN
+                        RETURN NEW;
+                    END IF;
+
+                    IF OLD.vat_id IS NOT NULL THEN
+                        UPDATE customer
+                        SET vat_ids = (vat_ids::jsonb - OLD.vat_id::text)::json
+                        WHERE default_billing_address_id = NEW.id
+                          AND vat_ids::jsonb @> jsonb_build_array(OLD.vat_id);
+                    END IF;
+                END IF;
+
                 IF NEW.vat_id IS NOT NULL THEN
-                    UPDATE customer SET vat_ids = JSON_ARRAY(NEW.vat_id)
-                        WHERE customer.default_billing_address_id = NEW.id
-                        AND (JSON_CONTAINS(vat_ids, \'"$NEW.vat_id"\') = 0 OR vat_ids IS NULL);
+                    UPDATE customer
+                    SET vat_ids = (COALESCE(vat_ids::jsonb, '[]'::jsonb) || jsonb_build_array(NEW.vat_id))::json
+                    WHERE default_billing_address_id = NEW.id
+                      AND (vat_ids IS NULL OR NOT vat_ids::jsonb @> jsonb_build_array(NEW.vat_id));
                 END IF;
-            END;';
-        $this->createTrigger($connection, $query);
-    }
-    /**
-     * Adds a database trigger that keeps the fields 'vat_ids' in `customer` and 'vat_id' in `customer_address` in sync.
-     * That means updating either value will update the other.
-     */
-    private function addUpdateTrigger(Connection $connection): void
-    {
-        $query = 'CREATE TRIGGER customer_address_vat_id_update ON customer_address
-            FOR EACH ROW BEGIN
-                IF (OLD.vat_id IS NOT NULL AND NEW.vat_id IS NULL) THEN
-                    UPDATE customer SET vat_ids = JSON_REMOVE(vat_ids, JSON_UNQUOTE(JSON_SEARCH(vat_ids, \'one\', OLD.vat_id)))
-                        WHERE customer.default_billing_address_id = NEW.id
-                        AND JSON_SEARCH(vat_ids, \'one\', OLD.vat_id) IS NOT NULL;
-                ELSEIF (OLD.vat_id IS NULL AND NEW.vat_id IS NOT NULL) OR (OLD.vat_id <> NEW.vat_id) THEN
-                    UPDATE customer SET vat_ids = JSON_ARRAY(NEW.vat_id)
-                        WHERE customer.default_billing_address_id = NEW.id
-                        AND (JSON_CONTAINS(vat_ids, \'"$NEW.vat_id"\') = 0 OR vat_ids IS NULL);
-                END IF;
-            END;';
-        $this->createTrigger($connection, $query);
+
+                RETURN NEW;
+            END;
+            SQL;
+
+        $this->createTriggerFunction($connection, 'sync_customer_address_vat_id', $body);
+        $this->createTrigger($connection, 'CREATE TRIGGER customer_address_vat_id_insert AFTER INSERT ON customer_address FOR EACH ROW EXECUTE FUNCTION sync_customer_address_vat_id()');
+        $this->createTrigger($connection, 'CREATE TRIGGER customer_address_vat_id_update AFTER UPDATE ON customer_address FOR EACH ROW EXECUTE FUNCTION sync_customer_address_vat_id()');
     }
 }
