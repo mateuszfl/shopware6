@@ -174,6 +174,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class, 1571210820, PostgreSQL63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class],
         [Core63\Migration1571660203FixOrderDeliveryStateNames::class, 1571660203, PostgreSQL63\Migration1571660203FixOrderDeliveryStateNames::class],
         [Core63\Migration1571724915MultipleTrackingCodesInOrderDelivery::class, 1571724915, PostgreSQL63\Migration1571724915MultipleTrackingCodesInOrderDelivery::class],
+        [Core63\Migration1571981437AddSeoColumns::class, 1571981437, PostgreSQL63\Migration1571981437AddSeoColumns::class],
     ];
 
     /**

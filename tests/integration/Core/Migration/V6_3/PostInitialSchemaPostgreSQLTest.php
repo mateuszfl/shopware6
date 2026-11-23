@@ -72,6 +72,7 @@ use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKi
 use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesChannel;
 use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
 use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrderDelivery;
+use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
 
 /**
  * @internal
@@ -80,7 +81,7 @@ use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrder
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571724915;
+    private const LAST_TIMESTAMP = 1571981437;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -93,7 +94,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(60, $pending);
+        static::assertCount(61, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -333,6 +334,73 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
             $codes = $connection->fetchOne('SELECT tracking_codes FROM order_delivery WHERE id = ?', [$deliveryId], [ParameterType::BINARY]);
             static::assertSame(['TRACKING-TEST'], json_decode((string) $codes, true, 512, \JSON_THROW_ON_ERROR));
         }
+    }
+
+    public function testSeoColumnsCopyDataBeforeDestructiveDropAndRetrySafely(): void
+    {
+        $mysqlSchema = null;
+        $postgresSchema = null;
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571724915);
+
+            $productId = Uuid::randomBytes();
+            $versionId = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
+            $languageId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM language LIMIT 1'));
+            static::assertIsString($languageId);
+            $connection->insert('product', [
+                'id' => $productId,
+                'version_id' => $versionId,
+                'stock' => 0,
+                'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::INTEGER, ParameterType::STRING]);
+            $connection->insert('product_translation', [
+                'product_id' => $productId,
+                'product_version_id' => $versionId,
+                'language_id' => $languageId,
+                'additional_text' => 'SEO-TEST-DATA',
+                'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1571981437AddSeoColumns::class], $collection->migrateInPlace(1571981437));
+            static::assertSame('SEO-TEST-DATA', $connection->fetchOne('SELECT meta_description FROM product_translation WHERE product_id = ? AND product_version_id = ? AND language_id = ?', [$productId, $versionId, $languageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+            $productColumns = array_column($this->columns($connection)['product_translation'], null, 'name');
+            $categoryColumns = array_column($this->columns($connection)['category_translation'], null, 'name');
+            static::assertArrayHasKey('meta_description', $productColumns);
+            static::assertArrayHasKey('meta_title', $categoryColumns);
+            static::assertArrayHasKey('meta_description', $categoryColumns);
+            static::assertArrayHasKey('keywords', $categoryColumns);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1571981437AddSeoColumns::class, 1571981437);
+                $variant->update($connection);
+                static::assertSame('SEO-TEST-DATA', $connection->fetchOne('SELECT meta_description FROM product_translation WHERE product_id = ? AND product_version_id = ? AND language_id = ?', [$productId, $versionId, $languageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+                $variant->updateDestructive($connection);
+                $variant->updateDestructive($connection);
+                $variant->update($connection);
+                static::assertSame('SEO-TEST-DATA', $connection->fetchOne('SELECT meta_description FROM product_translation WHERE product_id = ? AND product_version_id = ? AND language_id = ?', [$productId, $versionId, $languageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+            } else {
+                (new Migration1571981437AddSeoColumns())->updateDestructive($connection);
+            }
+
+            $productColumns = array_column($this->columns($connection)['product_translation'], null, 'name');
+            static::assertArrayNotHasKey('additional_text', $productColumns);
+            static::assertSame('SEO-TEST-DATA', $connection->fetchOne('SELECT meta_description FROM product_translation WHERE product_id = ? AND product_version_id = ? AND language_id = ?', [$productId, $versionId, $languageId], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY]));
+            $schema = [
+                $this->schema($connection)['product_translation'],
+                $this->schema($connection)['category_translation'],
+            ];
+            if ($connection === $this->mysql) {
+                $mysqlSchema = $schema;
+            } else {
+                $postgresSchema = $schema;
+            }
+        }
+
+        static::assertNotNull($mysqlSchema);
+        static::assertNotNull($postgresSchema);
+        static::assertSame($mysqlSchema, $postgresSchema);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
