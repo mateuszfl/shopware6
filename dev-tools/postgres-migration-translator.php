@@ -46,21 +46,25 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             $variantPath = $variantDirectory . '/' . $name;
             $diagnosticImplementation = !$isPortableMapping && is_file($variantPath)
                 && str_contains((string) file_get_contents($variantPath), 'Diagnostic best-effort PostgreSQL variant');
-            $report[] = [
-                'class_file' => $name,
-                'source' => $path,
-                'status' => $isPortableMapping ? 'registered_portable_mapping' : ($diagnosticImplementation ? 'diagnostic_variant_unhandled' : 'registered_variant'),
-                'blocker_category' => $diagnosticImplementation ? 'diagnostic-only mapping; semantics remain unverified' : null,
-                'logical_class' => $logicalClass,
-                'creation_timestamp' => $timestamp,
-                'implementation' => $implementation::class,
-                'variant_file_present' => is_file($variantPath),
-            ];
-            if ($diagnosticMode && $implementation::class !== $logicalClass && !is_file($variantDirectory . '/' . $name)) {
-                $report[array_key_last($report)]['status'] = 'registered_variant_file_missing';
-                $report[array_key_last($report)]['blocker_category'] = 'registry points to a missing implementation file';
+            if ($diagnosticMode && $diagnosticImplementation) {
+                // Fall through and regenerate this diagnostic-only variant from current source.
+            } else {
+                $report[] = [
+                    'class_file' => $name,
+                    'source' => $path,
+                    'status' => $isPortableMapping ? 'registered_portable_mapping' : 'registered_variant',
+                    'blocker_category' => null,
+                    'logical_class' => $logicalClass,
+                    'creation_timestamp' => $timestamp,
+                    'implementation' => $implementation::class,
+                    'variant_file_present' => is_file($variantPath),
+                ];
+                if ($diagnosticMode && $implementation::class !== $logicalClass && !is_file($variantDirectory . '/' . $name)) {
+                    $report[array_key_last($report)]['status'] = 'registered_variant_file_missing';
+                    $report[array_key_last($report)]['blocker_category'] = 'registry points to a missing implementation file';
+                }
+                continue;
             }
-            continue;
         } catch (Throwable $exception) {
             $missingVariantMessage = 'No PostgreSQL migration variant for ' . $logicalClass . ' (timestamp ' . $timestamp . ').';
             if (!$exception instanceof Shopware\Core\Framework\Migration\MigrationException
@@ -346,6 +350,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $originalSql = $node->value;
                 $sql = $this->rewriteCreateTable($originalSql);
                 $sql = $this->rewriteSingleDropForeignKey($sql);
+                $this->replace(
+                    'comparison_double_quoted_literal_to_single_quoted',
+                    '/(\s*(?:=|<>|!=|<=|>=|<|>)\s*)"((?:[^"]|"")*)"/',
+                    static fn (array $match): string => $match[1] . "'" . str_replace("'", "''", str_replace('""', '"', $match[2])) . "'",
+                    $sql
+                );
                 if ($this->hasMultiActionDropForeignKey($sql)) {
                     $this->unsupported[] = 'multi-action ALTER TABLE DROP FOREIGN KEY grouping is retained; splitting changes statement atomicity';
                 }
