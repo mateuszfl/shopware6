@@ -9,6 +9,7 @@ use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
 use Shopware\Core\Checkout\Customer\Event\CustomerDoubleOptInRegistrationEvent;
+use Shopware\Core\Checkout\Customer\Event\DoubleOptInGuestOrderEvent;
 use Shopware\Core\Content\ContactForm\Event\ContactFormEvent;
 use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
@@ -82,6 +83,7 @@ use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
 use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMailTemplate;
 use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
 use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliveryStates;
+use Shopware\Core\Migration\V6_3\Migration1573569685DoubleOptInGuestMailTemplate;
 
 /**
  * @internal
@@ -90,7 +92,7 @@ use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliver
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1573049297;
+    private const LAST_TIMESTAMP = 1573569685;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -103,7 +105,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(69, $pending);
+        static::assertCount(70, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -701,6 +703,45 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                     INNER JOIN state_machine machine ON machine.id = transition.state_machine_id
                     WHERE machine.technical_name = 'order_delivery.state' AND transition.action_name = 'reopen'
                     SQL));
+            }
+        }
+    }
+
+    public function testGuestOrderDoubleOptInMailTemplateIsCreatedAndRetrySafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1573049297);
+
+            static::assertSame([Migration1573569685DoubleOptInGuestMailTemplate::class], $collection->migrateInPlace(1573569685));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', ['guest_order.double_opt_in']));
+            $typeId = $connection->fetchOne('SELECT id FROM mail_template_type WHERE technical_name = ?', ['guest_order.double_opt_in']);
+            if (\is_resource($typeId)) {
+                $typeId = stream_get_contents($typeId);
+            }
+            static::assertIsString($typeId);
+            $templateId = $connection->fetchOne('SELECT id FROM mail_template WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]);
+            if (\is_resource($templateId)) {
+                $templateId = stream_get_contents($templateId);
+            }
+            static::assertIsString($templateId);
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type_translation WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]));
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [DoubleOptInGuestOrderEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+            static::assertSame('Please confirm your email address at {{ salesChannel.name }}', $connection->fetchOne('SELECT subject FROM mail_template_translation WHERE mail_template_id = ? AND language_id = ?', [$templateId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], [ParameterType::BINARY, ParameterType::BINARY]));
+            static::assertSame('Bitte bestätigen Sie Ihre E-Mail-Adresse bei {{ salesChannel.name }}', $connection->fetchOne('SELECT subject FROM mail_template_translation WHERE mail_template_id = ? AND language_id = (SELECT id FROM language WHERE name = ?)', [$templateId, 'Deutsch'], [ParameterType::BINARY, ParameterType::STRING]));
+            $eventConfig = $connection->fetchOne('SELECT config FROM event_action WHERE event_name = ? AND action_name = ?', [DoubleOptInGuestOrderEvent::EVENT_NAME, SendMailAction::ACTION_NAME]);
+            static::assertIsString($eventConfig);
+            static::assertSame(Uuid::fromBytesToHex($typeId), json_decode($eventConfig, true, flags: \JSON_THROW_ON_ERROR)['mail_template_type_id']);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1573569685DoubleOptInGuestMailTemplate::class, 1573569685);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', ['guest_order.double_opt_in']));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [DoubleOptInGuestOrderEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+                static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
             }
         }
     }
