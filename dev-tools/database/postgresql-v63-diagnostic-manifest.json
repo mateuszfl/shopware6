@@ -21,7 +21,8 @@
     "comparison_double_quoted_literal_to_single_quoted": 10,
     "create_table_utf8mb4_collation_to_sw_type_ci": 2,
     "language_uuid_bytea_resource_to_nullable_string": 1,
-    "check_json_valid_to_native_json_validation": 14
+    "check_json_valid_to_native_json_validation": 14,
+    "redundant_mysql_implicit_foreign_key_index_drop_removed": 1
   },
   "classes": [
     {
@@ -2328,13 +2329,14 @@
       "class_file": "Migration1576590301FixSalesChannelDomainLanguageFk.php",
       "logical_class": "Shopware\\Core\\Migration\\V6_3\\Migration1576590301FixSalesChannelDomainLanguageFk",
       "status": "diagnostic_emitted_with_unhandled_shapes",
-      "translated_sql_literals": 5,
+      "translated_sql_literals": 4,
       "unhandled_shapes": [
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax"
       ],
       "applied_rules": {
-        "alter_drop_foreign_key_to_drop_constraint": 2
+        "alter_drop_foreign_key_to_drop_constraint": 2,
+        "redundant_mysql_implicit_foreign_key_index_drop_removed": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1576590301,

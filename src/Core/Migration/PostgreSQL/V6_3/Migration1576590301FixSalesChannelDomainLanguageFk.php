@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1576590301FixSalesChannelDomainLanguageFk extends MigrationStep
     {
         return 1576590301;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -29,10 +32,7 @@ class Migration1576590301FixSalesChannelDomainLanguageFk extends MigrationStep
             ALTER TABLE "sales_channel_domain"
             DROP CONSTRAINT "fk.sales_channel_domain.sales_channel_id";
         ');
-        $connection->executeStatement('
-            ALTER TABLE "sales_channel_domain"
-            DROP INDEX "fk.sales_channel_domain.language_id";
-        ');
+
         $connection->executeStatement('
             ALTER TABLE "sales_channel_domain"
             ADD CONSTRAINT "fk.sales_channel_domain.language_id" FOREIGN KEY (language_id)
@@ -44,6 +44,7 @@ class Migration1576590301FixSalesChannelDomainLanguageFk extends MigrationStep
               REFERENCES "sales_channel" (id) ON DELETE CASCADE ON UPDATE CASCADE;
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

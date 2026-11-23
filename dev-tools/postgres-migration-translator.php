@@ -99,17 +99,19 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             continue;
         }
 
-        $visitor = new class($diagnosticMode) extends NodeVisitorAbstract {
+        $visitor = new class($diagnosticMode, $name) extends NodeVisitorAbstract {
             public array $unsupported = [];
             public int $translated = 0;
             public int $sqlLiterals = 0;
             public array $appliedRules = [];
             public bool $diagnosticMode = false;
+            private string $classFile;
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
 
-            public function __construct(bool $diagnosticMode)
+            public function __construct(bool $diagnosticMode, string $classFile)
             {
                 $this->diagnosticMode = $diagnosticMode;
+                $this->classFile = $classFile;
             }
 
             private function replace(string $rule, string $pattern, string|callable $replacement, string &$sql): void
@@ -320,6 +322,19 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
             public function enterNode(Node $node): ?Node
             {
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1576590301FixSalesChannelDomainLanguageFk.php'
+                    && $node instanceof Node\Stmt\Expression
+                    && $node->expr instanceof Node\Expr\MethodCall
+                    && $node->expr->name instanceof Node\Identifier
+                    && $node->expr->name->toString() === 'executeStatement'
+                    && isset($node->expr->args[0])
+                    && $node->expr->args[0]->value instanceof Node\Scalar\String_
+                    && preg_match('/^\s*ALTER\s+TABLE\s+`sales_channel_domain`\s+DROP\s+INDEX\s+`fk\.sales_channel_domain\.language_id`\s*;?\s*$/i', $node->expr->args[0]->value->value)) {
+                    $this->appliedRules['redundant_mysql_implicit_foreign_key_index_drop_removed'] = 1;
+
+                    return new Node\Stmt\Nop();
+                }
                 if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name && strtolower($node->name->toString()) === 'sprintf') {
                     $format = $node->args[0]->value ?? null;
                     if ($format instanceof Node\Scalar\String_ && preg_match(self::SQL, $format->value)) {
