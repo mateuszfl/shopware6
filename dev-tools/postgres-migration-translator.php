@@ -84,6 +84,7 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         $visitor = new class extends NodeVisitorAbstract {
             public array $unsupported = [];
             public int $translated = 0;
+            public int $sqlLiterals = 0;
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
 
             public function enterNode(Node $node): ?Node
@@ -119,6 +120,7 @@ if ($argc === 5 && $argv[1] === '--inventory') {
                 if (!$node instanceof Node\Scalar\String_ || !preg_match(self::SQL, $node->value)) {
                     return null;
                 }
+                ++$this->sqlLiterals;
 
                 $sql = $node->value;
                 $patterns = [
@@ -167,6 +169,7 @@ if ($argc === 5 && $argv[1] === '--inventory') {
             $statement->name = new Node\Name('Shopware\\Core\\Migration\\PostgreSQL\\V6_3');
         }
         $entry['translated_sql_literals'] = $visitor->translated;
+        $entry['static_sql_literals'] = $visitor->sqlLiterals;
         $entry['unsupported_shapes'] = array_values(array_unique($visitor->unsupported));
         $entry['logical_class'] = $logicalClass;
         $entry['proposed_implementation'] = 'Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);
@@ -190,9 +193,15 @@ if ($argc === 5 && $argv[1] === '--inventory') {
                 $entry['output'] = $target;
             }
         } else {
-            $entry['status'] = 'runtime_helper_data_review';
-            $entry['blocker_category'] = 'runtime/helper/data migration review';
-            $entry['unsupported_shapes'][] = 'no changed static SQL literal; manual/runtime analysis required';
+            if ($visitor->sqlLiterals > 0) {
+                $entry['status'] = 'static_sql_no_rewrite_review';
+                $entry['blocker_category'] = 'static SQL portability review';
+                $entry['unsupported_shapes'][] = 'static SQL has no recognized rewrite; portability not proven';
+            } else {
+                $entry['status'] = 'runtime_helper_data_review';
+                $entry['blocker_category'] = 'runtime/helper/data migration review';
+                $entry['unsupported_shapes'][] = 'no static SQL literal; helper/data behavior requires review';
+            }
         }
         $report[] = $entry;
     }
