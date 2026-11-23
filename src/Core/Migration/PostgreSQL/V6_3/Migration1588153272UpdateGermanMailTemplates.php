@@ -134,18 +134,18 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         $sqlString = '';
         $sqlParams = ['templateId' => $mailTemplateId, 'langId' => $langId];
         if ($contentHtml !== null) {
-            $sqlString .= '`content_html` = :contentHtml ';
+            $sqlString .= '"content_html" = :contentHtml ';
             $sqlParams['contentHtml'] = $contentHtml;
         }
         if ($contentPlain !== null) {
-            $sqlString .= ($sqlString !== '' ? ', ' : '') . '`content_plain` = :contentPlain ';
+            $sqlString .= ($sqlString !== '' ? ', ' : '') . '"content_plain" = :contentPlain ';
             $sqlParams['contentPlain'] = $contentPlain;
         }
         if ($senderName !== null) {
-            $sqlString .= ($sqlString !== '' ? ', ' : '') . '`sender_name` = :senderName ';
+            $sqlString .= ($sqlString !== '' ? ', ' : '') . '"sender_name" = :senderName ';
             $sqlParams['senderName'] = $senderName;
         }
-        $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE `mail_template_id`= :templateId AND `language_id` = :langId AND `updated_at` IS NULL';
+        $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE "mail_template_id"= :templateId AND "language_id" = :langId AND "updated_at" IS NULL';
         $connection->executeStatement($sqlString, $sqlParams, ['templateId' => ParameterType::BINARY, 'langId' => ParameterType::BINARY]);
     }
 
