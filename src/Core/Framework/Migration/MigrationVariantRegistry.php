@@ -188,6 +188,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1574063550AddCurrencyToProductExport::class, 1574063550, PostgreSQL63\Migration1574063550AddCurrencyToProductExport::class],
         [Core63\Migration1574082635AddOrderLineItemProductId::class, 1574082635, PostgreSQL63\Migration1574082635AddOrderLineItemProductId::class],
         [Core63\Migration1574258787ProductSearchLanguageKey::class, 1574258787, PostgreSQL63\Migration1574258787ProductSearchLanguageKey::class],
+        [Core63\Migration1574258788TaxRuleLanguageKey::class, 1574258788, PostgreSQL63\Migration1574258788TaxRuleLanguageKey::class],
     ];
 
     /**
