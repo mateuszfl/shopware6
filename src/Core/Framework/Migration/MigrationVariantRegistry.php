@@ -181,6 +181,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType::class, 1572273565, PostgreSQL63\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType::class],
         [Core63\Migration1572421282AddDoubleOptInRegistration::class, 1572421282, PostgreSQL63\Migration1572421282AddDoubleOptInRegistration::class],
         [Core63\Migration1572425108AddDoubleOptInRegistrationMailTemplate::class, 1572425108, PostgreSQL63\Migration1572425108AddDoubleOptInRegistrationMailTemplate::class],
+        [Core63\Migration1572957455AddAffiliateTrackingColumns::class, 1572957455, PostgreSQL63\Migration1572957455AddAffiliateTrackingColumns::class],
     ];
 
     /**

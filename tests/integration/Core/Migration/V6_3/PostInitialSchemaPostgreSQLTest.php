@@ -80,6 +80,7 @@ use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
 use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType;
 use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
 use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMailTemplate;
+use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
 
 /**
  * @internal
@@ -88,7 +89,7 @@ use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMa
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572425108;
+    private const LAST_TIMESTAMP = 1572957455;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -101,7 +102,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(67, $pending);
+        static::assertCount(68, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -639,6 +640,34 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
             }
         }
+    }
+
+    public function testAffiliateTrackingColumnsMatchMySqlAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572425108);
+
+            static::assertSame([Migration1572957455AddAffiliateTrackingColumns::class], $collection->migrateInPlace(1572957455));
+            foreach (['customer', 'order'] as $table) {
+                $columns = array_column($this->columns($connection)[$table], null, 'name');
+                static::assertArrayHasKey('affiliate_code', $columns);
+                static::assertArrayHasKey('campaign_code', $columns);
+                static::assertSame('YES', $columns['affiliate_code']['nullable']);
+                static::assertSame('YES', $columns['campaign_code']['nullable']);
+            }
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection);
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572957455AddAffiliateTrackingColumns::class, 1572957455);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection));
+            }
+        }
+
+        static::assertSame($this->schema($this->mysql)['customer'], $this->schema($this->postgres)['customer']);
+        static::assertSame($this->schema($this->mysql)['order'], $this->schema($this->postgres)['order']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
