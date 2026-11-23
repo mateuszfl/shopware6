@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,10 +20,12 @@ class Migration1580819350AddTrackingUrl extends MigrationStep
     {
         return 1580819350;
     }
+
     public function update(Connection $connection): void
     {
-        $connection->executeStatement('ALTER TABLE "shipping_method_translation" ADD "tracking_url" MEDIUMTEXT NULL DEFAULT NULL;');
+        $connection->executeStatement('ALTER TABLE "shipping_method_translation" ADD "tracking_url" TEXT NULL DEFAULT NULL;');
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

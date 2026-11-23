@@ -19,7 +19,6 @@
     "create_table_datetime_to_timestamp_without_time_zone": 49,
     "alter_drop_foreign_key_to_drop_constraint": 19,
     "comparison_double_quoted_literal_to_single_quoted": 10,
-    "language_uuid_bytea_resource_to_nullable_string": 1,
     "check_json_valid_to_native_json_validation": 14,
     "alter_after_column_placement_removed": 54,
     "redundant_mysql_implicit_foreign_key_index_drop_removed": 1,
@@ -28,7 +27,9 @@
     "alter_unsigned_removed": 3,
     "create_table_utf8mb4_collation_to_sw_type_ci": 2,
     "alter_modify_binary16_to_bytea_with_length_check": 1,
-    "alter_modify_column_to_alter_column": 5
+    "alter_modify_column_to_alter_column": 5,
+    "alter_text_type_to_postgresql_type": 6,
+    "alter_blob_type_to_bytea": 0
   },
   "classes": [
     {
@@ -2236,8 +2237,8 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
-        "check_json_valid_to_native_json_validation": 1,
-        "alter_after_column_placement_removed": 1
+        "alter_after_column_placement_removed": 1,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1575197543,
@@ -2577,10 +2578,10 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql text/blob type",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "alter_text_type_to_postgresql_type": 1,
         "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
@@ -2749,11 +2750,11 @@
       "translated_sql_literals": 1,
       "unhandled_shapes": [
         "mysql collation",
-        "mysql text/blob type",
         "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "alter_text_type_to_postgresql_type": 1,
         "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
@@ -3194,11 +3195,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 2,
       "unhandled_shapes": [
-        "mysql text/blob type",
         "mysql collation with quoted name",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "alter_text_type_to_postgresql_type": 1,
         "alter_after_column_placement_removed": 2
       },
       "source_dir_references_rebased": false,
@@ -3673,13 +3674,13 @@
         "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
         "mysql key/index alter syntax",
-        "mysql text/blob type",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
         "alter_binary16_to_bytea_with_length_check": 1,
         "alter_after_column_placement_removed": 6,
-        "alter_tinyint_to_smallint": 2
+        "alter_tinyint_to_smallint": 2,
+        "alter_text_type_to_postgresql_type": 2
       },
       "source_dir_references_rebased": true,
       "timestamp": 1596441551,
@@ -4464,8 +4465,8 @@
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
-        "check_json_valid_to_native_json_validation": 1,
-        "alter_after_column_placement_removed": 1
+        "alter_after_column_placement_removed": 1,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1605103533,
@@ -4478,10 +4479,10 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql text/blob type",
         "mixed-case MySQL identifier quoting needs review"
       ],
       "applied_rules": {
+        "alter_text_type_to_postgresql_type": 1,
         "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,

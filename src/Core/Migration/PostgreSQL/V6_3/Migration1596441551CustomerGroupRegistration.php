@@ -77,9 +77,9 @@ ADD "registration_active" SMALLINT NOT NULL DEFAULT \'0\';
         $connection->executeStatement('
 ALTER TABLE "customer_group_translation"
 ADD "registration_title" varchar(255) NULL,
-ADD "registration_introduction" longtext NULL,
+ADD "registration_introduction" TEXT NULL,
 ADD "registration_only_company_registration" SMALLINT NULL,
-ADD "registration_seo_meta_description" longtext NULL;
+ADD "registration_seo_meta_description" TEXT NULL;
 ');
     }
 

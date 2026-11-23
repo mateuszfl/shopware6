@@ -308,6 +308,21 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         $statement
                     );
                     $this->replace('alter_tinyint_to_smallint', '/\bTINYINT(?:\s*\(\s*\d+\s*\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $statement);
+                    // Only match types immediately following an ALTER column operation.
+                    // Keeping the operation and column identifiers in the pattern avoids
+                    // rewriting the same words in literals, functions, or expressions.
+                    $this->replace(
+                        'alter_text_type_to_postgresql_type',
+                        '/(\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?|CHANGE(?:\s+COLUMN)?)\s+' . $identifier . '(?:\s+' . $identifier . ')?\s+)(?:TINYTEXT|MEDIUMTEXT|LONGTEXT|TEXT)(?=\s+(?:NULL|NOT\s+NULL|DEFAULT|COLLATE|COMMENT|AFTER)\b|\s*[,;]|\s*$)/i',
+                        static fn (array $matches): string => $matches[1] . 'TEXT',
+                        $statement
+                    );
+                    $this->replace(
+                        'alter_blob_type_to_bytea',
+                        '/(\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?|CHANGE(?:\s+COLUMN)?)\s+' . $identifier . '(?:\s+' . $identifier . ')?\s+)(?:TINYBLOB|MEDIUMBLOB|LONGBLOB|BLOB)(?=\s+(?:NULL|NOT\s+NULL|DEFAULT|COLLATE|COMMENT|AFTER)\b|\s*[,;]|\s*$)/i',
+                        static fn (array $matches): string => $matches[1] . 'BYTEA',
+                        $statement
+                    );
                     $this->replace('alter_unsigned_removed', '/\s+UNSIGNED\b/i', '', $statement);
                     $this->replace('alter_after_column_placement_removed', '/\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)/i', '', $statement);
                     // PostgreSQL uses ALTER COLUMN TYPE and separate clauses for
@@ -486,7 +501,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     'unsigned numeric type' => '/\\bUNSIGNED\\b/i',
                     'auto increment type' => '/\\bAUTO_INCREMENT\\b/i',
                     'on update column clause' => '/\\bON\\s+UPDATE\\s+CURRENT_TIMESTAMP/i',
-                    'mysql text/blob type' => '/\\b(?:TINYTEXT|MEDIUMTEXT|LONGTEXT|TINYBLOB|MEDIUMBLOB|LONGBLOB)\\b/i',
+                    'mysql text/blob type' => '/\\b(?:TINYTEXT|MEDIUMTEXT|LONGTEXT|TINYBLOB|MEDIUMBLOB|LONGBLOB|BLOB)\\b/i',
                     'mysql datetime or medium integer type' => '/\\b(?:DATETIME(?:\\s*\\(\\d+\\))?|MEDIUMINT|YEAR)\\b/i',
                     'mysql collation with quoted name' => "~\\bCOLLATE\\s+['\"]?utf8(?:mb4)?_[a-z0-9_]+['\"]?~i",
                     'double-quoted SQL token is dialect-ambiguous' => '/"[^"\\r\\n]*"/',
