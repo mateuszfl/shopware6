@@ -42,7 +42,7 @@ class Migration1597391970App extends MigrationStep
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("id"),
-                CONSTRAINT "uniq.name" UNIQUE ("name"),
+                CONSTRAINT "uniq.app.name" UNIQUE ("name"),
                 CONSTRAINT "json.app.modules" CHECK (TRUE),
                 CONSTRAINT "fk.app.integration_id" FOREIGN KEY ("integration_id") REFERENCES "integration" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT "fk.app.acl_role_id" FOREIGN KEY ("acl_role_id") REFERENCES "acl_role" ("id") ON DELETE CASCADE ON UPDATE CASCADE
