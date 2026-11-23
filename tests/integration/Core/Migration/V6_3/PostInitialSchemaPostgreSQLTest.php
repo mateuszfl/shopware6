@@ -76,6 +76,7 @@ use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
 use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTemplates;
 use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
 use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
+use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType;
 
 /**
  * @internal
@@ -84,7 +85,7 @@ use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572264837;
+    private const LAST_TIMESTAMP = 1572273565;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -97,7 +98,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(64, $pending);
+        static::assertCount(65, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -528,6 +529,46 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame(1, (int) $connection->fetchOne("SELECT COUNT(*) FROM app_config WHERE $keyColumn = :key", ['key' => 'cache-id']));
             }
         }
+    }
+
+    public function testDuplicateDocumentTypesAreRemovedBeforeUniqueConstraintIsAdded(): void
+    {
+        $schemas = [];
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572264837);
+
+            $oldId = Uuid::randomBytes();
+            $newId = Uuid::randomBytes();
+            $documentTypes = $connection === $this->postgres
+                ? [[$oldId, '2020-01-01 00:00:00.000'], [$newId, '2021-01-01 00:00:00.000']]
+                : [[$oldId, '2020-01-01 00:00:00.000']];
+            foreach ($documentTypes as [$id, $createdAt]) {
+                $connection->insert('document_type', [
+                    'id' => $id,
+                    'technical_name' => 'migration.test.duplicate',
+                    'created_at' => $createdAt,
+                ], [ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING]);
+            }
+
+            static::assertSame([Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType::class], $collection->migrateInPlace(1572273565));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM document_type WHERE technical_name = :name', ['name' => 'migration.test.duplicate']));
+
+            $schema = $this->schema($connection)['document_type'];
+            $schemas[$connection === $this->mysql ? 'mysql' : 'postgres'] = $schema;
+            if ($connection === $this->postgres) {
+                static::assertStringStartsWith('2020-01-01 00:00:00', (string) $connection->fetchOne('SELECT created_at FROM document_type WHERE technical_name = :name', ['name' => 'migration.test.duplicate']));
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType::class, 1572273565);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['document_type']);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM document_type WHERE technical_name = :name', ['name' => 'migration.test.duplicate']));
+            }
+        }
+
+        static::assertArrayHasKey('mysql', $schemas);
+        static::assertArrayHasKey('postgres', $schemas);
+        static::assertSame($schemas['mysql'], $schemas['postgres']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
