@@ -272,6 +272,7 @@ try {
         'service_category_version_id' => $binary(Defaults::LIVE_VERSION), 'home_cms_page_version_id' => $binary(Defaults::LIVE_VERSION),
         'access_key' => $accessKey, 'active' => 1, 'created_at' => $now,
     ], ['id', 'type_id', 'language_id', 'customer_group_id', 'currency_id', 'payment_method_id', 'shipping_method_id', 'country_id', 'navigation_category_id', 'navigation_category_version_id', 'footer_category_version_id', 'service_category_version_id', 'home_cms_page_version_id']);
+    $create('sales_channel_language', ['salesChannelId' => $salesChannelId, 'languageId' => $languageId]);
     $insert('sales_channel_translation', [
         'sales_channel_id' => $binary($salesChannelId), 'language_id' => $binary($languageId), 'name' => 'Demo storefront',
         'home_enabled' => 1, 'home_name' => 'Home', 'created_at' => $now,
