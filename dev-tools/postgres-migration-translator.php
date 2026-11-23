@@ -466,6 +466,36 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         },
                         $statement
                     );
+                    // CHANGE can also be used as a MySQL spelling of MODIFY when
+                    // the old and new column names are identical. Keep renames
+                    // untouched because they need separate PostgreSQL handling.
+                    $this->replace(
+                        'alter_change_same_column_to_alter_column',
+                        '/\\bCHANGE(?:\\s+COLUMN)?\\s+(`[^`\\r\\n]+`|"[^"\\r\\n]+"|[A-Za-z_][A-Za-z0-9_$]*)\\s+(`[^`\\r\\n]+`|"[^"\\r\\n]+"|[A-Za-z_][A-Za-z0-9_$]*)\\s+(VARCHAR\\s*\\(\\s*\\d+\\s*\\)|CHARACTER\\s+VARYING\\s*\\(\\s*\\d+\\s*\\)|DOUBLE(?:\\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|DECIMAL\\s*\\(\\s*\\d+\\s*,\\s*\\d+\\s*\\))\\s+(NULL|NOT\\s+NULL)(?:\\s+DEFAULT\\s+(NULL|[-+]?[0-9]+(?:\\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\\s+AFTER\\s+(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\\s*(?:,|;|$))/i',
+                        static function (array $matches): string {
+                            $oldColumn = trim($matches[1], '`"');
+                            $newColumn = trim($matches[2], '`"');
+                            if ($oldColumn !== $newColumn) {
+                                return $matches[0];
+                            }
+
+                            $column = str_starts_with($matches[2], '`') ? '"' . $newColumn . '"' : $matches[2];
+                            $type = preg_replace('/^INT$/i', 'INTEGER', $matches[3]) ?? $matches[3];
+                            $type = preg_replace('/^DOUBLE$/i', 'DOUBLE PRECISION', $type) ?? $type;
+                            $clauses = ['ALTER COLUMN ' . $column . ' TYPE ' . $type];
+                            $clauses[] = strtoupper(preg_replace('/\\s+/', ' ', $matches[4]) ?? $matches[4]) === 'NULL'
+                                ? 'ALTER COLUMN ' . $column . ' DROP NOT NULL'
+                                : 'ALTER COLUMN ' . $column . ' SET NOT NULL';
+                            if (($matches[5] ?? '') !== '') {
+                                $clauses[] = strtoupper($matches[5]) === 'NULL'
+                                    ? 'ALTER COLUMN ' . $column . ' DROP DEFAULT'
+                                    : 'ALTER COLUMN ' . $column . ' SET DEFAULT ' . $matches[5];
+                            }
+
+                            return implode(', ', $clauses);
+                        },
+                        $statement
+                    );
 
                     $rewritten .= $statement;
                 }
