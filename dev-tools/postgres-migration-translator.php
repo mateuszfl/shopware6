@@ -134,10 +134,18 @@ if ($argc === 5 && $argv[1] === '--inventory') {
                     'mysql collation' => '/\\bCOLLATE\\s+utf8mb4?_[a-z0-9_]+/i',
                     'mysql storage or charset clause' => '/\\b(?:ENGINE\\s*=|DEFAULT\\s+CHARSET|CHARSET\\s*=)/i',
                     'mysql foreign key alter syntax' => '/\\bDROP\\s+FOREIGN\\s+KEY\\b/i',
-                    'mysql key/index alter syntax' => '/\\b(?:ADD\\s+)?KEY\\s+[`\\"]?[a-z0-9_.]+[`\\"]?\\s*\\(/i',
+                    'mysql key/index alter syntax' => '/\\bALTER\\s+TABLE\\b[\\s\\S]*?\\b(?:ADD\\s+(?:(?:UNIQUE|FULLTEXT|SPATIAL)\\s+)?(?:INDEX|KEY)\\b|ADD\\s+UNIQUE\\b|DROP\\s+INDEX\\b|DROP\\s+PRIMARY\\s+KEY\\b)/i',
                     'unsigned numeric type' => '/\\bUNSIGNED\\b/i',
                     'auto increment type' => '/\\bAUTO_INCREMENT\\b/i',
                     'on update column clause' => '/\\bON\\s+UPDATE\\s+CURRENT_TIMESTAMP/i',
+                    'mysql text/blob type' => '/\\b(?:TINYTEXT|MEDIUMTEXT|LONGTEXT|TINYBLOB|MEDIUMBLOB|LONGBLOB)\\b/i',
+                    'mysql datetime or medium integer type' => '/\\b(?:DATETIME(?:\\s*\\(\\d+\\))?|MEDIUMINT|YEAR)\\b/i',
+                    'mysql collation with quoted name' => "~\\bCOLLATE\\s+['\"]?utf8(?:mb4)?_[a-z0-9_]+['\"]?~i",
+                    'double-quoted SQL token is dialect-ambiguous' => '/"[^"\\r\\n]*"/',
+                    'MySQL AFTER column placement changes schema order' => '/\\bAFTER\\s+[`"a-z0-9_]+/i',
+                    'CREATE TABLE idempotency semantics need review' => '/\\bCREATE\\s+TABLE\\s+(?!IF\\s+NOT\\s+EXISTS)/i',
+                    'mixed-case MySQL identifier quoting needs review' => '/`[^`]*[A-Z][^`]*`/',
+                    'quoted UPDATE value may be a MySQL string' => '/\\bUPDATE\\b[\\s\\S]*?\\bSET\\b[\\s\\S]*?=\\s*`[^`]+`/i',
                 ];
                 foreach ($patterns as $reason => $pattern) {
                     if (preg_match($pattern, $sql)) {
@@ -159,6 +167,10 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         $traverser = new NodeTraverser();
         $traverser->addVisitor($visitor);
         $translated = $traverser->traverse($ast);
+        if (preg_match('/\\bUuid::(?:randomBytes|fromHexToBytes)\\s*\\(/', $source)
+            && preg_match('/(?:->(?:insert|update|delete|executeStatement|executeQuery|addInsert)\\s*\\(|\\bMultiInsertQueryQueue\\b|\\bStatementHelper::)/', $source)) {
+            $visitor->unsupported[] = 'binary UUID values passed through DBAL need explicit PostgreSQL binding review';
+        }
         $namespaceCount = 0;
         foreach ($translated as $statement) {
             if (!$statement instanceof Node\Stmt\Namespace_) {
