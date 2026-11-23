@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Product\SalesChannel\Sorting\ProductSortingDefinition;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
@@ -46,7 +47,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
         foreach ($this->getDefaultSortings() as $sorting) {
             $translations = $sorting['translations'];
             unset($sorting['translations']);
-            $connection->insert(ProductSortingDefinition::ENTITY_NAME, $sorting);
+            $connection->insert(ProductSortingDefinition::ENTITY_NAME, $sorting, ['id' => ParameterType::BINARY]);
             $translations = new Translations(['product_sorting_id' => $sorting['id'], 'label' => $translations['de-DE']], ['product_sorting_id' => $sorting['id'], 'label' => $translations['en-GB']]);
             $this->importTranslation('product_sorting_translation', $translations, $connection);
         }
@@ -58,7 +59,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
             CREATE TABLE IF NOT EXISTS "product_sorting" (
               "id"                              BYTEA CHECK (octet_length("id") = 16)                              NOT NULL,
               "url_key"                         VARCHAR(255) COLLATE "sw_type_ci"                            NOT NULL,
-              "priority"                        INT unsigned                        NOT NULL,
+              "priority"                        INT                                  NOT NULL,
               "active"                          SMALLINT                              NOt NULL DEFAULT 1,
               "fields"                          JSON                                    NOT NULL,
               "created_at"                      TIMESTAMP(3) WITHOUT TIME ZONE                             NOT NULL,
@@ -77,7 +78,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
             CREATE TABLE IF NOT EXISTS "product_sorting_translation" (
               "product_sorting_id"          BYTEA CHECK (octet_length("product_sorting_id") = 16)              NOT NULL,
               "language_id"                 BYTEA CHECK (octet_length("language_id") = 16)              NOT NULL,
-              "label"                       VARCHAR(255)            COLLATE sw_type_ciNULL,
+              "label"                       VARCHAR(255) COLLATE "sw_type_ci" NULL,
               "created_at"                  TIMESTAMP(3) WITHOUT TIME ZONE             NOT NULL,
               "updated_at"                  TIMESTAMP(3) WITHOUT TIME ZONE             NULL,
               PRIMARY KEY ("product_sorting_id", "language_id"),
@@ -91,7 +92,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
 
     private function setDefaultSystemConfig(Connection $connection): void
     {
-        $connection->insert('system_config', ['id' => Uuid::randomBytes(), 'configuration_key' => 'core.listing.defaultSorting', 'configuration_value' => '{"_value": "name-asc"}', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('system_config', ['id' => Uuid::randomBytes(), 'configuration_key' => 'core.listing.defaultSorting', 'configuration_value' => '{"_value": "name-asc"}', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
     }
 
     /**
