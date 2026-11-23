@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
@@ -60,12 +61,12 @@ class Migration1575021466AddCurrencies extends MigrationStep
         SELECT "currency"."id" FROM "currency" WHERE "iso_code" = :code LIMIT 1
         ', ['code' => $isoCode]);
         if (!$langId) {
-            $connection->insert('currency', ['id' => $id, 'iso_code' => $isoCode, 'factor' => $factor, 'symbol' => $symbol, 'position' => 1, 'decimal_precision' => 2, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('currency', ['id' => $id, 'iso_code' => $isoCode, 'factor' => $factor, 'symbol' => $symbol, 'position' => 1, 'decimal_precision' => 2, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
             if ($languageEN !== $languageDE) {
-                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageEN, 'short_name' => $shortNameEn, 'name' => $nameEn, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageEN, 'short_name' => $shortNameEn, 'name' => $nameEn, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['currency_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
             if ($languageDE) {
-                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDE, 'short_name' => $shortNameDe, 'name' => $nameDe, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDE, 'short_name' => $shortNameDe, 'name' => $nameDe, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['currency_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
         }
     }
