@@ -25,13 +25,17 @@ class Migration1587109484AddAfterOrderPaymentFlag extends MigrationStep
     {
         $connection->executeStatement('ALTER TABLE payment_method
             ADD COLUMN "after_order_enabled" SMALLINT NOT NULL DEFAULT 0');
-        $connection->executeStatement('UPDATE "payment_method"
+        $connection->executeStatement(
+            <<<'SQL'
+            UPDATE "payment_method"
             SET "after_order_enabled" = 1 WHERE "handler_identifier" IN (
-                "Shopware\\\\Core\\\\Checkout\\\\Payment\\\\Cart\\\\PaymentHandler\\\\DebitPayment",
-                "Shopware\\\\Core\\\\Checkout\\\\Payment\\\\Cart\\\\PaymentHandler\\\\CashPayment",
-                "Shopware\\\\Core\\\\Checkout\\\\Payment\\\\Cart\\\\PaymentHandler\\\\PrePayment",
-                "Shopware\\\\Core\\\\Checkout\\\\Payment\\\\Cart\\\\PaymentHandler\\\\InvoicePayment"
-            )');
+                'Shopware\\Core\\Checkout\\Payment\\Cart\\PaymentHandler\\DebitPayment',
+                'Shopware\\Core\\Checkout\\Payment\\Cart\\PaymentHandler\\CashPayment',
+                'Shopware\\Core\\Checkout\\Payment\\Cart\\PaymentHandler\\PrePayment',
+                'Shopware\\Core\\Checkout\\Payment\\Cart\\PaymentHandler\\InvoicePayment'
+            )
+            SQL
+        );
     }
 
     public function updateDestructive(Connection $connection): void
