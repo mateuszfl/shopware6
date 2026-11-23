@@ -35,9 +35,9 @@ class Migration1604056363CustomerWishlist extends MigrationStep
               CONSTRAINT "uniq.customer_wishlist" UNIQUE ("sales_channel_id","customer_id"),
               CONSTRAINT "fk.customer_wishlist.customer_id" FOREIGN KEY ("customer_id") REFERENCES "customer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.customer_wishlist.sales_channel_id" FOREIGN KEY ("sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-            )
+            )');
 
-CREATE INDEX "fk.customer_wishlist.sales_channel_id" ON "customer_wishlist" ("sales_channel_id");');
+        $connection->executeStatement('CREATE INDEX IF NOT EXISTS "fk.customer_wishlist.sales_channel_id" ON "customer_wishlist" ("sales_channel_id")');
     }
 
     public function updateDestructive(Connection $connection): void
