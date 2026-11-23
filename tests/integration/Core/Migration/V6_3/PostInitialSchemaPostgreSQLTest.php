@@ -91,6 +91,7 @@ use Shopware\Core\Migration\V6_3\Migration1574258787ProductSearchLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574258788TaxRuleLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574258789ProductReviewLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574520220AddSalesChannelMaintenance;
+use Shopware\Core\Migration\V6_3\Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable;
 
 /**
  * @internal
@@ -99,7 +100,7 @@ use Shopware\Core\Migration\V6_3\Migration1574520220AddSalesChannelMaintenance;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1574520220;
+    private const LAST_TIMESTAMP = 1574672450;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -112,7 +113,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(77, $pending);
+        static::assertCount(78, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -985,6 +986,31 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         }
 
         static::assertSame($this->schema($this->mysql)['sales_channel'], $this->schema($this->postgres)['sales_channel']);
+    }
+
+    public function testRemoteAddressColumnsMatchMySqlAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1574520220);
+
+            static::assertSame([Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable::class], $collection->migrateInPlace(1574672450));
+            foreach (['customer', 'order_customer'] as $table) {
+                $columns = array_column($this->columns($connection)[$table], null, 'name');
+                static::assertArrayHasKey('remote_address', $columns);
+                static::assertSame('YES', $columns['remote_address']['nullable']);
+            }
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection);
+                (new MigrationVariantRegistry())->resolve(Migration1574672450RemoteAddressIntoCustomerAndOrderCustomerTable::class, 1574672450)->update($connection);
+                static::assertSame($schema, $this->schema($connection));
+            }
+        }
+
+        static::assertSame($this->schema($this->mysql)['customer'], $this->schema($this->postgres)['customer']);
+        static::assertSame($this->schema($this->mysql)['order_customer'], $this->schema($this->postgres)['order_customer']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
