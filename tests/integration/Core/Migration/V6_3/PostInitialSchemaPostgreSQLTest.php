@@ -8,6 +8,7 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Doctrine\DBAL\Schema\Name\UnqualifiedName;
+use Shopware\Core\Checkout\Customer\Event\CustomerDoubleOptInRegistrationEvent;
 use Shopware\Core\Content\ContactForm\Event\ContactFormEvent;
 use Shopware\Core\Content\Flow\Dispatching\Action\SendMailAction;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
@@ -78,6 +79,7 @@ use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
 use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
 use Shopware\Core\Migration\V6_3\Migration1572273565AddUniqueConstraintToTechnicalNameOfDocumentType;
 use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
+use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMailTemplate;
 
 /**
  * @internal
@@ -86,7 +88,7 @@ use Shopware\Core\Migration\V6_3\Migration1572421282AddDoubleOptInRegistration;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572421282;
+    private const LAST_TIMESTAMP = 1572425108;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -99,7 +101,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(66, $pending);
+        static::assertCount(67, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -602,6 +604,41 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         static::assertArrayHasKey('mysql', $schemas);
         static::assertArrayHasKey('postgres', $schemas);
         static::assertSame($schemas['mysql'], $schemas['postgres']);
+    }
+
+    public function testDoubleOptInRegistrationMailTemplateIsCreatedAndRetrySafe(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572421282);
+
+            static::assertSame([Migration1572425108AddDoubleOptInRegistrationMailTemplate::class], $collection->migrateInPlace(1572425108));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', ['customer_register.double_opt_in']));
+            $typeId = $connection->fetchOne('SELECT id FROM mail_template_type WHERE technical_name = ?', ['customer_register.double_opt_in']);
+            if (\is_resource($typeId)) {
+                $typeId = stream_get_contents($typeId);
+            }
+            static::assertIsString($typeId);
+            $templateId = $connection->fetchOne('SELECT id FROM mail_template WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]);
+            if (\is_resource($templateId)) {
+                $templateId = stream_get_contents($templateId);
+            }
+            static::assertIsString($templateId);
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type_translation WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]));
+            static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [CustomerDoubleOptInRegistrationEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+            static::assertSame('Please confirm your sign-up with {{ salesChannel.translated.name }}', $connection->fetchOne('SELECT subject FROM mail_template_translation WHERE mail_template_id = ? AND language_id = ?', [$templateId, Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)], [ParameterType::BINARY, ParameterType::BINARY]));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572425108AddDoubleOptInRegistrationMailTemplate::class, 1572425108);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_type WHERE technical_name = ?', ['customer_register.double_opt_in']));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [CustomerDoubleOptInRegistrationEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
+                static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
