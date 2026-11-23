@@ -74,6 +74,7 @@ use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
 use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrderDelivery;
 use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
 use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTemplates;
+use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
 
 /**
  * @internal
@@ -82,7 +83,7 @@ use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTempl
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571990395;
+    private const LAST_TIMESTAMP = 1572193798;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -95,7 +96,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(62, $pending);
+        static::assertCount(63, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -444,6 +445,61 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                     SQL, ['type' => 'order_delivery.state.shipped']));
             }
         }
+    }
+
+    public function testTaxRuleTablesAndSeedTypesMatchMySqlAndRetrySafely(): void
+    {
+        $mysqlSchemas = [];
+        $postgresSchemas = [];
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571990395);
+
+            static::assertSame([Migration1572193798TaxRule::class], $collection->migrateInPlace(1572193798));
+            static::assertSame(4, (int) $connection->fetchOne('SELECT COUNT(*) FROM tax_rule_type'));
+            static::assertGreaterThanOrEqual(8, (int) $connection->fetchOne('SELECT COUNT(*) FROM tax_rule_type_translation'));
+
+            $taxId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM tax LIMIT 1'));
+            $countryId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM country LIMIT 1'));
+            $ruleTypeId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM tax_rule_type WHERE technical_name = :name', ['name' => 'zip_code']));
+            static::assertIsString($taxId);
+            static::assertIsString($countryId);
+            static::assertIsString($ruleTypeId);
+            $connection->insert('tax_rule', [
+                'id' => Uuid::randomBytes(),
+                'tax_id' => $taxId,
+                'tax_rule_type_id' => $ruleTypeId,
+                'country_id' => $countryId,
+                'tax_rate' => 19.0,
+                'data' => '{"zipCode":"12345"}',
+                'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+            $taxRuleData = $connection->fetchOne('SELECT data FROM tax_rule WHERE tax_rate = 19');
+            static::assertSame(['zipCode' => '12345'], json_decode((string) $taxRuleData, true, 512, \JSON_THROW_ON_ERROR));
+
+            $schema = [
+                $this->schema($connection)['tax_rule_type'],
+                $this->schema($connection)['tax_rule_type_translation'],
+                $this->schema($connection)['tax_rule'],
+            ];
+            if ($connection === $this->mysql) {
+                $mysqlSchemas = $schema;
+            } else {
+                $postgresSchemas = $schema;
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572193798TaxRule::class, 1572193798);
+                $variant->update($connection);
+                static::assertSame(4, (int) $connection->fetchOne('SELECT COUNT(*) FROM tax_rule_type'));
+                static::assertGreaterThanOrEqual(8, (int) $connection->fetchOne('SELECT COUNT(*) FROM tax_rule_type_translation'));
+                static::assertSame($schema, [
+                    $this->schema($connection)['tax_rule_type'],
+                    $this->schema($connection)['tax_rule_type_translation'],
+                    $this->schema($connection)['tax_rule'],
+                ]);
+            }
+        }
+
+        static::assertSame($mysqlSchemas, $postgresSchemas);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
