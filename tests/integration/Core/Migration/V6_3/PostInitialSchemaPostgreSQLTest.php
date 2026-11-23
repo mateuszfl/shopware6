@@ -71,6 +71,7 @@ use Shopware\Core\Migration\V6_3\Migration1570684913ScheduleIndexer;
 use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKingdom;
 use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesChannel;
 use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
+use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrderDelivery;
 
 /**
  * @internal
@@ -79,7 +80,7 @@ use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571660203;
+    private const LAST_TIMESTAMP = 1571724915;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -92,7 +93,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(59, $pending);
+        static::assertCount(60, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -270,6 +271,67 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant->update($connection);
                 static::assertSame('Enter delivery state: Shipped', $connection->fetchOne("SELECT translation.name FROM mail_template_type_translation AS translation INNER JOIN mail_template_type AS template_type ON template_type.id = translation.mail_template_type_id INNER JOIN language ON language.id = translation.language_id INNER JOIN locale ON locale.id = language.locale_id WHERE template_type.technical_name = '$type' AND locale.code = 'en-GB'"));
             }
+        }
+    }
+
+    public function testOrderDeliveryTrackingCodesAreMigratedAndLegacyColumnIsDropped(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571660203);
+            $versionId = Uuid::fromHexToBytes(Defaults::LIVE_VERSION);
+            $currencyId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM currency LIMIT 1'));
+            $languageId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM language LIMIT 1'));
+            $salesChannelId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM sales_channel LIMIT 1'));
+            $shippingMethodId = $this->normalizeBinaryValue($connection->fetchOne('SELECT id FROM shipping_method LIMIT 1'));
+            static::assertIsString($currencyId);
+            static::assertIsString($languageId);
+            static::assertIsString($salesChannelId);
+            static::assertIsString($shippingMethodId);
+            $orderId = Uuid::randomBytes();
+            $deliveryId = Uuid::randomBytes();
+            $createdAt = (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT);
+            $connection->executeStatement(
+                'INSERT INTO ' . $connection->getDatabasePlatform()->quoteSingleIdentifier('order') . ' (id, version_id, state_id, currency_id, language_id, sales_channel_id, billing_address_id, billing_address_version_id, price, order_date_time, shipping_costs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$orderId, $versionId, Uuid::randomBytes(), $currencyId, $languageId, $salesChannelId, Uuid::randomBytes(), $versionId, '{"totalPrice":1,"netPrice":1,"positionPrice":1,"taxStatus":"gross"}', $createdAt, '{"totalPrice":0}', $createdAt],
+                [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]
+            );
+            $connection->insert('order_delivery', [
+                'id' => $deliveryId,
+                'version_id' => $versionId,
+                'order_id' => $orderId,
+                'order_version_id' => $versionId,
+                'state_id' => Uuid::randomBytes(),
+                'shipping_method_id' => $shippingMethodId,
+                'shipping_date_earliest' => '2020-01-02',
+                'shipping_date_latest' => '2020-01-03',
+                'shipping_costs' => '{"totalPrice":0}',
+                'tracking_code' => 'TRACKING-TEST',
+                'created_at' => $createdAt,
+            ], [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+
+            static::assertSame([Migration1571724915MultipleTrackingCodesInOrderDelivery::class], $collection->migrateInPlace(1571724915));
+            $columns = array_column($this->columns($connection)['order_delivery'], null, 'name');
+            static::assertArrayHasKey('tracking_codes', $columns);
+            static::assertSame('NO', $columns['tracking_codes']['nullable']);
+            static::assertArrayHasKey('tracking_code', $columns);
+            $codes = $connection->fetchOne('SELECT tracking_codes FROM order_delivery WHERE id = ?', [$deliveryId], [ParameterType::BINARY]);
+            static::assertSame(['TRACKING-TEST'], json_decode((string) $codes, true, 512, \JSON_THROW_ON_ERROR));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1571724915MultipleTrackingCodesInOrderDelivery::class, 1571724915);
+                $variant->update($connection);
+                $variant->updateDestructive($connection);
+                $variant->updateDestructive($connection);
+            } else {
+                (new Migration1571724915MultipleTrackingCodesInOrderDelivery())->updateDestructive($connection);
+            }
+
+            $columns = array_column($this->columns($connection)['order_delivery'], null, 'name');
+            static::assertArrayNotHasKey('tracking_code', $columns);
+            $codes = $connection->fetchOne('SELECT tracking_codes FROM order_delivery WHERE id = ?', [$deliveryId], [ParameterType::BINARY]);
+            static::assertSame(['TRACKING-TEST'], json_decode((string) $codes, true, 512, \JSON_THROW_ON_ERROR));
         }
     }
 
@@ -2161,6 +2223,15 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
             $key->getOnDeleteAction()->name,
             $key->getOnUpdateAction()->name,
         ];
+    }
+
+    private function normalizeBinaryValue(mixed $value): ?string
+    {
+        if (\is_resource($value)) {
+            $value = stream_get_contents($value);
+        }
+
+        return \is_string($value) ? $value : null;
     }
 
     /**

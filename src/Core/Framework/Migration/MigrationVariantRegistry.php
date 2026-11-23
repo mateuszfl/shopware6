@@ -173,6 +173,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1571059598ChangeGreatBritainToUnitedKingdom::class, 1571059598, PostgreSQL63\Migration1571059598ChangeGreatBritainToUnitedKingdom::class],
         [Core63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class, 1571210820, PostgreSQL63\Migration1571210820AddPaymentMethodIdsToSalesChannel::class],
         [Core63\Migration1571660203FixOrderDeliveryStateNames::class, 1571660203, PostgreSQL63\Migration1571660203FixOrderDeliveryStateNames::class],
+        [Core63\Migration1571724915MultipleTrackingCodesInOrderDelivery::class, 1571724915, PostgreSQL63\Migration1571724915MultipleTrackingCodesInOrderDelivery::class],
     ];
 
     /**
