@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,12 +18,10 @@ class Migration1575626180RemoveSearchKeywordInheritance extends MigrationStep
     {
         return 1575626180;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
     }
-
     public function updateDestructive(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "product" DROP "searchKeywords";');

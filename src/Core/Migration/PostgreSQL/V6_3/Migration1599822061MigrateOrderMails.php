@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
@@ -13,7 +12,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -24,7 +22,6 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
     {
         return 1599822061;
     }
-
     public function update(Connection $connection): void
     {
         // migrate existing event_actions
@@ -48,11 +45,9 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         $states = $this->prefix($states, 'state_enter.');
         $this->insertMails($connection, $states);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     /**
      * @param array<string> $ids
      *
@@ -71,10 +66,8 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
             $key = $mail['mail_template_id'] . '.' . $mail['technical_name'];
             $mapping[$key] = $mail;
         }
-
         return $mapping;
     }
-
     /**
      * @param list<string> $names
      *
@@ -84,7 +77,6 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
     {
         return $connection->fetchFirstColumn('SELECT LOWER(HEX(id)) as id FROM mail_template_type WHERE technical_name IN (:names)', ['names' => $names], ['names' => ArrayParameterType::STRING]);
     }
-
     /**
      * @param array<string, array<string, string>> $mails
      */
@@ -112,7 +104,6 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
             }
         }
     }
-
     /**
      * @param array<string, array<string, string>> $mails
      *
@@ -123,10 +114,8 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         foreach ($mails as &$mail) {
             $mail['technical_name'] = $prefix . $mail['technical_name'];
         }
-
         return $mails;
     }
-
     /**
      * @param list<array<string, string>> $events
      * @param array<string, array<string, string>> $mails
@@ -138,14 +127,13 @@ class Migration1599822061MigrateOrderMails extends MigrationStep
         $exploded = [];
         foreach ($events as $event) {
             $typeId = $event['typeId'];
-            $typeMails = array_filter($mails, static fn ($mail) => $mail['mail_template_type_id'] === $typeId);
+            $typeMails = array_filter($mails, static fn($mail) => $mail['mail_template_type_id'] === $typeId);
             foreach ($typeMails as &$mail) {
                 $mail['technical_name'] = $event['event_name'];
             }
             unset($mail);
             $exploded = [...$exploded, ...$typeMails];
         }
-
         return $exploded;
     }
 }

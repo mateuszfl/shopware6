@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1582011195FixCountryStateGermanTranslation extends MigrationStep
     {
         return 1582011195;
     }
-
     public function update(Connection $connection): void
     {
         $default = ['DE-BW' => 'Baden-Württemberg', 'DE-BY' => 'Bavaria', 'DE-BE' => 'Berlin', 'DE-BB' => 'Brandenburg', 'DE-HB' => 'Bremen', 'DE-HH' => 'Hamburg', 'DE-HE' => 'Hesse', 'DE-NI' => 'Lower Saxony', 'DE-MV' => 'Mecklenburg-Western Pomerania', 'DE-NW' => 'North Rhine-Westphalia', 'DE-RP' => 'Rhineland-Palatinate', 'DE-SL' => 'Saarland', 'DE-SN' => 'Saxony', 'DE-ST' => 'Saxony-Anhalt', 'DE-SH' => 'Schleswig-Holstein', 'DE-TH' => 'Thuringia'];
@@ -39,7 +36,6 @@ class Migration1582011195FixCountryStateGermanTranslation extends MigrationStep
             $connection->update('country_state_translation', ['name' => $germanTranslations[$shortCode]], ['country_state_id' => $translation['id'], 'language_id' => $germanLanguageId]);
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }

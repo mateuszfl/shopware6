@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,20 +18,19 @@ class Migration1595492053SeoUrlTemplate extends MigrationStep
     {
         return 1595492053;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "seo_url_template" (
-                "id" BINARY(16) NOT NULL PRIMARY KEY,
-                "sales_channel_id" BINARY(16) NULL,
+                "id" BYTEA CHECK (octet_length("id") = 16) NOT NULL PRIMARY KEY,
+                "sales_channel_id" BYTEA CHECK (octet_length("sales_channel_id") = 16) NULL,
                 "route_name" VARCHAR(255) NOT NULL,
                 "entity_name" VARCHAR(64) NOT NULL,
                 "template" VARCHAR(750) NOT NULL,
-                "is_valid" TINYINT(1) NOT NULL DEFAULT 1,
+                "is_valid" SMALLINT NOT NULL DEFAULT 1,
                 "custom_fields" JSON NULL,
-                "created_at" DATETIME(3) NOT NULL,
-                "updated_at" DATETIME(3) NULL,
+                "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
+                "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 CONSTRAINT "uniq.seo_url_template.route_name"
                     UNIQUE ("sales_channel_id", "route_name"),
                 CONSTRAINT "fk.seo_url_template.sales_channel_id" FOREIGN KEY ("sales_channel_id")
@@ -42,7 +39,6 @@ class Migration1595492053SeoUrlTemplate extends MigrationStep
             )
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }

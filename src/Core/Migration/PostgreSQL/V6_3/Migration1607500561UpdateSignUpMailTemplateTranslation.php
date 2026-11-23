@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -13,7 +12,6 @@ use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Migration\Traits\MailSubjectUpdate;
 use Shopware\Core\Migration\Traits\MailUpdate;
 use Shopware\Core\Migration\Traits\UpdateMailTrait;
-
 /**
  * @internal
  */
@@ -21,12 +19,10 @@ use Shopware\Core\Migration\Traits\UpdateMailTrait;
 class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationStep
 {
     use UpdateMailTrait;
-
     public function getCreationTimestamp(): int
     {
         return 1607500561;
     }
-
     public function update(Connection $connection): void
     {
         // update customer registration
@@ -40,12 +36,10 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
         $mailSubjectUpdate = new MailSubjectUpdate(MailTemplateTypes::MAILTYPE_CUSTOMER_REGISTER_DOUBLE_OPT_IN, 'Please confirm your sign-up with {{ salesChannel.translated.name }}');
         $this->updateEnMailSubject($connection, $mailSubjectUpdate);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     private function getSignupConfirmationHtmlTemplateEn(): string
     {
         return '
@@ -63,7 +57,6 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
             </div>
         ';
     }
-
     private function getSignupConfirmationPlainTemplateEn(): string
     {
         return '
@@ -77,7 +70,6 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
             By this confirmation, you also agree that we may send you further emails as part of the fulfillment of the contract.
         ';
     }
-
     private function getSignupHtmlTemplateEn(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -90,7 +82,6 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
             </p>
         </div>';
     }
-
     private function getSignupPlainTemplateEn(): string
     {
         return '{{ customer.salutation.translated.letterName }} {{customer.firstName}} {{ customer.lastName }},
@@ -100,7 +91,6 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
                 You can change your password anytime.
         ';
     }
-
     private function getSignupHtmlTemplateDe(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -113,7 +103,6 @@ class Migration1607500561UpdateSignUpMailTemplateTranslation extends MigrationSt
             </p>
         </div>';
     }
-
     private function getSignupPlainTemplateDe(): string
     {
         return '{{ customer.salutation.translated.letterName }} {{customer.firstName}} {{ customer.lastName }},

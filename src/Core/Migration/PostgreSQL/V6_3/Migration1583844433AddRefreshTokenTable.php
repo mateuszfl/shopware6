@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,22 +18,20 @@ class Migration1583844433AddRefreshTokenTable extends MigrationStep
     {
         return 1583844433;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "refresh_token" (
-              "id"                  BINARY(16)                              NOT NULL,
-              "user_id"             BINARY(16)                              NOT NULL,
+              "id"                  BYTEA CHECK (octet_length("id") = 16)                              NOT NULL,
+              "user_id"             BYTEA CHECK (octet_length("user_id") = 16)                              NOT NULL,
               "token_id"            VARCHAR(80)                             NOT NULL,
-              "issued_at"           DATETIME(3)                             NOT NULL,
-              "expires_at"          DATETIME(3)                             NOT NULL,
+              "issued_at"           TIMESTAMP(3) WITHOUT TIME ZONE                             NOT NULL,
+              "expires_at"          TIMESTAMP(3) WITHOUT TIME ZONE                             NOT NULL,
               PRIMARY KEY ("id"),
               UNIQUE "uniq.token_id" (token_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            );
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

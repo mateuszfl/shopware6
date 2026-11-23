@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoC
     {
         return 1602745374;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -35,12 +32,10 @@ class Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoC
             WHERE "customer"."default_billing_address_id" = "customer_address"."id" AND "customer_address"."vat_id" IS NOT NULL;
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     /**
      * Adds a database trigger that keeps the fields 'vat_ids' in `customer` and 'vat_id' in `customer_address` in sync.
      * That means inserting either value will update the other.
@@ -57,7 +52,6 @@ class Migration1602745374AddVatIdsColumnAndTransferVatIdFromCustomerAddressIntoC
             END;';
         $this->createTrigger($connection, $query);
     }
-
     /**
      * Adds a database trigger that keeps the fields 'vat_ids' in `customer` and 'vat_id' in `customer_address` in sync.
      * That means updating either value will update the other.

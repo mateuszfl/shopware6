@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1595160327AddPositionToCustomFieldSet extends MigrationStep
     {
         return 1595160327;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -28,7 +25,6 @@ class Migration1595160327AddPositionToCustomFieldSet extends MigrationStep
             ADD COLUMN "position" INT NOT NULL DEFAULT 1;
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }

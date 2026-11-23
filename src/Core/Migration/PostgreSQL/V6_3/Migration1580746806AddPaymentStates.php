@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -13,7 +12,6 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineTransition\StateMachineTransitionActions;
-
 /**
  * @internal
  */
@@ -24,17 +22,14 @@ class Migration1580746806AddPaymentStates extends MigrationStep
     {
         return 1580746806;
     }
-
     public function update(Connection $connection): void
     {
         $this->addOrderTransactionStates($connection);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     private function addOrderTransactionStates(Connection $connection): void
     {
         $stateMachineId = (string) $connection->fetchOne('SELECT "id" FROM "state_machine" WHERE "technical_name" = :technical_name LIMIT 1', ['technical_name' => OrderTransactionStates::STATE_MACHINE]);
@@ -101,7 +96,6 @@ class Migration1580746806AddPaymentStates extends MigrationStep
         // from "refunded_partially" to *
         $connection->insert('state_machine_transition', ['id' => Uuid::randomBytes(), 'state_machine_id' => $stateMachineId, 'action_name' => StateMachineTransitionActions::ACTION_REOPEN, 'from_state_id' => $stateRefundedPartiallyId, 'to_state_id' => $stateOpenId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('SELECT "language"."id" FROM "language" INNER JOIN "locale" ON "language"."translation_code_id" = "locale"."id" WHERE "code" = :code LIMIT 1', ['code' => $code]);
@@ -111,10 +105,8 @@ class Migration1580746806AddPaymentStates extends MigrationStep
         if (!$langId) {
             return Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
         }
-
         return (string) $langId;
     }
-
     private function fetchStateId(string $technicalName, string $stateMachineId, Connection $connection): ?string
     {
         $stateId = $connection->fetchOne('SELECT "id" FROM "state_machine_state" WHERE
@@ -124,7 +116,6 @@ class Migration1580746806AddPaymentStates extends MigrationStep
         if ($stateId === false) {
             return null;
         }
-
         return (string) $stateId;
     }
 }

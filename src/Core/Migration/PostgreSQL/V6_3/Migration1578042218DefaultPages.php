@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,7 +10,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -22,7 +20,6 @@ class Migration1578042218DefaultPages extends MigrationStep
     {
         return 1578042218;
     }
-
     public function update(Connection $connection): void
     {
         $this->fixContactPageAssignment($connection);
@@ -36,11 +33,9 @@ class Migration1578042218DefaultPages extends MigrationStep
             $connection->insert('system_config', ['id' => Uuid::randomBytes(), 'configuration_key' => $page['key'], 'configuration_value' => \sprintf('{"_value": "%s"}', Uuid::fromBytesToHex($id)), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function createEmptyPage(string $titleEn, string $titleDe, Connection $connection): string
     {
         $id = Uuid::randomBytes();
@@ -68,10 +63,8 @@ class Migration1578042218DefaultPages extends MigrationStep
         if ($languageIdDe) {
             $connection->insert('cms_slot_translation', ['cms_slot_id' => $slotId, 'cms_slot_version_id' => $versionId, 'language_id' => $languageIdDe, 'config' => json_encode($contentDe), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
         }
-
         return $id;
     }
-
     private function fixContactPageAssignment(Connection $connection): void
     {
         if ($connection->fetchOne('SELECT 1 FROM system_config WHERE configuration_key = ?', ['core.basicInformation.contactPage'])) {
@@ -83,7 +76,6 @@ class Migration1578042218DefaultPages extends MigrationStep
             $connection->insert('system_config', ['id' => Uuid::randomBytes(), 'configuration_key' => 'core.basicInformation.contactPage', 'configuration_value' => \sprintf('{"_value": "%s"}', Uuid::fromBytesToHex($id)), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
         }
     }
-
     private function getLanguageIdByLocale(Connection $connection, string $locale): ?string
     {
         $sql = <<<'SQL'
@@ -99,7 +91,6 @@ class Migration1578042218DefaultPages extends MigrationStep
         if (!$languageId) {
             return Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
         }
-
         return $languageId;
     }
 }

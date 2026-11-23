@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1578475268FixSloveneLocale extends MigrationStep
     {
         return 1578475268;
     }
-
     public function update(Connection $connection): void
     {
         $enLangId = $this->fetchLanguageId('en-GB', $connection);
@@ -36,19 +33,16 @@ class Migration1578475268FixSloveneLocale extends MigrationStep
              WHERE locale_id = :locale_id AND language_id = :language_id
              AND name = :wrongName', ['locale_id' => $localeId, 'language_id' => $enLangId, 'wrongName' => 'Slovakian', 'correctName' => 'Slovene']);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('SELECT "language"."id" FROM "language" INNER JOIN "locale" ON "language"."translation_code_id" = "locale"."id" WHERE "code" = :code LIMIT 1', ['code' => $code]);
         if ($langId === false) {
             return null;
         }
-
         return (string) $langId;
     }
 }

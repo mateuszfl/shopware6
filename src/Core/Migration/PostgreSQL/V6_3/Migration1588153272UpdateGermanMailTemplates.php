@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
     {
         return 1588153272;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
@@ -51,11 +48,9 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_REFUNDED, $connection, $deLangId, $this->getPaymentRefundedHTMLTemplateDe(), $this->getPaymentRefundedPlainTemplateDe());
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_PAID_PARTIALLY, $connection, $deLangId, $this->getPaymentPaidPartiallyHTMLTemplateDe(), $this->getPaymentPaidPartiallyPlainTemplateDe());
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -64,10 +59,8 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         if (!$langId) {
             return null;
         }
-
         return $langId;
     }
-
     private function updateMailTemplate(string $mailTemplateType, Connection $connection, string $deLangId, string $getHtmlTemplateDe, string $getPlainTemplateDe): void
     {
         $templateId = $this->fetchSystemMailTemplateIdFromType($connection, $mailTemplateType);
@@ -81,7 +74,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $getHtmlTemplateDe, $getPlainTemplateDe);
         }
     }
-
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
@@ -93,10 +85,8 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
-
         return $templateId;
     }
-
     /**
      * @return array<string, mixed>
      */
@@ -106,10 +96,8 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         if ($availableEntities === false || !\is_string($availableEntities) || json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR) === null) {
             return [];
         }
-
         return json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR);
     }
-
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {
@@ -132,7 +120,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE `mail_template_id`= :templateId AND `language_id` = :langId AND `updated_at` IS NULL';
         $connection->executeStatement($sqlString, $sqlParams);
     }
-
     private function getOrderConfirmationHTMLTemplateDe(): string
     {
         return '
@@ -220,7 +207,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getOrderConfirmationPlainTemplateDe(): string
     {
         return '
@@ -276,7 +262,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung.';
     }
-
     private function getDeliveryCancellationHtmlTemplateDe(): string
     {
         return '
@@ -294,7 +279,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
            </p>
         </div>';
     }
-
     private function getDeliveryCancellationPlainTemplateDe(): string
     {
         return '
@@ -306,7 +290,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryReturnedHtmlTemplateDe(): string
     {
         return '
@@ -324,7 +307,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
                 </p>
             </div>';
     }
-
     private function getDeliveryReturnedPlainTemplateDe(): string
     {
         return '
@@ -336,7 +318,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryShippedPartiallyHtmlTemplateDe(): string
     {
         return '
@@ -354,7 +335,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
                 </p>
             </div>';
     }
-
     private function getDeliveryShippedPartiallyPlainTemplateDe(): string
     {
         return '
@@ -366,7 +346,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryShippedHTMLTemplateDe(): string
     {
         return '
@@ -385,7 +364,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryShippedPlainTemplateDe(): string
     {
         return '
@@ -397,7 +375,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryReturnedPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -416,7 +393,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryReturnedPartiallyPlainTemplateDe(): string
     {
         return '
@@ -428,7 +404,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getOrderStateCancelledHTMLTemplateDe(): string
     {
         return '
@@ -447,7 +422,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getOrderStateCancelledPlainTemplateDe(): string
     {
         return '
@@ -459,7 +433,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getOrderStateOpenHTMLTemplateDe(): string
     {
         return '
@@ -478,7 +451,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getOrderStateOpenPlainTemplateDe(): string
     {
         return '
@@ -490,7 +462,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getOrderStateProgressHTMLTemplateDe(): string
     {
         return '
@@ -509,7 +480,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getOrderStateProgressPlainTemplateDe(): string
     {
         return '
@@ -521,7 +491,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getOrderStateCompletedHTMLTemplateDe(): string
     {
         return '
@@ -540,7 +509,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getOrderStateCompletedPlainTemplateDe(): string
     {
         return '
@@ -552,7 +520,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentRefundPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -571,7 +538,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentRefundPartiallyPlainTemplateDe(): string
     {
         return '
@@ -583,7 +549,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentRemindedHTMLTemplateDe(): string
     {
         return '
@@ -602,7 +567,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentRemindedPlainTemplateDe(): string
     {
         return '
@@ -614,7 +578,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentOpenHTMLTemplateDe(): string
     {
         return '
@@ -633,7 +596,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentOpenPlainTemplateDe(): string
     {
         return '
@@ -645,7 +607,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentPaidHTMLTemplateDe(): string
     {
         return '
@@ -664,7 +625,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentPaidPlainTemplateDe(): string
     {
         return '
@@ -676,7 +636,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentCancelledHTMLTemplateDe(): string
     {
         return '
@@ -695,7 +654,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentCancelledPlainTemplateDe(): string
     {
         return '
@@ -707,7 +665,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentRefundedHTMLTemplateDe(): string
     {
         return '
@@ -726,7 +683,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentRefundedPlainTemplateDe(): string
     {
         return '
@@ -738,7 +694,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getPaymentPaidPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -757,7 +712,6 @@ class Migration1588153272UpdateGermanMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getPaymentPaidPartiallyPlainTemplateDe(): string
     {
         return '

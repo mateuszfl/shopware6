@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,19 +18,16 @@ class Migration1610965670RemoveDeprecatedColumns extends MigrationStep
     {
         return 1610965670;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
     }
-
     public function updateDestructive(Connection $connection): void
     {
         $this->dropDecimalPrecisionColumn($connection);
         $this->dropPurchasePrice($connection);
         $this->dropCustomFields($connection);
     }
-
     private function dropDecimalPrecisionColumn(Connection $connection): void
     {
         try {
@@ -49,7 +44,6 @@ class Migration1610965670RemoveDeprecatedColumns extends MigrationStep
         } catch (\Throwable) {
         }
     }
-
     private function dropPurchasePrice(Connection $connection): void
     {
         try {
@@ -66,7 +60,6 @@ class Migration1610965670RemoveDeprecatedColumns extends MigrationStep
         } catch (\Throwable) {
         }
     }
-
     private function dropCustomFields(Connection $connection): void
     {
         try {

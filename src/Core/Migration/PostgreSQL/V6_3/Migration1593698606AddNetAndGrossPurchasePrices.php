@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
     {
         return 1593698606;
     }
-
     public function update(Connection $connection): void
     {
         $this->migrateProductPurchasePriceField($connection);
@@ -29,11 +26,9 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
         $this->addUpdateDatabaseTrigger($connection);
         $this->addInsertDatabaseTrigger($connection);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function migrateCartLineItemPurchasePriceRuleCondition(Connection $connection): void
     {
         $rows = $connection->fetchAllAssociative('SELECT id, value FROM rule_condition WHERE type = "cartLineItemPurchasePrice"');
@@ -46,7 +41,6 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
             $connection->executeStatement('UPDATE rule_condition SET value = :conditionValue WHERE id = :id', ['conditionValue' => json_encode($conditionValue, \JSON_THROW_ON_ERROR), 'id' => $row['id']]);
         }
     }
-
     private function migrateProductPurchasePriceField(Connection $connection): void
     {
         // Add new 'purchase_prices' JSON field
@@ -68,7 +62,6 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
                 )
             );', ['currencyKey' => \sprintf('c%s', $defaultCurrencyId), 'currencyId' => $defaultCurrencyId]);
     }
-
     /**
      * Adds a database trigger that keeps the fields 'purchase_price' and 'purchase_prices' in sync. That means updating
      * either value will update the other.
@@ -109,7 +102,6 @@ class Migration1593698606AddNetAndGrossPurchasePrices extends MigrationStep
                 END', Defaults::CURRENCY);
         $this->createTrigger($connection, $query);
     }
-
     /**
      * Adds a database trigger that keeps the fields 'purchase_price' and 'purchase_prices' in sync. That means insert
      * either value will update the other.

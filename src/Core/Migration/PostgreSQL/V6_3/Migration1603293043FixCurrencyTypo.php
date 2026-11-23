@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,16 +19,13 @@ class Migration1603293043FixCurrencyTypo extends MigrationStep
     {
         return 1603293043;
     }
-
     public function update(Connection $connection): void
     {
         $this->updateCurrency($connection);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function updateCurrency(Connection $connection): void
     {
         try {

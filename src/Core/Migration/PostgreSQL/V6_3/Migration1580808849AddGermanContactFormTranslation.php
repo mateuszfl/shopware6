@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,7 +10,6 @@ use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -22,7 +20,6 @@ class Migration1580808849AddGermanContactFormTranslation extends MigrationStep
     {
         return 1580808849;
     }
-
     public function update(Connection $connection): void
     {
         $deLangId = $this->getGermanLanguageId($connection);
@@ -39,21 +36,17 @@ class Migration1580808849AddGermanContactFormTranslation extends MigrationStep
         }
         $connection->insert('mail_template_translation', ['mail_template_id' => $contactTemplateId, 'language_id' => $deLangId, 'sender_name' => '{{ salesChannel.name }}', 'subject' => 'Kontaktanfrage erhalten - {{ salesChannel.name }}', 'description' => 'Kontaktanfrage erhalten', 'content_html' => $this->getContactFormHtmlTemplateDe(), 'content_plain' => $this->getContactFormPlainTemplateDe(), 'created_at' => date(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // nth
     }
-
     private function getGermanLanguageId(Connection $connection): ?string
     {
         $result = $connection->fetchOne('
             SELECT "id" FROM "language" WHERE LOWER("name") = \'deutsch\'
         ');
-
         return $result === false ? null : (string) $result;
     }
-
     private function getContactMailTemplateId(Connection $connection): ?string
     {
         $sql = <<<'SQL'
@@ -63,10 +56,8 @@ class Migration1580808849AddGermanContactFormTranslation extends MigrationStep
             AND "system_default" = 1
         SQL;
         $result = $connection->executeQuery($sql, ['technical_name' => MailTemplateTypes::MAILTYPE_CONTACT_FORM])->fetchOne();
-
         return $result === false ? null : (string) $result;
     }
-
     private function getContactFormHtmlTemplateDe(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -83,7 +74,6 @@ class Migration1580808849AddGermanContactFormTranslation extends MigrationStep
     </p>
 </div>';
     }
-
     private function getContactFormPlainTemplateDe(): string
     {
         return 'Folgende Nachricht wurde von {{ contactFormData.firstName }} {{ contactFormData.lastName }} an Sie via Kontakt-Formular gesendet.

@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -12,7 +11,6 @@ use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Util\Database\TableHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -23,7 +21,6 @@ class Migration1590408550AclResources extends MigrationStep
     {
         return 1590408550;
     }
-
     public function update(Connection $connection): void
     {
         if (!TableHelper::tableExists($connection, 'acl_resource')) {
@@ -36,12 +33,10 @@ class Migration1590408550AclResources extends MigrationStep
         }
         $connection->executeStatement('ALTER TABLE "acl_role" CHANGE "privileges" "privileges" json NOT NULL;');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         $connection->executeStatement('DROP TABLE "acl_resource"');
     }
-
     /**
      * @return array<string, list<array{priv: string}>>
      */
@@ -55,7 +50,6 @@ class Migration1590408550AclResources extends MigrationStep
         ');
         /** @var array<string, list<array{priv: string}>> $grouped */
         $grouped = FetchModeHelper::group($roles);
-
         return $grouped;
     }
 }

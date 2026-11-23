@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1599134496FixImportExportProfilesForGermanLanguage extends Migrat
     {
         return 1599134496;
     }
-
     public function update(Connection $connection): void
     {
         $germanLanguageId = $connection->fetchOne('
@@ -61,11 +58,9 @@ class Migration1599134496FixImportExportProfilesForGermanLanguage extends Migrat
             StatementHelper::executeStatement($stmt, ['import_export_profile_id' => $data['import_export_profile_id'], 'language_id' => $germanLanguageId, 'label' => $germanTranslations[$data['label']], 'created_at' => $data['created_at']]);
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     /**
      * @return array<string, string>
      */
@@ -73,7 +68,6 @@ class Migration1599134496FixImportExportProfilesForGermanLanguage extends Migrat
     {
         return ['Default category' => 'Standardprofil Kategorie', 'Default media' => 'Standardprofil Medien', 'Default variant configuration settings' => 'Standardprofil Variantenkonfiguration', 'Default newsletter recipient' => 'Standardprofil Newsletter-Empfänger', 'Default properties' => 'Standardprofil Eigenschaften', 'Default product' => 'Standardprofil Produkt'];
     }
-
     /**
      * @param array<string, mixed> $englishRow
      * @param array<array<string, mixed>> $germanData
@@ -81,7 +75,6 @@ class Migration1599134496FixImportExportProfilesForGermanLanguage extends Migrat
     private function checkIfInGermanData(array $englishRow, array $germanData): bool
     {
         $germanProfileIds = array_column($germanData, 'import_export_profile_id');
-
         return \in_array($englishRow['import_export_profile_id'], $germanProfileIds, true);
     }
 }

@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,20 +19,17 @@ class Migration1595553089FixOrderConfirmationMailForAllPayloads extends Migratio
     {
         return 1595553089;
     }
-
     public function update(Connection $connection): void
     {
         $enLangId = $this->fetchLanguageId('en-GB', $connection);
         $deLangId = $this->fetchLanguageId('de-DE', $connection);
-        $mailTemplateContent = require \dirname(__FILE__, 2) . '/V6_3/../Fixtures/MailTemplateContent.php';
+        $mailTemplateContent = require dirname(__FILE__, 2) . '/V6_3' . '/../Fixtures/MailTemplateContent.php';
         // update order confirmation email templates
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_ORDER_CONFIRM, $connection, $enLangId, $deLangId, $mailTemplateContent['OrderConfirmation']['en-GB']['html'], $mailTemplateContent['OrderConfirmation']['en-GB']['plain'], $mailTemplateContent['OrderConfirmation']['de-DE']['html'], $mailTemplateContent['OrderConfirmation']['de-DE']['plain']);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -43,10 +38,8 @@ class Migration1595553089FixOrderConfirmationMailForAllPayloads extends Migratio
         if (!$langId) {
             return null;
         }
-
         return $langId;
     }
-
     private function updateMailTemplate(string $mailTemplateType, Connection $connection, ?string $enLangId, ?string $deLangId, string $getHtmlTemplateEn, string $getPlainTemplateEn, string $getHtmlTemplateDe, string $getPlainTemplateDe): void
     {
         $templateId = $this->fetchSystemMailTemplateIdFromType($connection, $mailTemplateType);
@@ -62,7 +55,6 @@ class Migration1595553089FixOrderConfirmationMailForAllPayloads extends Migratio
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $getHtmlTemplateDe, $getPlainTemplateDe);
         }
     }
-
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
@@ -74,10 +66,8 @@ class Migration1595553089FixOrderConfirmationMailForAllPayloads extends Migratio
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
-
         return $templateId;
     }
-
     /**
      * @return array<string, mixed>
      */
@@ -87,10 +77,8 @@ class Migration1595553089FixOrderConfirmationMailForAllPayloads extends Migratio
         if ($availableEntities === false || !\is_string($availableEntities) || json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR) === null) {
             return [];
         }
-
         return json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR);
     }
-
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {

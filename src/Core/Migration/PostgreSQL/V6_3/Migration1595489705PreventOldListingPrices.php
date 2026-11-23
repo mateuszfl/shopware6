@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1595489705PreventOldListingPrices extends MigrationStep
     {
         return 1595489705;
     }
-
     public function update(Connection $connection): void
     {
         $this->registerIndexer($connection, 'product.indexer');
@@ -38,7 +35,6 @@ class Migration1595489705PreventOldListingPrices extends MigrationStep
         $this->createTrigger($connection, $sql);
         $connection->executeStatement('UPDATE product SET listing_prices = NULL');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

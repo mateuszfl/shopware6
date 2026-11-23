@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
     {
         return 1580218617;
     }
-
     public function update(Connection $connection): void
     {
         $this->updateSchema($connection);
@@ -29,19 +26,16 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
         $this->createInsertTrigger($connection);
         $this->migrateData($connection);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     public function updateSchema(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "shipping_method_price" MODIFY "currency_id" binary(16) NULL;
             ALTER TABLE "shipping_method_price" MODIFY "price" double NULL;
             ALTER TABLE "shipping_method_price" ADD COLUMN "currency_price" json NULL;');
     }
-
     private function createUpdateTrigger(Connection $connection): void
     {
         $query = 'CREATE TRIGGER shipping_method_price_new_price_update BEFORE UPDATE ON shipping_method_price
@@ -77,7 +71,6 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
             END;';
         $this->createTrigger($connection, $query);
     }
-
     private function createInsertTrigger(Connection $connection): void
     {
         $query = 'CREATE TRIGGER shipping_method_price_new_price_insert BEFORE INSERT ON shipping_method_price
@@ -109,7 +102,6 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
             END;';
         $this->createTrigger($connection, $query);
     }
-
     private function migrateData(Connection $connection): void
     {
         $shippingPrices = $connection->fetchAllAssociative('SELECT * FROM "shipping_method_price"');

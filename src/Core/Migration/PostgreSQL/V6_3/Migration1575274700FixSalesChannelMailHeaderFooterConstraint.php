@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1575274700FixSalesChannelMailHeaderFooterConstraint extends Migra
     {
         return 1575274700;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -33,7 +30,6 @@ class Migration1575274700FixSalesChannelMailHeaderFooterConstraint extends Migra
             REFERENCES "mail_header_footer" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

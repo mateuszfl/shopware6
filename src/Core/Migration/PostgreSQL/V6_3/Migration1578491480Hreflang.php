@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1578491480Hreflang extends MigrationStep
     {
         return 1578491480;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "sales_channel" ADD "hreflang_default_domain_id" BINARY(16) NULL;');
@@ -33,7 +30,6 @@ class Migration1578491480Hreflang extends MigrationStep
         $connection->executeStatement('ALTER TABLE "sales_channel" ADD "hreflang_active" tinyint(1) unsigned DEFAULT 0;');
         $connection->executeStatement('ALTER TABLE "sales_channel_domain" ADD "hreflang_use_only_locale" tinyint(1) unsigned DEFAULT 0;');
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }

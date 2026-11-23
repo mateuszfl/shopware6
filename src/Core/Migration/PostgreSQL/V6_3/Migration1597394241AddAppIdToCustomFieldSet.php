@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1597394241AddAppIdToCustomFieldSet extends MigrationStep
     {
         return 1597394241;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -29,7 +26,6 @@ class Migration1597394241AddAppIdToCustomFieldSet extends MigrationStep
             ADD CONSTRAINT "fk.custom_field_set.app_id" FOREIGN KEY ("app_id") REFERENCES "app" ("id") ON DELETE CASCADE ON UPDATE CASCADE;
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // nth

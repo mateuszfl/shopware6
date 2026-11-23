@@ -29,7 +29,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $printer = new Standard();
-    $registry = new MigrationVariantRegistry(includeDiagnosticVariants: $diagnosticMode);
+    $registry = new MigrationVariantRegistry();
     $report = [];
     foreach (glob($sourceDirectory . '/Migration*.php') ?: [] as $path) {
         $name = basename($path);
@@ -99,7 +99,61 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             public array $unsupported = [];
             public int $translated = 0;
             public int $sqlLiterals = 0;
+            public array $appliedRules = [];
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+
+            private function replace(string $rule, string $pattern, string|callable $replacement, string &$sql): void
+            {
+                $count = 0;
+                $converted = is_callable($replacement)
+                    ? preg_replace_callback($pattern, $replacement, $sql, -1, $count)
+                    : preg_replace($pattern, $replacement, $sql, -1, $count);
+                if ($converted === null || $count === 0) {
+                    return;
+                }
+
+                $sql = $converted;
+                $this->appliedRules[$rule] = ($this->appliedRules[$rule] ?? 0) + $count;
+            }
+
+            private function rewriteCreateTable(string $sql): string
+            {
+                if (!preg_match('/^\\s*CREATE\\s+TABLE\\b/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'create_table_mysql_options_removed',
+                    '/(?:\\s+(?:ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*[A-Za-z0-9_]+))+(?=\\s*(?:;|CREATE\\b|ALTER\\b|INSERT\\b|UPDATE\\b|DELETE\\b|DROP\\b|$))/i',
+                    '',
+                    $sql
+                );
+                $this->replace(
+                    'create_table_binary16_to_bytea_with_length_check',
+                    '/(?m)^([ \\t]*)(?:"(?<double>[^"\\r\\n]+)"|`(?<tick>[^`\\r\\n]+)`|(?<plain>[A-Za-z_][A-Za-z0-9_$]*))([ \\t]+)BINARY\\s*\\(\\s*16\\s*\\)/i',
+                    static function (array $matches): string {
+                        $identifier = $matches['double'] !== '' ? '"' . $matches['double'] . '"' : ($matches['tick'] !== '' ? '"' . $matches['tick'] . '"' : $matches['plain']);
+
+                        return $matches[1] . $identifier . $matches[5] . 'BYTEA CHECK (octet_length(' . $identifier . ') = 16)';
+                    },
+                    $sql
+                );
+                $this->replace('create_table_tinyint_to_smallint', '/\\bTINYINT(?:\\s*\\(\\s*\\d+\\s*\\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $sql);
+                $this->replace(
+                    'create_table_datetime_to_timestamp_without_time_zone',
+                    '/\\bDATETIME(?:\\s*\\(\\s*(\\d+)\\s*\\))?/i',
+                    static fn (array $matches): string => 'TIMESTAMP' . (($matches[1] ?? '') === '' ? '' : '(' . $matches[1] . ')') . ' WITHOUT TIME ZONE',
+                    $sql
+                );
+                $this->replace(
+                    'create_table_utf8mb4_collation_to_sw_type_ci',
+                    '/\\bCOLLATE\\s+[" ]?utf8mb4?_[A-Za-z0-9_]+[" ]?/i',
+                    'COLLATE sw_type_ci',
+                    $sql
+                );
+
+                return $sql;
+            }
 
             public function enterNode(Node $node): ?Node
             {
@@ -136,7 +190,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 }
                 ++$this->sqlLiterals;
 
-                $sql = $node->value;
+                $sql = $this->rewriteCreateTable($node->value);
                 $patterns = [
                     'binary type/function' => '/\\bBINARY\\s*\\(/i',
                     'json type/function' => '/\\bJSON\\b|JSON_(?:EXTRACT|UNQUOTE|VALID)/i',
@@ -217,6 +271,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
         }
         $entry['translated_sql_literals'] = $visitor->translated;
         $entry['static_sql_literals'] = $visitor->sqlLiterals;
+        $entry['applied_rules'] = $visitor->appliedRules;
         $entry['unsupported_shapes'] = array_values(array_unique($visitor->unsupported));
         $entry['logical_class'] = $logicalClass;
         $entry['proposed_implementation'] = 'Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);

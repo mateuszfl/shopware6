@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1599463278AddCustomerIdIntoSalesChannelContext extends MigrationS
     {
         return 1599463278;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "sales_channel_api_context" ADD "customer_id" BINARY(16) NULL UNIQUE DEFAULT NULL;');
@@ -31,7 +28,6 @@ class Migration1599463278AddCustomerIdIntoSalesChannelContext extends MigrationS
             REFERENCES "customer" ("id") ON DELETE CASCADE;
         ');
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

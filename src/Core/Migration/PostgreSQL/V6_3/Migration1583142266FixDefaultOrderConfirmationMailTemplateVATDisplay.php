@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
     {
         return 1583142266;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
@@ -34,12 +31,10 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $this->getOrderConfirmationHtmlTemplateDe(), $this->getOrderConfirmationPlainTemplateDe());
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
@@ -51,10 +46,8 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
-
         return $templateId;
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -65,10 +58,8 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
         if (!$langId) {
             return null;
         }
-
         return $langId;
     }
-
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {
@@ -91,7 +82,6 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
         $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE `mail_template_id`= :templateId AND `language_id` = :enLangId AND `updated_at` IS NULL';
         $connection->executeStatement($sqlString, $sqlParams);
     }
-
     private function getOrderConfirmationHtmlTemplateEn(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -176,7 +166,6 @@ Thank you for your order at {{ salesChannel.name }} (Number: {{order.orderNumber
 <br>
 </div>';
     }
-
     private function getOrderConfirmationPlainTemplateEn(): string
     {
         return '{% set currencyIsoCode = order.currency.isoCode %}
@@ -229,7 +218,6 @@ In case of a successful order and if you are based in one of the EU countries, y
 
 If you have any questions, do not hesitate to contact us.';
     }
-
     private function getOrderConfirmationHtmlTemplateDe(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -313,7 +301,6 @@ vielen Dank für Ihre Bestellung im {{ salesChannel.name }} (Nummer: {{order.ord
 <br>
 </div>';
     }
-
     private function getOrderConfirmationPlainTemplateDe(): string
     {
         return '{% set currencyIsoCode = order.currency.isoCode %}

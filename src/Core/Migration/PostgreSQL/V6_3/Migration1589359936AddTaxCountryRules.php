@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,7 +10,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -22,12 +20,10 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
      * @var array<string, string>
      */
     private array $countryIds;
-
     public function getCreationTimestamp(): int
     {
         return 1589359936;
     }
-
     public function update(Connection $connection): void
     {
         // Taxes have been touched already?
@@ -38,30 +34,24 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
         $this->createNewTax($connection);
         $this->addCountryTaxRules($connection);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     private function isMigrationAllowed(Connection $connection): bool
     {
         $count = (int) $connection->executeQuery('SELECT COUNT(id) FROM tax WHERE tax_rate IN (7, 19) AND updated_at IS NULL')->fetchOne();
-
         return $count === 2;
     }
-
     private function updateTaxNames(Connection $connection): void
     {
         $connection->update('tax', ['name' => 'Standard rate'], ['tax_rate' => 19]);
         $connection->update('tax', ['name' => 'Reduced rate'], ['tax_rate' => 7]);
     }
-
     private function createNewTax(Connection $connection): void
     {
         $connection->insert('tax', ['id' => Uuid::randomBytes(), 'tax_rate' => 0, 'name' => 'Reduced rate 2', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
-
     private function addCountryTaxRules(Connection $connection): void
     {
         $standardRate = $connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 19')->fetchOne();
@@ -83,7 +73,6 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
             }
         }
     }
-
     private function fetchCountryIds(Connection $connection): void
     {
         /** @var list<array{id: string, iso: string}> $countries */
@@ -92,7 +81,6 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
             $this->countryIds[$country['iso']] = $country['id'];
         }
     }
-
     /**
      * @return array<string, array{standardRate: float, reduced1?: float, reduced2?: float}>
      */

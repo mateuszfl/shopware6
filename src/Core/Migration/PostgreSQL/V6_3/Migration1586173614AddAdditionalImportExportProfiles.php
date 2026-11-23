@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -14,7 +13,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -25,7 +23,6 @@ class Migration1586173614AddAdditionalImportExportProfiles extends MigrationStep
     {
         return 1586173614;
     }
-
     public function update(Connection $connection): void
     {
         foreach ($this->getProfiles() as $profile) {
@@ -39,12 +36,10 @@ class Migration1586173614AddAdditionalImportExportProfiles extends MigrationStep
             $connection->insert('import_export_profile', $profile);
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     /**
      * @return list<array{name: string, source_entity: string, mapping: list<array{key: string, mappedKey: string}>}>
      */

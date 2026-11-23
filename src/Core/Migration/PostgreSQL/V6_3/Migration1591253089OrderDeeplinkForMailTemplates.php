@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,13 +19,12 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
     {
         return 1591253089;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
         $enLangId = $this->fetchLanguageId('en-GB', $connection);
         $deLangId = $this->fetchLanguageId('de-DE', $connection);
-        $mailTemplateContent = require \dirname(__FILE__, 2) . '/V6_3/../Fixtures/MailTemplateContent.php';
+        $mailTemplateContent = require dirname(__FILE__, 2) . '/V6_3' . '/../Fixtures/MailTemplateContent.php';
         // update order confirmation email templates
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_ORDER_CONFIRM, $connection, $enLangId, $deLangId, $mailTemplateContent['OrderConfirmation']['en-GB']['html'], $mailTemplateContent['OrderConfirmation']['en-GB']['plain'], $mailTemplateContent['OrderConfirmation']['de-DE']['html'], $mailTemplateContent['OrderConfirmation']['de-DE']['plain']);
         // update delivery email templates
@@ -50,11 +47,9 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_REFUNDED, $connection, $enLangId, $deLangId, $mailTemplateContent['PaymentRefunded']['en-GB']['html'], $mailTemplateContent['PaymentRefunded']['en-GB']['plain'], $mailTemplateContent['PaymentRefunded']['de-DE']['html'], $mailTemplateContent['PaymentRefunded']['de-DE']['plain']);
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_PAID_PARTIALLY, $connection, $enLangId, $deLangId, $mailTemplateContent['PaymentPaidPartially']['en-GB']['html'], $mailTemplateContent['PaymentPaidPartially']['en-GB']['plain'], $mailTemplateContent['PaymentPaidPartially']['de-DE']['html'], $mailTemplateContent['PaymentPaidPartially']['de-DE']['plain']);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -63,10 +58,8 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
         if (!$langId) {
             return null;
         }
-
         return $langId;
     }
-
     private function updateMailTemplate(string $mailTemplateType, Connection $connection, ?string $enLangId, ?string $deLangId, string $getHtmlTemplateEn, string $getPlainTemplateEn, string $getHtmlTemplateDe, string $getPlainTemplateDe): void
     {
         $templateId = $this->fetchSystemMailTemplateIdFromType($connection, $mailTemplateType);
@@ -82,7 +75,6 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $getHtmlTemplateDe, $getPlainTemplateDe);
         }
     }
-
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
@@ -94,10 +86,8 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
-
         return $templateId;
     }
-
     /**
      * @return array<string, mixed>
      */
@@ -107,10 +97,8 @@ class Migration1591253089OrderDeeplinkForMailTemplates extends MigrationStep
         if ($availableEntities === false || !\is_string($availableEntities) || json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR) === null) {
             return [];
         }
-
         return json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR);
     }
-
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {

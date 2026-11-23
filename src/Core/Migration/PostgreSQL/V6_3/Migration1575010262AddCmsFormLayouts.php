@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,7 +10,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -22,22 +20,18 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
     private const NEWSLETTER = 'newsletter';
     private const CONTACT_DE = 'Kontakt';
     private const NEWSLETTER_DE = 'Newsletter';
-
     public function getCreationTimestamp(): int
     {
         return 1575010262;
     }
-
     public function update(Connection $connection): void
     {
         $this->addDefaultContactFormLayout($connection, self::CONTACT, self::CONTACT_DE);
         $this->addDefaultContactFormLayout($connection, self::NEWSLETTER, self::NEWSLETTER_DE);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function addDefaultContactFormLayout(Connection $connection, string $formType, string $formTypeDe): void
     {
         $slotTranslations = [];
@@ -73,7 +67,6 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
             $connection->insert('cms_slot_translation', $translation);
         }
     }
-
     private function getLanguageDeId(Connection $connection): ?string
     {
         $result = $connection->fetchOne('
@@ -84,7 +77,6 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
         if ($result === false || Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM) === $result) {
             return null;
         }
-
         return (string) $result;
     }
 }

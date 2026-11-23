@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,7 +18,6 @@ class Migration1611155140AddUpdatedAtToSalesChannelApiContext extends MigrationS
     {
         return 1611155140;
     }
-
     public function update(Connection $connection): void
     {
         try {
@@ -29,7 +26,6 @@ class Migration1611155140AddUpdatedAtToSalesChannelApiContext extends MigrationS
         } catch (\Throwable) {
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

@@ -2,8 +2,7 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
@@ -13,7 +12,6 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
-
 /**
  * @internal
  */
@@ -24,7 +22,6 @@ class Migration1591361320ChargebackAndAuthorized extends MigrationStep
     {
         return 1591361320;
     }
-
     public function update(Connection $connection): void
     {
         $machineId = $this->getMachineId($connection, 'order_transaction.state');
@@ -36,12 +33,10 @@ class Migration1591361320ChargebackAndAuthorized extends MigrationStep
         $state = ['technical_name' => 'chargeback', 'translations' => ['en-GB' => 'Chargeback', 'de-DE' => 'Rückbuchung'], 'transition' => 'chargeback', 'from' => $this->getStateIds($connection, $machineId, ['paid', 'paid_partially']), 'to' => ['paid' => $this->getStateId($connection, $machineId, 'paid'), 'paid_partially' => $this->getStateId($connection, $machineId, 'paid_partially'), 'cancel' => $this->getStateId($connection, $machineId, 'cancelled')]];
         $this->insertState($connection, $state, $machineId);
     }
-
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
-
     /**
      * @param array<string, mixed> $state
      */
@@ -77,13 +72,11 @@ class Migration1591361320ChargebackAndAuthorized extends MigrationStep
             $this->insertTransition($action, $machineId, $stateId, $toId, $connection);
         }
     }
-
     private function insertTransition(string $action, string $machineId, string $from, string $to, Connection $connection): void
     {
         $connection->executeStatement('REPLACE INTO state_machine_transition (id, action_name, state_machine_id, from_state_id, to_state_id, created_at)
             VALUES (:id, :action_name, :state_machine_id, :from_state_id, :to_state_id, :created_at)', ['id' => Uuid::randomBytes(), 'action_name' => $action, 'state_machine_id' => Uuid::fromHexToBytes($machineId), 'from_state_id' => Uuid::fromHexToBytes($from), 'to_state_id' => Uuid::fromHexToBytes($to), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
-
     private function insertTranslation(string $stateId, string $name, string $languageId, Connection $connection): void
     {
         $connection->executeStatement('REPLACE INTO state_machine_state_translation
@@ -91,7 +84,6 @@ class Migration1591361320ChargebackAndAuthorized extends MigrationStep
              VALUES
              (:language_id, :state_machine_state_id, :name, :created_at)', ['language_id' => Uuid::fromHexToBytes($languageId), 'state_machine_state_id' => Uuid::fromHexToBytes($stateId), 'name' => $name, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
-
     private function getLanguageId(string $locale, Connection $connection): ?string
     {
         $column = $connection->fetchOne('
@@ -101,20 +93,16 @@ class Migration1591361320ChargebackAndAuthorized extends MigrationStep
                 ON locale.id = "language".translation_code_id
                 AND locale.code = :locale
         ', ['locale' => $locale]);
-
         return $column === false ? null : (string) $column;
     }
-
     private function getMachineId(Connection $connection, string $name): string
     {
         return $connection->fetchOne('SELECT LOWER(HEX(id)) FROM state_machine WHERE technical_name = :name', ['name' => $name]);
     }
-
     private function getStateId(Connection $connection, string $machineId, string $name): string
     {
         return $connection->fetchOne('SELECT LOWER(HEX(id)) as id FROM state_machine_state WHERE technical_name = :name AND state_machine_id = :id', ['name' => $name, 'id' => Uuid::fromHexToBytes($machineId)]);
     }
-
     /**
      * @param list<string> $names
      *

@@ -2,15 +2,13 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -21,7 +19,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
     {
         return 1580743279;
     }
-
     public function update(Connection $connection): void
     {
         // implement update
@@ -54,11 +51,9 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $this->getDeliveryReturnedPartiallyHTMLTemplateDe(), $this->getDeliveryReturnedPartiallyPlainTemplateDe());
         }
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
-
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
@@ -70,10 +65,8 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
-
         return $templateId;
     }
-
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -82,10 +75,8 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         if (!$langId) {
             return null;
         }
-
         return $langId;
     }
-
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {
@@ -108,7 +99,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE `mail_template_id`= :templateId AND `language_id` = :langId AND `updated_at` IS NULL';
         $connection->executeStatement($sqlString, $sqlParams);
     }
-
     private function getDeliveryCancellationHtmlTemplateEn(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -123,7 +113,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
                     </p>
                 </div>';
     }
-
     private function getDeliveryCancellationPlainTemplateEn(): string
     {
         return '
@@ -135,7 +124,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             You can check the current status of your order on our website under "My account" - "My orders" anytime.
             But in case you have purchased without a registration or a customer account, you do not have this option.';
     }
-
     private function getDeliveryCancellationHtmlTemplateDe(): string
     {
         return '
@@ -151,7 +139,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
            </p>
         </div>';
     }
-
     private function getDeliveryCancellationPlainTemplateDe(): string
     {
         return '
@@ -163,7 +150,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen.
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryReturnedHtmlTemplateEn(): string
     {
         return '
@@ -180,7 +166,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryReturnedPlainTemplateEn(): string
     {
         return '
@@ -192,7 +177,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             You can check the current status of your order on our website under "My account" - "My orders" anytime.
             But in case you have purchased without a registration or a customer account, you do not have this option.';
     }
-
     private function getDeliveryReturnedHtmlTemplateDe(): string
     {
         return '
@@ -208,7 +192,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
                 </p>
             </div>';
     }
-
     private function getDeliveryReturnedPlainTemplateDe(): string
     {
         return '
@@ -220,7 +203,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen.
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryShippedPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -237,7 +219,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryShippedPartiallyPlainTemplateEn(): string
     {
         return '
@@ -249,7 +230,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         You can check the current status of your order on our website under "My account" - "My orders" anytime.
         But in case you have purchased without a registration or a customer account, you do not have this option.';
     }
-
     private function getDeliveryShippedPartiallyHtmlTemplateDe(): string
     {
         return '
@@ -265,7 +245,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
                 </p>
             </div>';
     }
-
     private function getDeliveryShippedPartiallyPlainTemplateDe(): string
     {
         return '
@@ -277,7 +256,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen.
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryShippedHtmlTemplateEn(): string
     {
         return '
@@ -294,7 +272,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryShippedPlainTemplateEn(): string
     {
         return '
@@ -306,7 +283,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         You can check the current status of your order on our website under "My account" - "My orders" anytime.
         But in case you have purchased without a registration or a customer account, you do not have this option.';
     }
-
     private function getDeliveryShippedHTMLTemplateDe(): string
     {
         return '
@@ -323,7 +299,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryShippedPlainTemplateDe(): string
     {
         return '
@@ -335,7 +310,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen.
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
-
     private function getDeliveryReturnedPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -352,7 +326,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryReturnedPartiallyPlainTemplateEn(): string
     {
         return '
@@ -364,7 +337,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
         You can check the current status of your order on our website under "My account" - "My orders" anytime.
         But in case you have purchased without a registration or a customer account, you do not have this option.';
     }
-
     private function getDeliveryReturnedPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -381,7 +353,6 @@ class Migration1580743279UpdateDeliveryMailTemplates extends MigrationStep
             </div>
         ';
     }
-
     private function getDeliveryReturnedPartiallyPlainTemplateDe(): string
     {
         return '

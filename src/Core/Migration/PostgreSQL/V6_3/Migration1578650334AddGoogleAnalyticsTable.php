@@ -2,14 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
-
 /**
  * @internal
  */
@@ -20,19 +18,18 @@ class Migration1578650334AddGoogleAnalyticsTable extends MigrationStep
     {
         return 1578650334;
     }
-
     public function update(Connection $connection): void
     {
         $connection->executeStatement(<<<'SQL'
                     CREATE TABLE IF NOT EXISTS "sales_channel_analytics" (
-                        "id" BINARY(16)  NOT NULL,
+                        "id" BYTEA CHECK (octet_length("id") = 16)  NOT NULL,
                         "tracking_id" VARCHAR(50) NOT NULL,
-                        "active" TINYINT(1) NOT NULL DEFAULT '0',
-                        "track_orders" TINYINT(1) NOT NULL DEFAULT '0',
-                        "created_at" DATETIME(3) NOT NULL,
-                        "updated_at" DATETIME(3) NULL,
+                        "active" SMALLINT NOT NULL DEFAULT '0',
+                        "track_orders" SMALLINT NOT NULL DEFAULT '0',
+                        "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
+                        "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                         PRIMARY KEY ("id")
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                    );
         SQL);
         $connection->executeStatement(<<<'SQL'
                     ALTER TABLE "sales_channel"
@@ -40,7 +37,6 @@ class Migration1578650334AddGoogleAnalyticsTable extends MigrationStep
                     ADD CONSTRAINT "fk.sales_channel.analytics_id" FOREIGN KEY ("analytics_id") REFERENCES "sales_channel_analytics" ("id") ON DELETE CASCADE ON UPDATE CASCADE
         SQL);
     }
-
     public function updateDestructive(Connection $connection): void
     {
     }
