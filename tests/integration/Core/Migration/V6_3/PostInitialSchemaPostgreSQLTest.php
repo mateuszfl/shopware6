@@ -89,6 +89,7 @@ use Shopware\Core\Migration\V6_3\Migration1574063550AddCurrencyToProductExport;
 use Shopware\Core\Migration\V6_3\Migration1574082635AddOrderLineItemProductId;
 use Shopware\Core\Migration\V6_3\Migration1574258787ProductSearchLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574258788TaxRuleLanguageKey;
+use Shopware\Core\Migration\V6_3\Migration1574258789ProductReviewLanguageKey;
 
 /**
  * @internal
@@ -97,7 +98,7 @@ use Shopware\Core\Migration\V6_3\Migration1574258788TaxRuleLanguageKey;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1574258788;
+    private const LAST_TIMESTAMP = 1574258789;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -110,7 +111,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(75, $pending);
+        static::assertCount(76, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -936,6 +937,29 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         }
 
         static::assertSame($this->schema($this->mysql)['tax_rule_type_translation'], $this->schema($this->postgres)['tax_rule_type_translation']);
+    }
+
+    public function testProductReviewLanguageConstraintRestrictsDelete(): void
+    {
+        $constraintName = 'fk.product_review.language_id';
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1574258788);
+            static::assertSame([Migration1574258789ProductReviewLanguageKey::class], $collection->migrateInPlace(1574258789));
+
+            $foreignKeys = array_values(array_filter($this->schema($connection)['product_review']['foreignKeys'], static fn (array $key): bool => $key[0] === $constraintName));
+            static::assertCount(1, $foreignKeys);
+            static::assertSame('RESTRICT', $foreignKeys[0][3]);
+            static::assertSame('CASCADE', $foreignKeys[0][4]);
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['product_review'];
+                (new MigrationVariantRegistry())->resolve(Migration1574258789ProductReviewLanguageKey::class, 1574258789)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['product_review']);
+            }
+        }
+
+        static::assertSame($this->schema($this->mysql)['product_review'], $this->schema($this->postgres)['product_review']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
