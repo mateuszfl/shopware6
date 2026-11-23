@@ -2,14 +2,17 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -17,11 +20,14 @@ use Shopware\Core\Framework\Uuid\Uuid;
 class Migration1591259559AddMissingCurrency extends MigrationStep
 {
     private ?string $deLanguage = null;
+
     private ?string $enLanguage = null;
+
     public function getCreationTimestamp(): int
     {
         return 1591259559;
     }
+
     public function update(Connection $connection): void
     {
         if ($this->currencyExists($connection, 'CZK')) {
@@ -29,10 +35,12 @@ class Migration1591259559AddMissingCurrency extends MigrationStep
         }
         $this->addCurrency($connection, Uuid::randomBytes(), 'CZK', 26.735, 'Kč', 'CZK', 'CZK', 'Tschechische Krone', 'Czech koruna');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     private function addCurrency(Connection $connection, string $id, string $isoCode, float $factor, string $symbol, string $shortNameDe, string $shortNameEn, string $nameDe, string $nameEn): void
     {
         $languageDefault = $this->getEnLanguageId($connection);
@@ -40,30 +48,38 @@ class Migration1591259559AddMissingCurrency extends MigrationStep
         $langId = $connection->fetchOne('
         SELECT "currency"."id" FROM "currency" WHERE "iso_code" = :code LIMIT 1
         ', ['code' => $isoCode]);
+        if (\is_resource($langId)) {
+            $langId = stream_get_contents($langId);
+        }
         if (!$langId) {
-            $connection->insert('currency', ['id' => $id, 'iso_code' => $isoCode, 'factor' => $factor, 'symbol' => $symbol, 'position' => 1, 'decimal_precision' => 2, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('currency', ['id' => $id, 'iso_code' => $isoCode, 'factor' => $factor, 'symbol' => $symbol, 'position' => 1, 'decimal_precision' => 2, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
             if ($languageDefault !== $languageDE) {
-                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDefault, 'short_name' => $shortNameEn, 'name' => $nameEn, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDefault, 'short_name' => $shortNameEn, 'name' => $nameEn, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['currency_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
             if ($languageDE) {
-                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDE, 'short_name' => $shortNameDe, 'name' => $nameDe, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('currency_translation', ['currency_id' => $id, 'language_id' => $languageDE, 'short_name' => $shortNameDe, 'name' => $nameDe, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['currency_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
             }
         }
     }
+
     private function getDeLanguageId(Connection $connection): ?string
     {
         if (!$this->deLanguage) {
             $this->deLanguage = $this->fetchLanguageId('de-DE', $connection);
         }
+
         return $this->deLanguage;
     }
+
     private function getEnLanguageId(Connection $connection): ?string
     {
         if (!$this->enLanguage) {
             $this->enLanguage = $this->fetchLanguageId('en-GB', $connection);
         }
+
         return $this->enLanguage;
     }
+
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -81,8 +97,10 @@ class Migration1591259559AddMissingCurrency extends MigrationStep
         if (!$langId) {
             return Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
         }
+
         return $langId;
     }
+
     private function currencyExists(Connection $connection, string $isoCode): bool
     {
         return (bool) $connection->fetchOne('SELECT * FROM currency WHERE LOWER(iso_code) = LOWER(?)', [$isoCode]);
