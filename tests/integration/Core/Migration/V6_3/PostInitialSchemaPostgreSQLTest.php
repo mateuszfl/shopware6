@@ -75,6 +75,7 @@ use Shopware\Core\Migration\V6_3\Migration1571724915MultipleTrackingCodesInOrder
 use Shopware\Core\Migration\V6_3\Migration1571981437AddSeoColumns;
 use Shopware\Core\Migration\V6_3\Migration1571990395UpdateDefaultStatusMailTemplates;
 use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
+use Shopware\Core\Migration\V6_3\Migration1572264837AddCacheId;
 
 /**
  * @internal
@@ -83,7 +84,7 @@ use Shopware\Core\Migration\V6_3\Migration1572193798TaxRule;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1572193798;
+    private const LAST_TIMESTAMP = 1572264837;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -96,7 +97,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(63, $pending);
+        static::assertCount(64, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -500,6 +501,33 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         }
 
         static::assertSame($mysqlSchemas, $postgresSchemas);
+    }
+
+    public function testAppConfigIsResetAndCacheIdIsRecreated(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1572193798);
+            $keyColumn = $connection->getDatabasePlatform()->quoteSingleIdentifier('key');
+            $connection->executeStatement("INSERT INTO app_config ($keyColumn, value) VALUES (:key, :value)", [
+                'key' => 'stale-setting',
+                'value' => 'stale-value',
+            ]);
+
+            static::assertSame([Migration1572264837AddCacheId::class], $collection->migrateInPlace(1572264837));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM app_config'));
+            static::assertSame(1, (int) $connection->fetchOne("SELECT COUNT(*) FROM app_config WHERE $keyColumn = :key", ['key' => 'cache-id']));
+            static::assertSame(0, (int) $connection->fetchOne("SELECT COUNT(*) FROM app_config WHERE $keyColumn = :key", ['key' => 'stale-setting']));
+            static::assertSame(['key'], $this->schema($connection)['app_config']['primaryKey']);
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1572264837AddCacheId::class, 1572264837);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM app_config'));
+                static::assertSame(1, (int) $connection->fetchOne("SELECT COUNT(*) FROM app_config WHERE $keyColumn = :key", ['key' => 'cache-id']));
+            }
+        }
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void

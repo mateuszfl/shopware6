@@ -177,6 +177,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1571981437AddSeoColumns::class, 1571981437, PostgreSQL63\Migration1571981437AddSeoColumns::class],
         [Core63\Migration1571990395UpdateDefaultStatusMailTemplates::class, 1571990395, PostgreSQL63\Migration1571990395UpdateDefaultStatusMailTemplates::class],
         [Core63\Migration1572193798TaxRule::class, 1572193798, PostgreSQL63\Migration1572193798TaxRule::class],
+        [Core63\Migration1572264837AddCacheId::class, 1572264837, PostgreSQL63\Migration1572264837AddCacheId::class],
     ];
 
     /**
