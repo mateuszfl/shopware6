@@ -190,6 +190,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1574258787ProductSearchLanguageKey::class, 1574258787, PostgreSQL63\Migration1574258787ProductSearchLanguageKey::class],
         [Core63\Migration1574258788TaxRuleLanguageKey::class, 1574258788, PostgreSQL63\Migration1574258788TaxRuleLanguageKey::class],
         [Core63\Migration1574258789ProductReviewLanguageKey::class, 1574258789, PostgreSQL63\Migration1574258789ProductReviewLanguageKey::class],
+        [Core63\Migration1574520220AddSalesChannelMaintenance::class, 1574520220, PostgreSQL63\Migration1574520220AddSalesChannelMaintenance::class],
     ];
 
     /**

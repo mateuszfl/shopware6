@@ -90,6 +90,7 @@ use Shopware\Core\Migration\V6_3\Migration1574082635AddOrderLineItemProductId;
 use Shopware\Core\Migration\V6_3\Migration1574258787ProductSearchLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574258788TaxRuleLanguageKey;
 use Shopware\Core\Migration\V6_3\Migration1574258789ProductReviewLanguageKey;
+use Shopware\Core\Migration\V6_3\Migration1574520220AddSalesChannelMaintenance;
 
 /**
  * @internal
@@ -98,7 +99,7 @@ use Shopware\Core\Migration\V6_3\Migration1574258789ProductReviewLanguageKey;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1574258789;
+    private const LAST_TIMESTAMP = 1574520220;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -111,7 +112,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(76, $pending);
+        static::assertCount(77, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -960,6 +961,30 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
         }
 
         static::assertSame($this->schema($this->mysql)['product_review'], $this->schema($this->postgres)['product_review']);
+    }
+
+    public function testSalesChannelMaintenanceDefaultsMatchAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1574258789);
+
+            static::assertSame([Migration1574520220AddSalesChannelMaintenance::class], $collection->migrateInPlace(1574520220));
+            $columns = array_column($this->columns($connection)['sales_channel'], null, 'name');
+            static::assertSame('NO', $columns['maintenance']['nullable']);
+            static::assertSame('0', (string) $columns['maintenance']['default_value']);
+            static::assertSame('YES', $columns['maintenance_ip_whitelist']['nullable']);
+            static::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM sales_channel WHERE maintenance <> 0'));
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['sales_channel'];
+                (new MigrationVariantRegistry())->resolve(Migration1574520220AddSalesChannelMaintenance::class, 1574520220)->update($connection);
+                static::assertSame($schema, $this->schema($connection)['sales_channel']);
+            }
+        }
+
+        static::assertSame($this->schema($this->mysql)['sales_channel'], $this->schema($this->postgres)['sales_channel']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
