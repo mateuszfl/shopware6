@@ -23,7 +23,7 @@ class Migration1600330846ChangeActiveColumn extends MigrationStep
 
     public function update(Connection $connection): void
     {
-        $connection->executeStatement('ALTER TABLE "product" CHANGE "active" "active" SMALLINT NULL;');
+        $connection->executeStatement('ALTER TABLE "product" ALTER COLUMN "active" DROP NOT NULL;');
     }
 
     public function updateDestructive(Connection $connection): void
