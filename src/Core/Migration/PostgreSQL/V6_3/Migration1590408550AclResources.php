@@ -35,7 +35,7 @@ class Migration1590408550AclResources extends MigrationStep
             $list = array_column($privs, 'priv');
             $connection->executeStatement('UPDATE "acl_role" SET "privileges" = :privileges WHERE id = :id', ['privileges' => json_encode($list, \JSON_THROW_ON_ERROR), 'id' => Uuid::fromHexToBytes($id)], ['id' => ParameterType::BINARY]);
         }
-        $connection->executeStatement('ALTER TABLE "acl_role" CHANGE "privileges" "privileges" json NOT NULL;');
+        $connection->executeStatement('ALTER TABLE "acl_role" ALTER COLUMN "privileges" SET NOT NULL;');
     }
 
     public function updateDestructive(Connection $connection): void
@@ -49,7 +49,7 @@ class Migration1590408550AclResources extends MigrationStep
     private function getRoles(Connection $connection): array
     {
         $roles = $connection->fetchAllAssociative('
-            SELECT LOWER(HEX("role".id)) as id, CONCAT("resource"."resource", \':\', "resource"."privilege") as priv
+            SELECT LOWER(encode("role".id, \'hex\')) as id, CONCAT("resource"."resource", \':\', "resource"."privilege") as priv
             FROM acl_role "role"
                 LEFT JOIN acl_resource "resource"
                     ON "role".id = "resource".acl_role_id
