@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 
@@ -24,9 +25,12 @@ class Migration1586334003AddParentIdToProductProfile extends MigrationStep
     public function update(Connection $connection): void
     {
         $productProfileId = $connection->executeQuery('SELECT "id" FROM "import_export_profile" WHERE "name" = :name AND "system_default" = 1 AND source_entity = \'product\'', ['name' => 'Default product'])->fetchOne();
+        if (\is_resource($productProfileId)) {
+            $productProfileId = stream_get_contents($productProfileId);
+        }
         if ($productProfileId) {
             $mapping = $this->getProductMapping();
-            $connection->update('import_export_profile', ['mapping' => json_encode($mapping, \JSON_THROW_ON_ERROR)], ['id' => $productProfileId]);
+            $connection->update('import_export_profile', ['mapping' => json_encode($mapping, \JSON_THROW_ON_ERROR)], ['id' => $productProfileId], ['id' => ParameterType::BINARY]);
         }
     }
 

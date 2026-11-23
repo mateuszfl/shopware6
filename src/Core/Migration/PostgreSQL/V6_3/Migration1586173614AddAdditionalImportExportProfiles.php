@@ -2,10 +2,12 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipient\NewsletterRecipientDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductConfiguratorSetting\ProductConfiguratorSettingDefinition;
 use Shopware\Core\Content\Property\Aggregate\PropertyGroupOption\PropertyGroupOptionDefinition;
@@ -13,6 +15,7 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -23,6 +26,7 @@ class Migration1586173614AddAdditionalImportExportProfiles extends MigrationStep
     {
         return 1586173614;
     }
+
     public function update(Connection $connection): void
     {
         foreach ($this->getProfiles() as $profile) {
@@ -33,13 +37,15 @@ class Migration1586173614AddAdditionalImportExportProfiles extends MigrationStep
             $profile['enclosure'] = '"';
             $profile['mapping'] = json_encode($profile['mapping'], \JSON_THROW_ON_ERROR);
             $profile['created_at'] = (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT);
-            $connection->insert('import_export_profile', $profile);
+            $connection->insert('import_export_profile', $profile, ['id' => ParameterType::BINARY]);
         }
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     /**
      * @return list<array{name: string, source_entity: string, mapping: list<array{key: string, mappedKey: string}>}>
      */

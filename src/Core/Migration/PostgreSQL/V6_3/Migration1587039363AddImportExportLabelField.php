@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
@@ -58,6 +59,12 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
             INNER JOIN locale loc ON lang.translation_code_id = loc.id
             AND loc.code = \'de-DE\';
         ');
+        if (\is_resource($englishLanguageId)) {
+            $englishLanguageId = stream_get_contents($englishLanguageId);
+        }
+        if (\is_resource($germanLanguageId)) {
+            $germanLanguageId = stream_get_contents($germanLanguageId);
+        }
         $insertNamesAsLabelsStatement = $connection->prepare('
             INSERT INTO "import_export_profile_translation" ("import_export_profile_id", "language_id", "label", "created_at")
             SELECT "id", :languageId, "name", NOW()
@@ -78,13 +85,13 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
             FROM "temp_import_export_profile_translation";
         ');
         if (!\in_array($defaultLanguageId, [$englishLanguageId, $germanLanguageId], true)) {
-            StatementHelper::executeStatement($insertNamesAsLabelsStatement, ['languageId' => $defaultLanguageId]);
+            StatementHelper::executeStatement($insertNamesAsLabelsStatement, ['languageId' => $defaultLanguageId], ['languageId' => ParameterType::BINARY]);
         }
         if ($englishLanguageId) {
-            StatementHelper::executeStatement($insertNamesAsLabelsStatement, ['languageId' => $englishLanguageId]);
+            StatementHelper::executeStatement($insertNamesAsLabelsStatement, ['languageId' => $englishLanguageId], ['languageId' => ParameterType::BINARY]);
         }
         if ($germanLanguageId) {
-            StatementHelper::executeStatement($insertGermanLabelsStatement, ['languageId' => $germanLanguageId]);
+            StatementHelper::executeStatement($insertGermanLabelsStatement, ['languageId' => $germanLanguageId], ['languageId' => ParameterType::BINARY]);
         }
     }
 

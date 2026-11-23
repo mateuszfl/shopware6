@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
@@ -59,29 +60,38 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
 
     private function createNewTax(Connection $connection): void
     {
-        $connection->insert('tax', ['id' => Uuid::randomBytes(), 'tax_rate' => 0, 'name' => 'Reduced rate 2', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+        $connection->insert('tax', ['id' => Uuid::randomBytes(), 'tax_rate' => 0, 'name' => 'Reduced rate 2', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
     }
 
     private function addCountryTaxRules(Connection $connection): void
     {
-        $standardRate = $connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 19')->fetchOne();
-        $reducedRate = $connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 7')->fetchOne();
-        $reducedRate2 = $connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 0')->fetchOne();
+        $standardRate = $this->normalizeBinaryUuid($connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 19')->fetchOne());
+        $reducedRate = $this->normalizeBinaryUuid($connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 7')->fetchOne());
+        $reducedRate2 = $this->normalizeBinaryUuid($connection->executeQuery('SELECT id FROM tax WHERE tax_rate = 0')->fetchOne());
         $this->fetchCountryIds($connection);
-        $taxRuleTypeId = $connection->executeQuery('SELECT id FROM tax_rule_type WHERE technical_name = \'entire_country\'')->fetchOne();
+        $taxRuleTypeId = $this->normalizeBinaryUuid($connection->executeQuery('SELECT id FROM tax_rule_type WHERE technical_name = \'entire_country\'')->fetchOne());
         foreach ($this->getCountryTaxes() as $isoCode => $countryTax) {
             if (!\array_key_exists($isoCode, $this->countryIds)) {
                 // country was deleted by shop owner
                 continue;
             }
-            $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $standardRate, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['standardRate'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $standardRate, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['standardRate'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY, 'tax_id' => ParameterType::BINARY, 'tax_rule_type_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             if (\array_key_exists('reduced1', $countryTax)) {
-                $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $reducedRate, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['reduced1'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $reducedRate, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['reduced1'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY, 'tax_id' => ParameterType::BINARY, 'tax_rule_type_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             }
             if (\array_key_exists('reduced2', $countryTax)) {
-                $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $reducedRate2, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['reduced2'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+                $connection->insert('tax_rule', ['id' => Uuid::randomBytes(), 'tax_id' => $reducedRate2, 'tax_rule_type_id' => $taxRuleTypeId, 'country_id' => $this->countryIds[$isoCode], 'tax_rate' => $countryTax['reduced2'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY, 'tax_id' => ParameterType::BINARY, 'tax_rule_type_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             }
         }
+    }
+
+    private function normalizeBinaryUuid(mixed $value): ?string
+    {
+        if (\is_resource($value)) {
+            $value = stream_get_contents($value);
+        }
+
+        return \is_string($value) && $value !== '' ? $value : null;
     }
 
     private function fetchCountryIds(Connection $connection): void
@@ -89,7 +99,10 @@ class Migration1589359936AddTaxCountryRules extends MigrationStep
         /** @var list<array{id: string, iso: string}> $countries */
         $countries = $connection->executeQuery('SELECT id, iso FROM country')->fetchAllAssociative();
         foreach ($countries as $country) {
-            $this->countryIds[$country['iso']] = $country['id'];
+            $id = $this->normalizeBinaryUuid($country['id']);
+            if ($id !== null) {
+                $this->countryIds[$country['iso']] = $id;
+            }
         }
     }
 

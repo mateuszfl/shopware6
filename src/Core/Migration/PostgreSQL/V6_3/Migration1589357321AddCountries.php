@@ -2,14 +2,17 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -20,43 +23,46 @@ class Migration1589357321AddCountries extends MigrationStep
     {
         return 1589357321;
     }
+
     public function update(Connection $connection): void
     {
         $deLanguageId = $this->getLanguageId($connection, 'de-DE');
         $languageDE = null;
         if ($deLanguageId && $deLanguageId !== Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)) {
-            $languageDE = static fn(string $countryId, string $name) => ['language_id' => $deLanguageId, 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
+            $languageDE = static fn (string $countryId, string $name) => ['language_id' => $deLanguageId, 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
         }
         $enLanguageId = $this->getLanguageId($connection, 'en-GB');
         $languageEN = null;
         if ($enLanguageId && $enLanguageId !== Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)) {
-            $languageEN = static fn(string $countryId, string $name) => ['language_id' => $enLanguageId, 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
+            $languageEN = static fn (string $countryId, string $name) => ['language_id' => $enLanguageId, 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
         }
-        $default = static fn(string $countryId, string $name) => ['language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
+        $default = static fn (string $countryId, string $name) => ['language_id' => Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM), 'name' => $name, 'country_id' => $countryId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
         foreach ($this->createNewCountries() as $country) {
             $id = Uuid::randomBytes();
             $exists = $connection->fetchOne('SELECT 1 FROM country WHERE iso = :iso3', ['iso3' => $country['iso3']]);
             if ($exists !== false) {
                 continue;
             }
-            $connection->insert('country', ['id' => $id, 'iso' => $country['iso'], 'position' => 10, 'iso3' => $country['iso3'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
+            $connection->insert('country', ['id' => $id, 'iso' => $country['iso'], 'position' => 10, 'iso3' => $country['iso3'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)], ['id' => ParameterType::BINARY]);
             $defaultTranslations = $country['en'];
             if ($deLanguageId === Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM)) {
                 $defaultTranslations = $country['de'];
             }
-            $connection->insert('country_translation', $default($id, $defaultTranslations));
+            $connection->insert('country_translation', $default($id, $defaultTranslations), ['language_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             if ($languageDE !== null) {
-                $connection->insert('country_translation', $languageDE($id, $country['de']));
+                $connection->insert('country_translation', $languageDE($id, $country['de']), ['language_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             }
             if ($languageEN !== null) {
-                $connection->insert('country_translation', $languageEN($id, $country['en']));
+                $connection->insert('country_translation', $languageEN($id, $country['en']), ['language_id' => ParameterType::BINARY, 'country_id' => ParameterType::BINARY]);
             }
         }
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     private function getLanguageId(Connection $connection, string $code): string
     {
         $sql = <<<'SQL'
@@ -69,8 +75,14 @@ class Migration1589357321AddCountries extends MigrationStep
                     )
                     ORDER BY created_at ASC
         SQL;
-        return (string) $connection->executeQuery($sql, ['code' => $code])->fetchOne();
+        $languageId = $connection->executeQuery($sql, ['code' => $code])->fetchOne();
+        if (\is_resource($languageId)) {
+            $languageId = stream_get_contents($languageId);
+        }
+
+        return (string) $languageId;
     }
+
     /**
      * @return list<array{iso: string, iso3: string, de: string, en: string}>
      */

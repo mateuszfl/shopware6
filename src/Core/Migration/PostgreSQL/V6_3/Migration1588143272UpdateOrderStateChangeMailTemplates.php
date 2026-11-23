@@ -2,15 +2,18 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -21,6 +24,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
     {
         return 1588143272;
     }
+
     public function update(Connection $connection): void
     {
         // implement update
@@ -48,9 +52,11 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_REFUNDED, $connection, $defaultLangId, $deLangId, $this->getPaymentRefundedHtmlTemplateEn(), $this->getPaymentRefundedPlainTemplateEn(), $this->getPaymentRefundedHTMLTemplateDe(), $this->getPaymentRefundedPlainTemplateDe());
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_STATE_ENTER_ORDER_TRANSACTION_STATE_PAID_PARTIALLY, $connection, $defaultLangId, $deLangId, $this->getPaymentPaidPartiallyHtmlTemplateEn(), $this->getPaymentPaidPartiallyPlainTemplateEn(), $this->getPaymentPaidPartiallyHTMLTemplateDe(), $this->getPaymentPaidPartiallyPlainTemplateDe());
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }
+
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -68,8 +74,10 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         if (!$langId) {
             return Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM);
         }
+
         return $langId;
     }
+
     private function updateMailTemplate(string $mailTemplateType, Connection $connection, ?string $enLangId, ?string $deLangId, string $getHtmlTemplateEn, string $getPlainTemplateEn, string $getHtmlTemplateDe, string $getPlainTemplateDe): void
     {
         $templateId = $this->fetchSystemMailTemplateIdFromType($connection, $mailTemplateType);
@@ -89,19 +97,31 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             }
         }
     }
+
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
         SELECT "id" from "mail_template_type" WHERE "technical_name" = :type
         ', ['type' => $mailTemplateType])->fetchOne();
+        if (\is_resource($templateTypeId)) {
+            $templateTypeId = stream_get_contents($templateTypeId);
+        }
+        if (!\is_string($templateTypeId) || $templateTypeId === '') {
+            return null;
+        }
         $templateId = $connection->executeQuery('
         SELECT "id" from "mail_template" WHERE "mail_template_type_id" = :typeId AND "system_default" = 1 AND "updated_at" IS NULL
-        ', ['typeId' => $templateTypeId])->fetchOne();
+        ', ['typeId' => $templateTypeId], ['typeId' => ParameterType::BINARY])->fetchOne();
+        if (\is_resource($templateId)) {
+            $templateId = stream_get_contents($templateId);
+        }
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
+
         return $templateId;
     }
+
     /**
      * @return array<string, mixed>
      */
@@ -113,8 +133,10 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         if ($availableEntities === false || !\is_string($availableEntities) || json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR) === null) {
             return [];
         }
+
         return json_decode($availableEntities, true, 512, \JSON_THROW_ON_ERROR);
     }
+
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {
@@ -135,8 +157,9 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             $sqlParams['senderName'] = $senderName;
         }
         $sqlString = 'UPDATE "mail_template_translation" SET ' . $sqlString . 'WHERE `mail_template_id`= :templateId AND `language_id` = :langId AND `updated_at` IS NULL';
-        $connection->executeStatement($sqlString, $sqlParams);
+        $connection->executeStatement($sqlString, $sqlParams, ['templateId' => ParameterType::BINARY, 'langId' => ParameterType::BINARY]);
     }
+
     private function getOrderConfirmationHtmlTemplateEn(): string
     {
         return '
@@ -225,6 +248,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderConfirmationPlainTemplateEn(): string
     {
         return '
@@ -281,6 +305,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
 
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderConfirmationHTMLTemplateDe(): string
     {
         return '
@@ -368,6 +393,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderConfirmationPlainTemplateDe(): string
     {
         return '
@@ -423,6 +449,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Für Rückfragen stehen wir Ihnen jederzeit gerne zur Verfügung.';
     }
+
     private function getDeliveryCancellationHtmlTemplateEn(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -439,6 +466,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
                     </p>
                 </div>';
     }
+
     private function getDeliveryCancellationPlainTemplateEn(): string
     {
         return '
@@ -450,6 +478,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
             However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getDeliveryCancellationHtmlTemplateDe(): string
     {
         return '
@@ -467,6 +496,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
            </p>
         </div>';
     }
+
     private function getDeliveryCancellationPlainTemplateDe(): string
     {
         return '
@@ -478,6 +508,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getDeliveryReturnedHtmlTemplateEn(): string
     {
         return '
@@ -496,6 +527,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryReturnedPlainTemplateEn(): string
     {
         return '
@@ -507,6 +539,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
             However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getDeliveryReturnedHtmlTemplateDe(): string
     {
         return '
@@ -524,6 +557,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
                 </p>
             </div>';
     }
+
     private function getDeliveryReturnedPlainTemplateDe(): string
     {
         return '
@@ -535,6 +569,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getDeliveryShippedPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -553,6 +588,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryShippedPartiallyPlainTemplateEn(): string
     {
         return '
@@ -564,6 +600,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getDeliveryShippedPartiallyHtmlTemplateDe(): string
     {
         return '
@@ -581,6 +618,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
                 </p>
             </div>';
     }
+
     private function getDeliveryShippedPartiallyPlainTemplateDe(): string
     {
         return '
@@ -592,6 +630,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getDeliveryShippedHtmlTemplateEn(): string
     {
         return '
@@ -610,6 +649,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryShippedPlainTemplateEn(): string
     {
         return '
@@ -621,6 +661,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getDeliveryShippedHTMLTemplateDe(): string
     {
         return '
@@ -639,6 +680,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryShippedPlainTemplateDe(): string
     {
         return '
@@ -650,6 +692,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getDeliveryReturnedPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -668,6 +711,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryReturnedPartiallyPlainTemplateEn(): string
     {
         return '
@@ -679,6 +723,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getDeliveryReturnedPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -697,6 +742,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getDeliveryReturnedPartiallyPlainTemplateDe(): string
     {
         return '
@@ -708,6 +754,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getOrderStateCancelledHtmlTemplateEn(): string
     {
         return '
@@ -725,6 +772,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateCancelledPlainTemplateEn(): string
     {
         return '
@@ -737,6 +785,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderStateCancelledHTMLTemplateDe(): string
     {
         return '
@@ -755,6 +804,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateCancelledPlainTemplateDe(): string
     {
         return '
@@ -766,6 +816,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getOrderStateOpenHtmlTemplateEn(): string
     {
         return '
@@ -784,6 +835,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateOpenPlainTemplateEn(): string
     {
         return '
@@ -795,6 +847,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderStateOpenHTMLTemplateDe(): string
     {
         return '
@@ -813,6 +866,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateOpenPlainTemplateDe(): string
     {
         return '
@@ -824,6 +878,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getOrderStateProgressHtmlTemplateEn(): string
     {
         return '
@@ -841,6 +896,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateProgressPlainTemplateEn(): string
     {
         return '
@@ -852,6 +908,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderStateProgressHTMLTemplateDe(): string
     {
         return '
@@ -870,6 +927,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateProgressPlainTemplateDe(): string
     {
         return '
@@ -881,6 +939,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getOrderStateCompletedHtmlTemplateEn(): string
     {
         return '
@@ -904,6 +963,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateCompletedPlainTemplateEn(): string
     {
         return '
@@ -915,6 +975,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderStateCompletedHTMLTemplateDe(): string
     {
         return '
@@ -933,6 +994,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getOrderStateCompletedPlainTemplateDe(): string
     {
         return '
@@ -944,6 +1006,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentRefundPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -963,6 +1026,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRefundPartiallyPlainTemplateEn(): string
     {
         return '
@@ -974,6 +1038,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentRefundPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -992,6 +1057,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRefundPartiallyPlainTemplateDe(): string
     {
         return '
@@ -1003,6 +1069,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentRemindedHtmlTemplateEn(): string
     {
         return '
@@ -1021,6 +1088,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRemindedPlainTemplateEn(): string
     {
         return '
@@ -1032,6 +1100,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentRemindedHTMLTemplateDe(): string
     {
         return '
@@ -1050,6 +1119,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRemindedPlainTemplateDe(): string
     {
         return '
@@ -1061,6 +1131,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentOpenHtmlTemplateEn(): string
     {
         return '
@@ -1079,6 +1150,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentOpenPlainTemplateEn(): string
     {
         return '
@@ -1090,6 +1162,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentOpenHTMLTemplateDe(): string
     {
         return '
@@ -1108,6 +1181,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentOpenPlainTemplateDe(): string
     {
         return '
@@ -1119,6 +1193,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentPaidHtmlTemplateEn(): string
     {
         return '
@@ -1137,6 +1212,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentPaidPlainTemplateEn(): string
     {
         return '
@@ -1148,6 +1224,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentPaidHTMLTemplateDe(): string
     {
         return '
@@ -1166,6 +1243,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentPaidPlainTemplateDe(): string
     {
         return '
@@ -1177,6 +1255,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentCancelledHtmlTemplateEn(): string
     {
         return '
@@ -1195,6 +1274,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentCancelledPlainTemplateEn(): string
     {
         return '
@@ -1206,6 +1286,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentCancelledHTMLTemplateDe(): string
     {
         return '
@@ -1224,6 +1305,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentCancelledPlainTemplateDe(): string
     {
         return '
@@ -1235,6 +1317,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentRefundedHtmlTemplateEn(): string
     {
         return '
@@ -1253,6 +1336,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRefundedPlainTemplateEn(): string
     {
         return '
@@ -1264,6 +1348,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentRefundedHTMLTemplateDe(): string
     {
         return '
@@ -1282,6 +1367,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentRefundedPlainTemplateDe(): string
     {
         return '
@@ -1293,6 +1379,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         Den aktuellen Status Ihrer Bestellung können Sie auch jederzeit auf unserer Webseite im  Bereich "Mein Konto" - "Meine Bestellungen" abrufen: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         Sollten Sie allerdings den Kauf ohne Registrierung, also ohne Anlage eines Kundenkontos, gewählt haben, steht Ihnen diese Möglichkeit nicht zur Verfügung.';
     }
+
     private function getPaymentPaidPartiallyHtmlTemplateEn(): string
     {
         return '
@@ -1311,6 +1398,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentPaidPartiallyPlainTemplateEn(): string
     {
         return '
@@ -1322,6 +1410,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
         You can check the current status of your order on our website under "My account" - "My orders" anytime: {{ rawUrl(\'frontend.account.edit-order.page\', { \'orderId\': order.id}, salesChannel.domains|first.url) }}
         However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getPaymentPaidPartiallyHTMLTemplateDe(): string
     {
         return '
@@ -1340,6 +1429,7 @@ class Migration1588143272UpdateOrderStateChangeMailTemplates extends MigrationSt
             </div>
         ';
     }
+
     private function getPaymentPaidPartiallyPlainTemplateDe(): string
     {
         return '

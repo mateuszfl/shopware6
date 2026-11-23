@@ -2,13 +2,16 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Shopware\Core\Content\MailTemplate\MailTemplateTypes;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -19,6 +22,7 @@ class Migration1589379060AddVariantCharacteristicsToEmailTemplates extends Migra
     {
         return 1589379060;
     }
+
     public function update(Connection $connection): void
     {
         // implement update
@@ -27,10 +31,12 @@ class Migration1589379060AddVariantCharacteristicsToEmailTemplates extends Migra
         // update email templates
         $this->updateMailTemplate(MailTemplateTypes::MAILTYPE_ORDER_CONFIRM, $connection, $enLangId, $deLangId, $this->getOrderConfirmationHtmlTemplateEn(), $this->getOrderConfirmationPlainTemplateEn(), $this->getOrderConfirmationHTMLTemplateDe(), $this->getOrderConfirmationPlainTemplateDe());
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     private function updateMailTemplate(string $mailTemplateType, Connection $connection, ?string $enLangId, ?string $deLangId, string $getHtmlTemplateEn, string $getPlainTemplateEn, string $getHtmlTemplateDe, string $getPlainTemplateDe): void
     {
         $templateId = $this->fetchSystemMailTemplateIdFromType($connection, $mailTemplateType);
@@ -44,19 +50,31 @@ class Migration1589379060AddVariantCharacteristicsToEmailTemplates extends Migra
             $this->updateMailTemplateTranslation($connection, $templateId, $deLangId, $getHtmlTemplateDe, $getPlainTemplateDe);
         }
     }
+
     private function fetchSystemMailTemplateIdFromType(Connection $connection, string $mailTemplateType): ?string
     {
         $templateTypeId = $connection->executeQuery('
         SELECT "id" from "mail_template_type" WHERE "technical_name" = :type
         ', ['type' => $mailTemplateType])->fetchOne();
+        if (\is_resource($templateTypeId)) {
+            $templateTypeId = stream_get_contents($templateTypeId);
+        }
+        if (!\is_string($templateTypeId) || $templateTypeId === '') {
+            return null;
+        }
         $templateId = $connection->executeQuery('
         SELECT "id" from "mail_template" WHERE "mail_template_type_id" = :typeId AND "system_default" = 1 AND "updated_at" IS NULL
-        ', ['typeId' => $templateTypeId])->fetchOne();
+        ', ['typeId' => $templateTypeId], ['typeId' => ParameterType::BINARY])->fetchOne();
+        if (\is_resource($templateId)) {
+            $templateId = stream_get_contents($templateId);
+        }
         if ($templateId === false || !\is_string($templateId)) {
             return null;
         }
+
         return $templateId;
     }
+
     private function fetchLanguageId(string $code, Connection $connection): ?string
     {
         $langId = $connection->fetchOne('
@@ -71,8 +89,10 @@ class Migration1589379060AddVariantCharacteristicsToEmailTemplates extends Migra
         if (!$langId) {
             return null;
         }
+
         return $langId;
     }
+
     private function updateMailTemplateTranslation(Connection $connection, string $mailTemplateId, ?string $langId, ?string $contentHtml, ?string $contentPlain, ?string $senderName = null): void
     {
         if (!$langId) {
@@ -88,8 +108,9 @@ class Migration1589379060AddVariantCharacteristicsToEmailTemplates extends Migra
         if ($senderName !== null) {
             $sqlParams['sender_name'] = $senderName;
         }
-        $connection->update('mail_template_translation', $sqlParams, ['mail_template_id' => $mailTemplateId, 'language_id' => $langId, 'updated_at' => null]);
+        $connection->update('mail_template_translation', $sqlParams, ['mail_template_id' => $mailTemplateId, 'language_id' => $langId, 'updated_at' => null], ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]);
     }
+
     private function getOrderConfirmationHtmlTemplateEn(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -186,6 +207,7 @@ Thank you for your order at {{ salesChannel.name }} (Number: {{order.orderNumber
 </div>
         ';
     }
+
     private function getOrderConfirmationPlainTemplateEn(): string
     {
         return '{% set currencyIsoCode = order.currency.isoCode %}
@@ -241,6 +263,7 @@ If you have any questions, do not hesitate to contact us.
 
 However, in case you have purchased without a registration or a customer account, you do not have this option.';
     }
+
     private function getOrderConfirmationHTMLTemplateDe(): string
     {
         return '<div style="font-family:arial; font-size:12px;">
@@ -335,6 +358,7 @@ vielen Dank für Ihre Bestellung im {{ salesChannel.name }} (Nummer: {{order.ord
 <br>
 </div>';
     }
+
     private function getOrderConfirmationPlainTemplateDe(): string
     {
         return '{% set currencyIsoCode = order.currency.isoCode %}
