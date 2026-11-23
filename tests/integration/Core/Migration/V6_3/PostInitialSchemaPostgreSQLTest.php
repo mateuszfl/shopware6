@@ -84,6 +84,7 @@ use Shopware\Core\Migration\V6_3\Migration1572425108AddDoubleOptInRegistrationMa
 use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
 use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliveryStates;
 use Shopware\Core\Migration\V6_3\Migration1573569685DoubleOptInGuestMailTemplate;
+use Shopware\Core\Migration\V6_3\Migration1573729158AddSitemapConfig;
 
 /**
  * @internal
@@ -92,7 +93,7 @@ use Shopware\Core\Migration\V6_3\Migration1573569685DoubleOptInGuestMailTemplate
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1573569685;
+    private const LAST_TIMESTAMP = 1573729158;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -105,7 +106,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(70, $pending);
+        static::assertCount(71, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -742,6 +743,35 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template WHERE mail_template_type_id = ?', [$typeId], [ParameterType::BINARY]));
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM event_action WHERE event_name = ? AND action_name = ?', [DoubleOptInGuestOrderEvent::EVENT_NAME, SendMailAction::ACTION_NAME]));
                 static::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM mail_template_translation WHERE mail_template_id = ?', [$templateId], [ParameterType::BINARY]));
+            }
+        }
+    }
+
+    public function testSitemapConfigDefaultsPreserveExistingValuesAndRetrySafely(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1573569685);
+            if ($connection === $this->postgres) {
+                $connection->insert('system_config', [
+                    'id' => Uuid::randomBytes(),
+                    'configuration_key' => 'core.sitemap.sitemapRefreshTime',
+                    'configuration_value' => '{"_value": 900}',
+                    'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+                ], [ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING]);
+            }
+
+            static::assertSame([Migration1573729158AddSitemapConfig::class], $collection->migrateInPlace(1573729158));
+            static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.sitemap.sitemapRefreshTime']));
+            static::assertSame($connection === $this->postgres ? '{"_value": 900}' : '{"_value": 3600}', $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL ORDER BY created_at LIMIT 1', ['core.sitemap.sitemapRefreshTime']));
+            static::assertSame('{"_value": "2"}', $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.sitemap.sitemapRefreshStrategy']));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1573729158AddSitemapConfig::class, 1573729158);
+                $variant->update($connection);
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.sitemap.sitemapRefreshTime']));
+                static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.sitemap.sitemapRefreshStrategy']));
             }
         }
     }
