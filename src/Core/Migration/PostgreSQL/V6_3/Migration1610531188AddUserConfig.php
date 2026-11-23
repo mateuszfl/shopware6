@@ -32,7 +32,7 @@ class Migration1610531188AddUserConfig extends MigrationStep
                 "created_at"            TIMESTAMP(3) WITHOUT TIME ZONE     NOT NULL,
                 "updated_at"            TIMESTAMP(3) WITHOUT TIME ZONE     NULL,
                 PRIMARY KEY ("id"),
-                UNIQUE "uniq.user_id_key" ("user_id", "key"),
+                CONSTRAINT "uniq.user_id_key" UNIQUE ("user_id", "key"),
                 CONSTRAINT "json.user_config.value" CHECK (TRUE),
                 CONSTRAINT "fk.user_config.user_id" FOREIGN KEY ("user_id")
                     REFERENCES "user" ("id") ON DELETE CASCADE ON UPDATE CASCADE

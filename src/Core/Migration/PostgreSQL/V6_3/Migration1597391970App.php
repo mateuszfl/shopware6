@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1597391970App extends MigrationStep
     {
         return 1597391970;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -39,7 +42,7 @@ class Migration1597391970App extends MigrationStep
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("id"),
-                UNIQUE KEY "uniq.name" ("name"),
+                CONSTRAINT "uniq.name" UNIQUE ("name"),
                 CONSTRAINT "json.app.modules" CHECK (TRUE),
                 CONSTRAINT "fk.app.integration_id" FOREIGN KEY ("integration_id") REFERENCES "integration" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT "fk.app.acl_role_id" FOREIGN KEY ("acl_role_id") REFERENCES "acl_role" ("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -61,6 +64,7 @@ CREATE INDEX "fk.app_translation.app_id" ON "app_translation" ("app_id");
 CREATE INDEX "fk.app_translation.language_id" ON "app_translation" ("language_id");
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

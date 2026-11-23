@@ -30,7 +30,9 @@
     "alter_modify_column_to_alter_column": 5,
     "alter_text_type_to_postgresql_type": 6,
     "alter_blob_type_to_bytea": 0,
-    "create_table_key_to_create_index": 14
+    "create_table_key_to_create_index": 14,
+    "alter_add_unique_to_constraint": 3,
+    "create_table_unique_key_to_constraint": 5
   },
   "classes": [
     {
@@ -2646,10 +2648,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_add_unique_to_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1583416186,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1583416186KeywordUniques",
@@ -2684,7 +2687,8 @@
         "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "create_table_unique_key_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1583844433,
@@ -3707,7 +3711,8 @@
         "create_table_tinyint_to_smallint": 1,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
         "check_json_valid_to_native_json_validation": 1,
-        "create_table_key_to_create_index": 2
+        "create_table_key_to_create_index": 2,
+        "create_table_unique_key_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1597391970,
@@ -4207,7 +4212,9 @@
         "mysql key/index alter syntax",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_add_unique_to_constraint": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1602062376,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1602062376AddUniqueConstraintForEmailAndBoundSalesChannelIdIntoCustomerTable",
@@ -4244,7 +4251,8 @@
       "applied_rules": {
         "alter_drop_foreign_key_to_drop_constraint": 1,
         "alter_binary16_to_bytea_with_length_check": 1,
-        "alter_after_column_placement_removed": 1
+        "alter_after_column_placement_removed": 1,
+        "alter_add_unique_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1602153572,
@@ -4374,7 +4382,8 @@
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 3,
         "create_table_datetime_to_timestamp_without_time_zone": 2,
-        "create_table_key_to_create_index": 1
+        "create_table_key_to_create_index": 1,
+        "create_table_unique_key_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1604056363,
@@ -4395,7 +4404,8 @@
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 4,
         "create_table_datetime_to_timestamp_without_time_zone": 2,
-        "create_table_key_to_create_index": 2
+        "create_table_key_to_create_index": 2,
+        "create_table_unique_key_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1604056421,
@@ -4711,7 +4721,8 @@
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 2,
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "create_table_unique_key_to_constraint": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1610531188,

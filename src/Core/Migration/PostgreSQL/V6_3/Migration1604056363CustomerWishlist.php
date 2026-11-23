@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1604056363CustomerWishlist extends MigrationStep
     {
         return 1604056363;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -29,13 +32,14 @@ class Migration1604056363CustomerWishlist extends MigrationStep
               "created_at"        TIMESTAMP(3) WITHOUT TIME ZONE  NOT NULL,
               "updated_at"        TIMESTAMP(3) WITHOUT TIME ZONE  DEFAULT NULL,
               PRIMARY KEY ("id"),
-              UNIQUE KEY "uniq.customer_wishlist" ("sales_channel_id","customer_id"),
+              CONSTRAINT "uniq.customer_wishlist" UNIQUE ("sales_channel_id","customer_id"),
               CONSTRAINT "fk.customer_wishlist.customer_id" FOREIGN KEY ("customer_id") REFERENCES "customer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.customer_wishlist.sales_channel_id" FOREIGN KEY ("sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
 
 CREATE INDEX "fk.customer_wishlist.sales_channel_id" ON "customer_wishlist" ("sales_channel_id");');
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive

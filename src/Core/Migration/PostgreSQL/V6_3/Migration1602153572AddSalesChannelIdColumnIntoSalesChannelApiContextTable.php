@@ -35,7 +35,7 @@ class Migration1602153572AddSalesChannelIdColumnIntoSalesChannelApiContextTable 
             FOREIGN KEY ("customer_id")
             REFERENCES "customer" ("id") ON DELETE CASCADE;
         ');
-        $connection->executeStatement('ALTER TABLE "sales_channel_api_context" ADD UNIQUE "uniq.sales_channel_api_context.sales_channel_id_customer_id"("sales_channel_id", "customer_id");');
+        $connection->executeStatement('ALTER TABLE "sales_channel_api_context" ADD CONSTRAINT "uniq.sales_channel_api_context.sales_channel_id_customer_id" UNIQUE ("sales_channel_id", "customer_id");');
     }
 
     public function updateDestructive(Connection $connection): void

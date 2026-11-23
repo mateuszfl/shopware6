@@ -302,7 +302,20 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $clauses[] = substr($body, $start);
                 $indexes = [];
                 $kept = [];
+                $changed = false;
                 foreach ($clauses as $clause) {
+                    if (preg_match('/^\\s*UNIQUE\\s+(?:(?:KEY|INDEX)\\s+)?("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $uniqueMatch)) {
+                        $columns = trim($uniqueMatch[2]);
+                        if (preg_match('/^(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)(?:\\s*,\\s*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*))*$/', $columns)) {
+                            $kept[] = 'CONSTRAINT ' . $uniqueMatch[1] . ' UNIQUE (' . $columns . ')';
+                            $this->appliedRules['create_table_unique_key_to_constraint'] = ($this->appliedRules['create_table_unique_key_to_constraint'] ?? 0) + 1;
+                            $changed = true;
+                        } else {
+                            $this->unsupported[] = 'table-level UNIQUE KEY has unsupported column expression';
+                            $kept[] = $clause;
+                        }
+                        continue;
+                    }
                     if (!preg_match('/^\\s*KEY\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $match)) {
                         $kept[] = $clause;
                         continue;
@@ -314,8 +327,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         continue;
                     }
                     $indexes[] = [$match[1], $table, $columns];
+                    $changed = true;
                 }
-                if ($indexes === []) { return [$statement, []]; }
+                if (!$changed) { return [$statement, []]; }
                 return [substr($statement, 0, $open + 1) . implode(',', $kept) . substr($statement, $close), $indexes];
             }
 
@@ -348,6 +362,16 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     }
 
                     $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                    $this->replace(
+                        'alter_add_unique_to_constraint',
+                        '/\bADD\s+UNIQUE\s+(?:(?:KEY|INDEX)\s+)?' . $identifier . '\s*\(\s*' . $identifier . '(?:\s*,\s*' . $identifier . ')*\s*\)/i',
+                        static function (array $matches) use ($identifier): string {
+                            preg_match('/\bADD\s+UNIQUE\s+(?:(?:KEY|INDEX)\s+)?(' . $identifier . ')\s*\((.*)\)/i', $matches[0], $parts);
+
+                            return 'ADD CONSTRAINT ' . $parts[1] . ' UNIQUE (' . $parts[2] . ')';
+                        },
+                        $statement
+                    );
                     $this->replace(
                         'alter_modify_binary16_to_bytea_with_length_check',
                         '/\bMODIFY(?:\s+COLUMN)?\s+(' . $identifier . ')\s+BINARY\s*\(\s*16\s*\)\s+(NULL|NOT\s+NULL)(?:\s+AFTER\s+' . $identifier . ')?(?=\s*(?:;|$))/i',
