@@ -622,8 +622,28 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 if ($this->diagnosticMode) {
                     $this->replace(
                         'mysql_order_currency_multi_table_update_to_postgresql_update_from',
-                        '/^\s*UPDATE\s+`order`\s*,\s*`currency`\s+SET\s+`order`\s*\.\s*`item_rounding`\s*=\s*`currency`\s*\.\s*`item_rounding`\s+WHERE\s+`order`\s*\.\s*`currency_id`\s*=\s*`currency`\s*\.\s*`id`\s*;?\s*$/i',
-                        'UPDATE `order` SET `item_rounding` = `currency`.`item_rounding` FROM `currency` WHERE `order`.`currency_id` = `currency`.`id`',
+                        '/^\s*UPDATE\s+("order"|`order`|order)\s*,\s*("currency"|`currency`|currency)\s+SET\s+(.+?)\s+WHERE\s+(.+?)\s*;?\s*$/is',
+                        static function (array $matches): string {
+                            if (!preg_match('/^(?:"order"|`order`|order)\s*\.\s*["`]?currency_id["`]?\s*=\s*(?:"currency"|`currency`|currency)\s*\.\s*["`]?id["`]?$/i', trim($matches[4]))) {
+                                return $matches[0];
+                            }
+
+                            $assignments = preg_split('/\s*,\s*(?=(?:"order"|`order`|order)\s*\.)/i', trim($matches[3])) ?: [];
+                            if ($assignments === []) {
+                                return $matches[0];
+                            }
+
+                            $translatedAssignments = [];
+                            foreach ($assignments as $assignment) {
+                                if (!preg_match('/^(?:"order"|`order`|order)\s*\.\s*["`]?([A-Za-z_][A-Za-z0-9_$]*)["`]?\s*=\s*(?:"currency"|`currency`|currency)\s*\.\s*["`]?([A-Za-z_][A-Za-z0-9_$]*)["`]?$/i', trim($assignment), $columns)) {
+                                    return $matches[0];
+                                }
+
+                                $translatedAssignments[] = '"order"."' . $columns[1] . '" = "currency"."' . $columns[2] . '"';
+                            }
+
+                            return 'UPDATE "order" SET ' . implode(', ', $translatedAssignments) . ' FROM "currency" WHERE "order"."currency_id" = "currency"."id"';
+                        },
                         $sql
                     );
                     $this->replace(
