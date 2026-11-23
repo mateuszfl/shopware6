@@ -55,6 +55,12 @@ class Migration1583142266FixDefaultOrderConfirmationMailTemplateVATDisplay exten
         INNER JOIN "locale" ON "language"."translation_code_id" = "locale"."id"
         WHERE "code" = :code LIMIT 1
         ', ['code' => $code]);
+        if (\is_resource($langId)) {
+            $langId = stream_get_contents($langId);
+        }
+        if (!\is_string($langId) || $langId === '') {
+            $langId = null;
+        }
         if (!$langId) {
             return null;
         }

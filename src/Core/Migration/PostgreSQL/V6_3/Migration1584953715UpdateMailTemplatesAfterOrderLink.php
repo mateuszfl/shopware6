@@ -85,6 +85,12 @@ class Migration1584953715UpdateMailTemplatesAfterOrderLink extends MigrationStep
         $langId = $connection->fetchOne('
         SELECT "language"."id" FROM "language" INNER JOIN "locale" ON "language"."locale_id" = "locale"."id" WHERE "code" = :code LIMIT 1
         ', ['code' => $code]);
+        if (\is_resource($langId)) {
+            $langId = stream_get_contents($langId);
+        }
+        if (!\is_string($langId) || $langId === '') {
+            $langId = null;
+        }
         if (!$langId && $code !== 'en-GB') {
             return null;
         }

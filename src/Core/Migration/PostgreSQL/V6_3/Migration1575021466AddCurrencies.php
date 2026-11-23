@@ -97,7 +97,7 @@ class Migration1575021466AddCurrencies extends MigrationStep
         if (\is_resource($langId)) {
             $langId = stream_get_contents($langId);
         }
-        if ($langId === false || $langId === '') {
+        if (!\is_string($langId) || $langId === '') {
             $langId = null;
         }
         if (!$langId && $code !== 'en-GB') {

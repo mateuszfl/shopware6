@@ -241,6 +241,9 @@ class Migration1570621541UpdateDefaultMailTemplates extends MigrationStep
         if (\is_resource($langId)) {
             $langId = stream_get_contents($langId);
         }
+        if (!\is_string($langId) || $langId === '') {
+            $langId = null;
+        }
 
         if (!$langId && $code !== 'en-GB') {
             return null;
