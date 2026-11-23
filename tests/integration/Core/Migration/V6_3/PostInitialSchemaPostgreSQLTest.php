@@ -70,6 +70,7 @@ use Shopware\Core\Migration\V6_3\Migration1570629862ClearCategoryBreadcrumbs;
 use Shopware\Core\Migration\V6_3\Migration1570684913ScheduleIndexer;
 use Shopware\Core\Migration\V6_3\Migration1571059598ChangeGreatBritainToUnitedKingdom;
 use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesChannel;
+use Shopware\Core\Migration\V6_3\Migration1571660203FixOrderDeliveryStateNames;
 
 /**
  * @internal
@@ -78,7 +79,7 @@ use Shopware\Core\Migration\V6_3\Migration1571210820AddPaymentMethodIdsToSalesCh
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1571210820;
+    private const LAST_TIMESTAMP = 1571660203;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -91,7 +92,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(58, $pending);
+        static::assertCount(59, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -249,6 +250,25 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 $variant->update($connection);
                 static::assertSame($schema, $this->schema($connection)['sales_channel']);
                 static::assertSame($indexerConfig, $connection->fetchOne('SELECT configuration_value FROM system_config WHERE configuration_key = \'core.scheduled_indexers\' AND sales_channel_id IS NULL'));
+            }
+        }
+    }
+
+    public function testOrderDeliveryMailTypeNamesAreUpdatedAndRetrySafely(): void
+    {
+        $type = 'state_enter.order_delivery.state.shipped';
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1571210820);
+
+            static::assertSame([Migration1571660203FixOrderDeliveryStateNames::class], $collection->migrateInPlace(1571660203));
+            static::assertSame('Enter delivery state: Shipped', $connection->fetchOne("SELECT translation.name FROM mail_template_type_translation AS translation INNER JOIN mail_template_type AS template_type ON template_type.id = translation.mail_template_type_id INNER JOIN language ON language.id = translation.language_id INNER JOIN locale ON locale.id = language.locale_id WHERE template_type.technical_name = '$type' AND locale.code = 'en-GB'"));
+
+            if ($connection === $this->postgres) {
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1571660203FixOrderDeliveryStateNames::class, 1571660203);
+                $variant->update($connection);
+                static::assertSame('Enter delivery state: Shipped', $connection->fetchOne("SELECT translation.name FROM mail_template_type_translation AS translation INNER JOIN mail_template_type AS template_type ON template_type.id = translation.mail_template_type_id INNER JOIN language ON language.id = translation.language_id INNER JOIN locale ON locale.id = language.locale_id WHERE template_type.technical_name = '$type' AND locale.code = 'en-GB'"));
             }
         }
     }
