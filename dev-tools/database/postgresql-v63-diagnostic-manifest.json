@@ -23,10 +23,12 @@
     "check_json_valid_to_native_json_validation": 14,
     "alter_after_column_placement_removed": 54,
     "redundant_mysql_implicit_foreign_key_index_drop_removed": 1,
-    "alter_binary16_to_bytea_with_length_check": 21,
+    "alter_binary16_to_bytea_with_length_check": 20,
     "alter_tinyint_to_smallint": 16,
     "alter_unsigned_removed": 3,
-    "create_table_utf8mb4_collation_to_sw_type_ci": 2
+    "create_table_utf8mb4_collation_to_sw_type_ci": 2,
+    "alter_modify_binary16_to_bytea_with_length_check": 1,
+    "alter_modify_column_to_alter_column": 5
   },
   "classes": [
     {
@@ -2511,13 +2513,13 @@
       "translated_sql_literals": 3,
       "unhandled_shapes": [
         "json type/function",
-        "mysql alter syntax",
         "double-quoted SQL token is dialect-ambiguous",
         "mixed-case MySQL identifier quoting needs review",
         "trigger syntax"
       ],
       "applied_rules": {
-        "alter_binary16_to_bytea_with_length_check": 1,
+        "alter_modify_binary16_to_bytea_with_length_check": 1,
+        "alter_modify_column_to_alter_column": 1,
         "alter_after_column_placement_removed": 1
       },
       "source_dir_references_rebased": false,
@@ -2873,12 +2875,12 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 5,
       "unhandled_shapes": [
-        "mysql alter syntax",
-        "mixed-case MySQL identifier quoting needs review",
         "double-quoted SQL token is dialect-ambiguous",
+        "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
       "applied_rules": {
+        "alter_modify_column_to_alter_column": 1,
         "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
@@ -3814,10 +3816,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql alter syntax",
-        "mixed-case MySQL identifier quoting needs review"
+        "double-quoted SQL token is dialect-ambiguous"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_modify_column_to_alter_column": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1598280548,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1598280548NullableSeoUrlTemplate",
@@ -4561,10 +4564,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "mysql alter syntax",
-        "mixed-case MySQL identifier quoting needs review"
+        "double-quoted SQL token is dialect-ambiguous"
       ],
-      "applied_rules": {},
+      "applied_rules": {
+        "alter_modify_column_to_alter_column": 2
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1607415095,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1607415095PromotionRedemptionsNullable",

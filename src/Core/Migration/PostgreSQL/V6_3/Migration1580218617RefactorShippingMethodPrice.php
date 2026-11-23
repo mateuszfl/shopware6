@@ -37,8 +37,8 @@ class Migration1580218617RefactorShippingMethodPrice extends MigrationStep
 
     public function updateSchema(Connection $connection): void
     {
-        $connection->executeStatement('ALTER TABLE "shipping_method_price" MODIFY "currency_id" BYTEA CHECK (octet_length("currency_id") = 16) NULL;
-            ALTER TABLE "shipping_method_price" MODIFY "price" double NULL;
+        $connection->executeStatement('ALTER TABLE "shipping_method_price" ALTER COLUMN "currency_id" TYPE BYTEA, ALTER COLUMN "currency_id" DROP NOT NULL, ADD CHECK (octet_length("currency_id") = 16);
+            ALTER TABLE "shipping_method_price" ALTER COLUMN "price" TYPE DOUBLE PRECISION, ALTER COLUMN "price" DROP NOT NULL;
             ALTER TABLE "shipping_method_price" ADD COLUMN "currency_price" json NULL;');
     }
 

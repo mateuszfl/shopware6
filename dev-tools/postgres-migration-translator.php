@@ -274,6 +274,18 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
                     $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
                     $this->replace(
+                        'alter_modify_binary16_to_bytea_with_length_check',
+                        '/\bMODIFY(?:\s+COLUMN)?\s+(' . $identifier . ')\s+BINARY\s*\(\s*16\s*\)\s+(NULL|NOT\s+NULL)(?:\s+AFTER\s+' . $identifier . ')?(?=\s*(?:;|$))/i',
+                        static function (array $matches): string {
+                            $column = str_starts_with($matches[1], '`') ? '"' . trim($matches[1], '`') . '"' : $matches[1];
+                            $nullability = strtoupper(preg_replace('/\s+/', ' ', $matches[2]) ?? $matches[2]) === 'NULL' ? 'DROP NOT NULL' : 'SET NOT NULL';
+
+                            return 'ALTER COLUMN ' . $column . ' TYPE BYTEA, ALTER COLUMN ' . $column . ' ' . $nullability . ', ADD CHECK (octet_length(' . $column . ') = 16)';
+                        },
+                        $statement
+                    );
+
+                    $this->replace(
                         'alter_binary16_to_bytea_with_length_check',
                         '/\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?)\s+' . $identifier . '\s+BINARY\s*\(\s*16\s*\)/i',
                         static function (array $matches): string {
@@ -298,6 +310,32 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $this->replace('alter_tinyint_to_smallint', '/\bTINYINT(?:\s*\(\s*\d+\s*\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $statement);
                     $this->replace('alter_unsigned_removed', '/\s+UNSIGNED\b/i', '', $statement);
                     $this->replace('alter_after_column_placement_removed', '/\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)/i', '', $statement);
+                    // PostgreSQL uses ALTER COLUMN TYPE and separate clauses for
+                    // nullability/defaults. Keep this deliberately limited to a
+                    // single, simple MODIFY definition; more complex MySQL forms
+                    // stay in the inventory as unsupported syntax.
+                    $this->replace(
+                        'alter_modify_column_to_alter_column',
+                        '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))\s+(NULL|NOT\s+NULL)(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
+                        static function (array $matches): string {
+                            $column = str_starts_with($matches[1], '`') ? '"' . trim($matches[1], '`') . '"' : $matches[1];
+                            $type = preg_replace('/^INT$/i', 'INTEGER', $matches[2]) ?? $matches[2];
+                            $type = preg_replace('/^DOUBLE$/i', 'DOUBLE PRECISION', $type) ?? $type;
+                            $clauses = ['ALTER COLUMN ' . $column . ' TYPE ' . $type];
+                            $clauses[] = strtoupper(preg_replace('/\s+/', ' ', $matches[3]) ?? $matches[3]) === 'NULL'
+                                ? 'ALTER COLUMN ' . $column . ' DROP NOT NULL'
+                                : 'ALTER COLUMN ' . $column . ' SET NOT NULL';
+                            if (($matches[4] ?? '') !== '') {
+                                $clauses[] = strtoupper($matches[4]) === 'NULL'
+                                    ? 'ALTER COLUMN ' . $column . ' DROP DEFAULT'
+                                    : 'ALTER COLUMN ' . $column . ' SET DEFAULT ' . $matches[4];
+                            }
+
+                            return implode(', ', $clauses);
+                        },
+                        $statement
+                    );
+
                     $rewritten .= $statement;
                 }
 

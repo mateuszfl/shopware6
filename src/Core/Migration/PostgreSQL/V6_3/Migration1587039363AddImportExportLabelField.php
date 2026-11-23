@@ -2,7 +2,8 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -11,6 +12,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Util\StatementHelper;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -21,9 +23,10 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
     {
         return 1587039363;
     }
+
     public function update(Connection $connection): void
     {
-        $connection->executeStatement('ALTER TABLE "import_export_profile" MODIFY "name" VARCHAR(255) NULL;');
+        $connection->executeStatement('ALTER TABLE "import_export_profile" ALTER COLUMN "name" TYPE VARCHAR(255), ALTER COLUMN "name" DROP NOT NULL;');
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "import_export_profile_translation" (
                 "import_export_profile_id" BYTEA CHECK (octet_length("import_export_profile_id") = 16) NOT NULL,
@@ -84,6 +87,7 @@ class Migration1587039363AddImportExportLabelField extends MigrationStep
             StatementHelper::executeStatement($insertGermanLabelsStatement, ['languageId' => $germanLanguageId]);
         }
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }
