@@ -102,10 +102,20 @@ class Migration1575010262AddCmsFormLayouts extends MigrationStep
             FROM language lang
             INNER JOIN locale loc ON lang.translation_code_id = loc.id
             AND loc.code = \'de-DE\'');
-        if ($result === false || Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM) === $result) {
+        $languageId = $this->normalizeBinaryValue($result);
+        if ($languageId === null || Uuid::fromHexToBytes(Defaults::LANGUAGE_SYSTEM) === $languageId) {
             return null;
         }
 
-        return (string) $result;
+        return $languageId;
+    }
+
+    private function normalizeBinaryValue(mixed $value): ?string
+    {
+        if (\is_resource($value)) {
+            $value = stream_get_contents($value);
+        }
+
+        return \is_string($value) && $value !== '' ? $value : null;
     }
 }
