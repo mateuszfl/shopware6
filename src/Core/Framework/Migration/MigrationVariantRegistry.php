@@ -185,6 +185,7 @@ final class MigrationVariantRegistry
         [Core63\Migration1573049297AddReopenTransitionToDeliveryStates::class, 1573049297, PostgreSQL63\Migration1573049297AddReopenTransitionToDeliveryStates::class],
         [Core63\Migration1573569685DoubleOptInGuestMailTemplate::class, 1573569685, PostgreSQL63\Migration1573569685DoubleOptInGuestMailTemplate::class],
         [Core63\Migration1573729158AddSitemapConfig::class, 1573729158, PostgreSQL63\Migration1573729158AddSitemapConfig::class],
+        [Core63\Migration1574063550AddCurrencyToProductExport::class, 1574063550, PostgreSQL63\Migration1574063550AddCurrencyToProductExport::class],
     ];
 
     /**

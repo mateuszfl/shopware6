@@ -85,6 +85,7 @@ use Shopware\Core\Migration\V6_3\Migration1572957455AddAffiliateTrackingColumns;
 use Shopware\Core\Migration\V6_3\Migration1573049297AddReopenTransitionToDeliveryStates;
 use Shopware\Core\Migration\V6_3\Migration1573569685DoubleOptInGuestMailTemplate;
 use Shopware\Core\Migration\V6_3\Migration1573729158AddSitemapConfig;
+use Shopware\Core\Migration\V6_3\Migration1574063550AddCurrencyToProductExport;
 
 /**
  * @internal
@@ -93,7 +94,7 @@ use Shopware\Core\Migration\V6_3\Migration1573729158AddSitemapConfig;
 class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 {
     private const BASIC_DATA_TIMESTAMP = 1536233560;
-    private const LAST_TIMESTAMP = 1573729158;
+    private const LAST_TIMESTAMP = 1574063550;
 
     public function testSchemaMatchesMySqlAfterEachUpgradeStepAndRetry(): void
     {
@@ -106,7 +107,7 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
 
         $registry = new MigrationVariantRegistry();
         $pending = $mysql->getExecutableMigrations(self::LAST_TIMESTAMP);
-        static::assertCount(71, $pending);
+        static::assertCount(72, $pending);
         static::assertSame($pending, $postgres->getExecutableMigrations(self::LAST_TIMESTAMP));
         foreach ($pending as $class) {
             $timestamp = (new $class())->getCreationTimestamp();
@@ -774,6 +775,55 @@ class PostInitialSchemaPostgreSQLTest extends MigrationHistoryDatabaseTestCase
                 static::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM system_config WHERE configuration_key = ? AND sales_channel_id IS NULL', ['core.sitemap.sitemapRefreshStrategy']));
             }
         }
+    }
+
+    public function testProductExportCurrencyColumnBackfillsExistingRows(): void
+    {
+        foreach ([$this->mysql, $this->postgres] as $connection) {
+            $collection = $this->collection($connection);
+            $collection->sync();
+            $collection->migrateInPlace(1573729158);
+            $salesChannelId = $connection->fetchOne('SELECT id FROM sales_channel LIMIT 1');
+            if (\is_resource($salesChannelId)) {
+                $salesChannelId = stream_get_contents($salesChannelId);
+            }
+            static::assertIsString($salesChannelId);
+            $productStreamId = Uuid::randomBytes();
+            $connection->insert('product_stream', [
+                'id' => $productStreamId,
+                'invalid' => 1,
+                'created_at' => '2020-01-01 00:00:00.000',
+            ], [ParameterType::BINARY, ParameterType::INTEGER, ParameterType::STRING]);
+            $exportId = Uuid::randomBytes();
+            $intervalColumn = $connection->getDatabasePlatform()->quoteSingleIdentifier('interval');
+            $connection->executeStatement(
+                'INSERT INTO product_export (id, product_stream_id, sales_channel_id, file_name, access_key, encoding, file_format, ' . $intervalColumn . ', created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [$exportId, $productStreamId, $salesChannelId, 'currency-column-migration.csv', 'migration-test', 'UTF-8', 'csv', 3600, '2020-01-01 00:00:00.000'],
+                [ParameterType::BINARY, ParameterType::BINARY, ParameterType::BINARY, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING],
+            );
+
+            static::assertSame([Migration1574063550AddCurrencyToProductExport::class], $collection->migrateInPlace(1574063550));
+            $currencyId = $connection->fetchOne('SELECT currency_id FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]);
+            if (\is_resource($currencyId)) {
+                $currencyId = stream_get_contents($currencyId);
+            }
+            static::assertSame(str_repeat("\0", 16), $currencyId);
+            static::assertSame('NO', array_column($this->columns($connection)['product_export'], null, 'name')['currency_id']['nullable']);
+
+            if ($connection === $this->postgres) {
+                $schema = $this->schema($connection)['product_export'];
+                $variant = (new MigrationVariantRegistry())->resolve(Migration1574063550AddCurrencyToProductExport::class, 1574063550);
+                $variant->update($connection);
+                static::assertSame($schema, $this->schema($connection)['product_export']);
+                $currencyIdAfterRetry = $connection->fetchOne('SELECT currency_id FROM product_export WHERE id = ?', [$exportId], [ParameterType::BINARY]);
+                if (\is_resource($currencyIdAfterRetry)) {
+                    $currencyIdAfterRetry = stream_get_contents($currencyIdAfterRetry);
+                }
+                static::assertSame(str_repeat("\0", 16), $currencyIdAfterRetry);
+            }
+        }
+
+        static::assertSame($this->schema($this->mysql)['product_export'], $this->schema($this->postgres)['product_export']);
     }
 
     public function testCmsSectionDefaultsAndIdempotentCreation(): void
