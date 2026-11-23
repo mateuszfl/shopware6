@@ -5,6 +5,7 @@ use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
+use Shopware\Core\Framework\Migration\MigrationVariantRegistry;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -16,15 +17,49 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         fwrite(STDERR, "Source, variant, and output directories must exist\n");
         exit(2);
     }
+    if (glob($outputDirectory . '/Migration*.php') !== []) {
+        fwrite(STDERR, "Output directory must be empty to prevent stale candidate files\n");
+        exit(2);
+    }
 
     $parser = (new ParserFactory())->createForNewestSupportedVersion();
     $printer = new Standard();
+    $registry = new MigrationVariantRegistry();
     $report = [];
     foreach (glob($sourceDirectory . '/Migration*.php') ?: [] as $path) {
         $name = basename($path);
-        if (is_file($variantDirectory . '/' . $name)) {
-            $report[] = ['class_file' => $name, 'source' => $path, 'status' => 'existing_variant', 'blocker_category' => null, 'variant' => $variantDirectory . '/' . $name];
+        $logicalClass = 'Shopware\\Core\\Migration\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);
+        if (!class_exists($logicalClass)) {
+            $report[] = ['class_file' => $name, 'source' => $path, 'status' => 'source_class_not_autoloadable', 'blocker_category' => 'inventory error'];
             continue;
+        }
+        $logicalMigration = new $logicalClass();
+        $timestamp = $logicalMigration->getCreationTimestamp();
+        try {
+            $implementation = $registry->resolve($logicalClass, $timestamp);
+            $isPortableMapping = $implementation::class === $logicalClass;
+            $report[] = [
+                'class_file' => $name,
+                'source' => $path,
+                'status' => $isPortableMapping ? 'registered_portable_mapping' : 'registered_variant',
+                'blocker_category' => null,
+                'implementation' => $implementation::class,
+                'variant_file_present' => is_file($variantDirectory . '/' . $name),
+            ];
+            continue;
+        } catch (Throwable $exception) {
+            $missingVariantMessage = 'No PostgreSQL migration variant for ' . $logicalClass . ' (timestamp ' . $timestamp . ').';
+            if (!$exception instanceof Shopware\Core\Framework\Migration\MigrationException
+                || !str_contains($exception->getMessage(), $missingVariantMessage)) {
+                $report[] = [
+                    'class_file' => $name,
+                    'source' => $path,
+                    'status' => 'registry_resolution_error',
+                    'blocker_category' => 'migration registry inconsistency',
+                    'error' => $exception->getMessage(),
+                ];
+                continue;
+            }
         }
         $source = file_get_contents($path);
         $entry = ['class_file' => $name, 'source' => $path, 'status' => 'rejected', 'unsupported_shapes' => [], 'translated_sql_literals' => 0];
@@ -95,6 +130,12 @@ if ($argc === 5 && $argv[1] === '--inventory') {
                     'generated or virtual column' => '/\\b(?:VIRTUAL|GENERATED\\s+ALWAYS)\\b/i',
                     'trigger syntax' => '/\\bTRIGGER\\b/i',
                     'mysql collation' => '/\\bCOLLATE\\s+utf8mb4?_[a-z0-9_]+/i',
+                    'mysql storage or charset clause' => '/\\b(?:ENGINE\\s*=|DEFAULT\\s+CHARSET|CHARSET\\s*=)/i',
+                    'mysql foreign key alter syntax' => '/\\bDROP\\s+FOREIGN\\s+KEY\\b/i',
+                    'mysql key/index alter syntax' => '/\\b(?:ADD\\s+)?KEY\\s+[`\\"]?[a-z0-9_.]+[`\\"]?\\s*\\(/i',
+                    'unsigned numeric type' => '/\\bUNSIGNED\\b/i',
+                    'auto increment type' => '/\\bAUTO_INCREMENT\\b/i',
+                    'on update column clause' => '/\\bON\\s+UPDATE\\s+CURRENT_TIMESTAMP/i',
                 ];
                 foreach ($patterns as $reason => $pattern) {
                     if (preg_match($pattern, $sql)) {
@@ -116,14 +157,31 @@ if ($argc === 5 && $argv[1] === '--inventory') {
         $traverser = new NodeTraverser();
         $traverser->addVisitor($visitor);
         $translated = $traverser->traverse($ast);
+        $namespaceCount = 0;
+        foreach ($translated as $statement) {
+            if (!$statement instanceof Node\Stmt\Namespace_) {
+                continue;
+            }
+
+            ++$namespaceCount;
+            $statement->name = new Node\Name('Shopware\\Core\\Migration\\PostgreSQL\\V6_3');
+        }
         $entry['translated_sql_literals'] = $visitor->translated;
         $entry['unsupported_shapes'] = array_values(array_unique($visitor->unsupported));
-        if ($entry['unsupported_shapes'] !== []) {
-            $entry['status'] = 'rejected_unsupported';
-            $entry['blocker_category'] = 'unsupported SQL syntax rule';
+        $entry['logical_class'] = $logicalClass;
+        $entry['proposed_implementation'] = 'Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\' . pathinfo($name, PATHINFO_FILENAME);
+        $entry['proposed_timestamp'] = $timestamp;
+        $entry['registry_entry_proposal'] = 'Core63\\' . pathinfo($name, PATHINFO_FILENAME) . '::class, ' . $timestamp . ', PostgreSQL63\\' . pathinfo($name, PATHINFO_FILENAME) . '::class';
+        if ($namespaceCount !== 1) {
+            $entry['status'] = 'rejected_namespace_shape';
+            $entry['blocker_category'] = 'PHP namespace shape';
+            $entry['unsupported_shapes'][] = 'expected exactly one namespace declaration';
+        } elseif ($entry['unsupported_shapes'] !== []) {
+            $entry['status'] = 'custom_semantic_review';
+            $entry['blocker_category'] = 'custom SQL semantics or runtime-generated SQL';
         } elseif ($visitor->translated > 0) {
-            $entry['status'] = 'converted';
-            $entry['blocker_category'] = 'candidate; semantic migration review still required';
+            $entry['status'] = 'basic_sql_rewrite_candidate';
+            $entry['blocker_category'] = 'SQL syntax rewrite; semantic review still required';
             $target = $outputDirectory . '/' . $name;
             if (file_put_contents($target, $printer->prettyPrintFile($translated) . "\n") === false) {
                 $entry['status'] = 'rejected_write_error';
@@ -132,14 +190,14 @@ if ($argc === 5 && $argv[1] === '--inventory') {
                 $entry['output'] = $target;
             }
         } else {
-            $entry['status'] = 'no_supported_transform';
+            $entry['status'] = 'runtime_helper_data_review';
             $entry['blocker_category'] = 'runtime/helper/data migration review';
             $entry['unsupported_shapes'][] = 'no changed static SQL literal; manual/runtime analysis required';
         }
         $report[] = $entry;
     }
     echo json_encode(['source_directory' => $sourceDirectory, 'variant_directory' => $variantDirectory, 'count' => count($report), 'summary' => array_count_values(array_column($report, 'status')), 'blocker_summary' => array_count_values(array_filter(array_column($report, 'blocker_category'))), 'classes' => $report], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";
-    exit(array_filter($report, static fn (array $entry): bool => $entry['status'] !== 'converted') === [] ? 0 : 3);
+    exit(array_filter($report, static fn (array $entry): bool => !str_starts_with($entry['status'], 'registered_') && $entry['status'] !== 'basic_sql_rewrite_candidate') === [] ? 0 : 3);
 }
 
 if ($argc < 3) {
