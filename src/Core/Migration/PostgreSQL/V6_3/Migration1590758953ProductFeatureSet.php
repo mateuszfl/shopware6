@@ -153,8 +153,8 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         INNER JOIN locale loc
         ON lang.translation_code_id = loc.id AND loc.code IN (:locale_codes);
         SQL;
-        $languageId = $connection->fetchOne($sql, ['locale_codes' => $localeCodes], ['locale_codes' => ArrayParameterType::STRING]);
+        $languageIds = $connection->fetchFirstColumn($sql, ['locale_codes' => $localeCodes], ['locale_codes' => ArrayParameterType::STRING]);
 
-        return $languageId === false ? [] : [$languageId];
+        return array_map(static fn (mixed $languageId): string => \is_resource($languageId) ? (string) stream_get_contents($languageId) : (string) $languageId, $languageIds);
     }
 }
