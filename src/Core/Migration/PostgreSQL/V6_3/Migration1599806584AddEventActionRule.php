@@ -25,11 +25,11 @@ class Migration1599806584AddEventActionRule extends MigrationStep
               "event_action_id" BYTEA CHECK (octet_length("event_action_id") = 16) NOT NULL,
               "rule_id" BYTEA CHECK (octet_length("rule_id") = 16) NOT NULL,
               PRIMARY KEY ("event_action_id","rule_id"),
-              KEY "rule_id" ("rule_id"),
               CONSTRAINT "fk.event_action_rule.event_action_id" FOREIGN KEY ("event_action_id") REFERENCES "event_action" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.event_action_rule.rule_id" FOREIGN KEY ("rule_id") REFERENCES "rule" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ');
+
+CREATE INDEX "rule_id" ON "event_action_rule" ("rule_id");');
     }
     public function updateDestructive(Connection $connection): void
     {

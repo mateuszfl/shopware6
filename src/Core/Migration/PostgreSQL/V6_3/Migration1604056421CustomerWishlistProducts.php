@@ -31,12 +31,12 @@ class Migration1604056421CustomerWishlistProducts extends MigrationStep
               "updated_at"            TIMESTAMP(3) WITHOUT TIME ZONE DEFAULT NULL,
               PRIMARY KEY ("id"),
               UNIQUE KEY "uniq.customer_wishlist.sales_channel_id__customer_id" ("customer_wishlist_id","product_id"),
-              KEY "fk.customer_wishlist_product.product_id" ("product_id","product_version_id"),
-              KEY "fk.customer_wishlist_product.customer_wishlist_id" ("customer_wishlist_id"),
               CONSTRAINT "fk.customer_wishlist_product.product_id" FOREIGN KEY ("product_id", "product_version_id") REFERENCES "product" ("id", "version_id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.customer_wishlist_product.customer_wishlist_id" FOREIGN KEY ("customer_wishlist_id") REFERENCES "customer_wishlist" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ');
+
+CREATE INDEX "fk.customer_wishlist_product.product_id" ON "customer_wishlist_product" ("product_id","product_version_id");
+CREATE INDEX "fk.customer_wishlist_product.customer_wishlist_id" ON "customer_wishlist_product" ("customer_wishlist_id");');
     }
     public function updateDestructive(Connection $connection): void
     {

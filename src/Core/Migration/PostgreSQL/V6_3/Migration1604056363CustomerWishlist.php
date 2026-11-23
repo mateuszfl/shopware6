@@ -30,11 +30,11 @@ class Migration1604056363CustomerWishlist extends MigrationStep
               "updated_at"        TIMESTAMP(3) WITHOUT TIME ZONE  DEFAULT NULL,
               PRIMARY KEY ("id"),
               UNIQUE KEY "uniq.customer_wishlist" ("sales_channel_id","customer_id"),
-              KEY "fk.customer_wishlist.sales_channel_id" ("sales_channel_id"),
               CONSTRAINT "fk.customer_wishlist.customer_id" FOREIGN KEY ("customer_id") REFERENCES "customer" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.customer_wishlist.sales_channel_id" FOREIGN KEY ("sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ');
+
+CREATE INDEX "fk.customer_wishlist.sales_channel_id" ON "customer_wishlist" ("sales_channel_id");');
     }
     public function updateDestructive(Connection $connection): void
     {

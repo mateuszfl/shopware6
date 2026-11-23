@@ -25,11 +25,11 @@ class Migration1599806595AddEventActionSalesChannel extends MigrationStep
               "event_action_id" BYTEA CHECK (octet_length("event_action_id") = 16) NOT NULL,
               "sales_channel_id" BYTEA CHECK (octet_length("sales_channel_id") = 16) NOT NULL,
               PRIMARY KEY ("event_action_id","sales_channel_id"),
-              KEY "sales_channel_id" ("sales_channel_id"),
               CONSTRAINT "fk.event_action_sales_channel.event_action_id" FOREIGN KEY ("event_action_id") REFERENCES "event_action" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
               CONSTRAINT "fk.event_action_sales_channel.sales_channel_id" FOREIGN KEY ("sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             )
-        ');
+
+CREATE INDEX "sales_channel_id" ON "event_action_sales_channel" ("sales_channel_id");');
     }
     public function updateDestructive(Connection $connection): void
     {

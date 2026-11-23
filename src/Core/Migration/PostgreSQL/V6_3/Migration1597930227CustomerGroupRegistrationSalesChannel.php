@@ -25,11 +25,11 @@ class Migration1597930227CustomerGroupRegistrationSalesChannel extends Migration
     "sales_channel_id" BYTEA CHECK (octet_length("sales_channel_id") = 16) NOT NULL,
     "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
     PRIMARY KEY ("customer_group_id","sales_channel_id"),
-    KEY "fk.customer_group_registration_sales_channels.customer_group_id" ("customer_group_id"),
-    KEY "fk.customer_group_registration_sales_channels.sales_channel_id" ("sales_channel_id"),
     CONSTRAINT "fk.customer_group_registration_sales_channels.customer_group_id" FOREIGN KEY ("customer_group_id") REFERENCES "customer_group" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "fk.customer_group_registration_sales_channels.sales_channel_id" FOREIGN KEY ("sales_channel_id") REFERENCES "sales_channel" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);');
+);
+CREATE INDEX "fk.customer_group_registration_sales_channels.customer_group_id" ON "customer_group_registration_sales_channels" ("customer_group_id");
+CREATE INDEX "fk.customer_group_registration_sales_channels.sales_channel_id" ON "customer_group_registration_sales_channels" ("sales_channel_id");');
     }
     public function updateDestructive(Connection $connection): void
     {

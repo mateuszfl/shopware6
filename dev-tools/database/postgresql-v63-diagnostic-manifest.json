@@ -3706,7 +3706,8 @@
         "create_table_binary16_to_bytea_with_length_check": 5,
         "create_table_tinyint_to_smallint": 1,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
-        "check_json_valid_to_native_json_validation": 1
+        "check_json_valid_to_native_json_validation": 1,
+        "create_table_key_to_create_index": 2
       },
       "source_dir_references_rebased": false,
       "timestamp": 1597391970,

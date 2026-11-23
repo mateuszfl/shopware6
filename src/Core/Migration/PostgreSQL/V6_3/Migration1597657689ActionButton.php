@@ -32,10 +32,10 @@ class Migration1597657689ActionButton extends MigrationStep
                 "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
                 "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
                 PRIMARY KEY ("id"),
-                KEY "fk.app_action_button.app_id" ("app_id"),
                 CONSTRAINT "fk.app_action_button.app_id" FOREIGN KEY ("app_id") REFERENCES "app" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT "uniq.app_action_button.action" UNIQUE ("action", "app_id")
             );
+CREATE INDEX "fk.app_action_button.app_id" ON "app_action_button" ("app_id");
         ');
         $connection->executeStatement('
             CREATE TABLE IF NOT EXISTS "app_action_button_translation" (
@@ -45,11 +45,11 @@ class Migration1597657689ActionButton extends MigrationStep
                 "app_action_button_id" BYTEA CHECK (octet_length("app_action_button_id") = 16) NOT NULL,
                 "language_id" BYTEA CHECK (octet_length("language_id") = 16) NOT NULL,
                 PRIMARY KEY ("app_action_button_id","language_id"),
-                KEY "fk.app_action_button_translation.app_action_button_id" ("app_action_button_id"),
-                KEY "fk.app_action_button_translation.language_id" ("language_id"),
                 CONSTRAINT "fk.app_action_button_translation.app_action_button_id" FOREIGN KEY ("app_action_button_id") REFERENCES "app_action_button" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT "fk.app_action_button_translation.language_id" FOREIGN KEY ("language_id") REFERENCES "language" ("id") ON DELETE CASCADE ON UPDATE CASCADE
             );
+CREATE INDEX "fk.app_action_button_translation.app_action_button_id" ON "app_action_button_translation" ("app_action_button_id");
+CREATE INDEX "fk.app_action_button_translation.language_id" ON "app_action_button_translation" ("language_id");
         ');
     }
     public function updateDestructive(Connection $connection): void
