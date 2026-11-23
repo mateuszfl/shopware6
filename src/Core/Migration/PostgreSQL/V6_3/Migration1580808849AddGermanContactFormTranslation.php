@@ -34,7 +34,11 @@ class Migration1580808849AddGermanContactFormTranslation extends MigrationStep
         if (!$contactTemplateId) {
             return;
         }
-        $germanTranslation = $connection->fetchOne('SELECT "mail_template_id" FROM "mail_template_translation" WHERE "mail_template_id" = :mail_template_id AND "language_id" = :language_id LIMIT 1', ['mail_template_id' => $contactTemplateId, 'language_id' => $deLangId]);
+        $germanTranslation = $connection->fetchOne(
+            'SELECT "mail_template_id" FROM "mail_template_translation" WHERE "mail_template_id" = :mail_template_id AND "language_id" = :language_id LIMIT 1',
+            ['mail_template_id' => $contactTemplateId, 'language_id' => $deLangId],
+            ['mail_template_id' => ParameterType::BINARY, 'language_id' => ParameterType::BINARY]
+        );
         if ($germanTranslation) {
             return;
         }
