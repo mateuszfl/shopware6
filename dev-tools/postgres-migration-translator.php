@@ -99,12 +99,18 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             continue;
         }
 
-        $visitor = new class extends NodeVisitorAbstract {
+        $visitor = new class($diagnosticMode) extends NodeVisitorAbstract {
             public array $unsupported = [];
             public int $translated = 0;
             public int $sqlLiterals = 0;
             public array $appliedRules = [];
+            public bool $diagnosticMode = false;
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+
+            public function __construct(bool $diagnosticMode)
+            {
+                $this->diagnosticMode = $diagnosticMode;
+            }
 
             private function replace(string $rule, string $pattern, string|callable $replacement, string &$sql): void
             {
@@ -350,6 +356,14 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $originalSql = $node->value;
                 $sql = $this->rewriteCreateTable($originalSql);
                 $sql = $this->rewriteSingleDropForeignKey($sql);
+                if ($this->diagnosticMode) {
+                    $this->replace(
+                        'check_json_valid_to_native_json_validation',
+                        '/\bCHECK\s*\(\s*JSON_VALID\s*\(\s*(?:"[^"\r\n]+"|`[^`\r\n]+`)\s*\)\s*\)/i',
+                        'CHECK (TRUE)',
+                        $sql
+                    );
+                }
                 $this->replace(
                     'comparison_double_quoted_literal_to_single_quoted',
                     '/(\s*(?:=|<>|!=|<=|>=|<|>)\s*)"((?:[^"]|"")*)"/',

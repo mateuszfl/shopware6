@@ -2,7 +2,8 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -10,6 +11,7 @@ use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -20,6 +22,7 @@ class Migration1584002637NewImportExport extends MigrationStep
     {
         return 1584002637;
     }
+
     public function update(Connection $connection): void
     {
         $this->clearOldImportExportTables($connection);
@@ -28,10 +31,12 @@ class Migration1584002637NewImportExport extends MigrationStep
         $this->addInvalidRecordsLog($connection);
         $this->addDefaultImportExportMediaFolder($connection);
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     /**
      * This is OK, because the feature was never released.
      */
@@ -41,12 +46,14 @@ class Migration1584002637NewImportExport extends MigrationStep
         $connection->executeStatement('DELETE FROM "import_export_file"');
         $connection->executeStatement('DELETE FROM "import_export_profile"');
     }
+
     private function addConfigField(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE import_export_log
             ADD COLUMN config JSON,
-            ADD CONSTRAINT "json.import_export_log.config" CHECK (JSON_VALID("config"))');
+            ADD CONSTRAINT "json.import_export_log.config" CHECK (TRUE)');
     }
+
     private function addSystemDefaultProfiles(Connection $connection): void
     {
         foreach ($this->getSystemDefaultProfiles() as $profile) {
@@ -60,6 +67,7 @@ class Migration1584002637NewImportExport extends MigrationStep
             $connection->insert('import_export_profile', $profile);
         }
     }
+
     private function addInvalidRecordsLog(Connection $connection): void
     {
         $connection->executeStatement('ALTER TABLE "import_export_log"
@@ -69,6 +77,7 @@ class Migration1584002637NewImportExport extends MigrationStep
                 REFERENCES "import_export_log" ("id")
                 ON DELETE SET NULL');
     }
+
     private function addDefaultImportExportMediaFolder(Connection $connection): void
     {
         $defaultFolderId = Uuid::randomBytes();
@@ -86,6 +95,7 @@ class Migration1584002637NewImportExport extends MigrationStep
         }
         $connection->insert('media_folder', ['id' => Uuid::randomBytes(), 'default_folder_id' => $defaultFolderId, 'name' => 'Import Media', 'media_folder_configuration_id' => $configurationId, 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
+
     /**
      * @return list<array{id: string, width: int, height: int}>
      */
@@ -101,8 +111,10 @@ class Migration1584002637NewImportExport extends MigrationStep
             $thumbnailSize['id'] = $id;
             $sizes[] = $thumbnailSize;
         }
+
         return $sizes;
     }
+
     /**
      * @return list<array{name: string, source_entity: string, mapping: list<array{key: string, mappedKey: string}>}>
      */

@@ -10,6 +10,23 @@ This refresh addresses the observed DDL syntax blocker in the first emitted migr
 
 The diagnostic translator also rewrites a double-quoted token to a single-quoted SQL literal only when it immediately follows a comparison operator. This handles MySQL string comparisons such as `loc.code = "de-DE"`; the manifest counts these rewrites under `comparison_double_quoted_literal_to_single_quoted`. Other double-quoted SQL tokens remain flagged as dialect-ambiguous.
 
+The latest fresh-database run reached migration 180 of 335 before PostgreSQL reported SQLSTATE `42883` for `JSON_VALID(json)`. A diagnostic-only rewrite now changes the exact DDL form `CHECK (JSON_VALID("column"))` (including backtick-quoted source identifiers) to `CHECK (TRUE)`, retaining the named constraint. The checked fields in all 14 matching migration classes are explicitly declared with the MySQL `JSON` type in their source DDL, which maps to PostgreSQL `json` and already enforces valid JSON syntax. The rewrite is limited to this `CHECK` expression in `--diagnostic-inventory` mode; it does not rewrite arbitrary runtime `JSON_VALID` calls or run in fail-closed inventory mode. The manifest records the 14 applications and their remaining findings:
+
+- `Migration1575197543MailTemplateCustomFields.php`
+- `Migration1584002637NewImportExport.php`
+- `Migration1586158920AddImportExportProfileConfig.php`
+- `Migration1590758953ProductFeatureSet.php`
+- `Migration1591817370AddCustomerTagsManyToManyIdField.php`
+- `Migration1595422169AddProductSorting.php`
+- `Migration1595492052SeoUrl.php`
+- `Migration1595492053SeoUrlTemplate.php`
+- `Migration1597391970App.php`
+- `Migration1600072779AddSearchKeywordsToProductTranslation.php`
+- `Migration1601451838ChangeSearchKeywordColumnToProductTranslation.php`
+- `Migration1605103533AddCookiesToAppEntity.php`
+- `Migration1607581275AddProductSearchConfiguration.php`
+- `Migration1610531188AddUserConfig.php`
+
 The fresh-database run exposed a PostgreSQL `BYTEA` resource returned by DBAL for a language UUID. One verified diagnostic method, `Migration1575021466AddCurrencies::fetchLanguageId()`, now reads stream resources with `stream_get_contents()` and maps failed or empty reads to `null` before its existing fallback logic. The manifest records this single application under `language_uuid_bytea_resource_to_nullable_string`. Other methods with similar names were not changed without an individually verified shape; the default migration registry remains opt-in.
 
 The generated classes and their registry mappings exist only to run one disposable PostgreSQL migration attempt and capture the first failure. The complete class-by-class mapping and unhandled-shape list is in [postgresql-v63-diagnostic-manifest.json](postgresql-v63-diagnostic-manifest.json). Each generated PHP file also carries a diagnostic-only header.

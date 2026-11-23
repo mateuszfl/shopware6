@@ -2,12 +2,14 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Migration\MigrationStep;
+
 /**
  * @internal
  */
@@ -18,6 +20,7 @@ class Migration1595492053SeoUrlTemplate extends MigrationStep
     {
         return 1595492053;
     }
+
     public function update(Connection $connection): void
     {
         $connection->executeStatement('
@@ -35,10 +38,11 @@ class Migration1595492053SeoUrlTemplate extends MigrationStep
                     UNIQUE ("sales_channel_id", "route_name"),
                 CONSTRAINT "fk.seo_url_template.sales_channel_id" FOREIGN KEY ("sales_channel_id")
                     REFERENCES "sales_channel" ("id") ON UPDATE CASCADE ON DELETE CASCADE,
-                CONSTRAINT "json.seo_url_template.custom_fields" CHECK (JSON_VALID("custom_fields"))
+                CONSTRAINT "json.seo_url_template.custom_fields" CHECK (TRUE)
             )
         ');
     }
+
     public function updateDestructive(Connection $connection): void
     {
     }

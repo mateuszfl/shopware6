@@ -20,7 +20,8 @@
     "alter_drop_foreign_key_to_drop_constraint": 19,
     "comparison_double_quoted_literal_to_single_quoted": 10,
     "create_table_utf8mb4_collation_to_sw_type_ci": 2,
-    "language_uuid_bytea_resource_to_nullable_string": 1
+    "language_uuid_bytea_resource_to_nullable_string": 1,
+    "check_json_valid_to_native_json_validation": 14
   },
   "classes": [
     {
@@ -2228,7 +2229,9 @@
         "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1575197543,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1575197543MailTemplateCustomFields",
@@ -2677,11 +2680,13 @@
       "translated_sql_literals": 6,
       "unhandled_shapes": [
         "json type/function",
-        "mixed-case MySQL identifier quoting needs review",
         "binary type/function",
+        "mixed-case MySQL identifier quoting needs review",
         "binary UUID values passed through DBAL need explicit PostgreSQL binding review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1584002637,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1584002637NewImportExport",
@@ -2788,10 +2793,11 @@
       "status": "diagnostic_emitted_with_unhandled_shapes",
       "translated_sql_literals": 1,
       "unhandled_shapes": [
-        "json type/function",
-        "mixed-case MySQL identifier quoting needs review"
+        "json type/function"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1586158920,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1586158920AddImportExportProfileConfig",
@@ -3135,7 +3141,8 @@
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 3,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
-        "create_table_default_collation_to_sw_type_ci": 2
+        "create_table_default_collation_to_sw_type_ci": 2,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1590758953,
@@ -3255,7 +3262,9 @@
         "json type/function",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1591817370,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1591817370AddCustomerTagsManyToManyIdField",
@@ -3466,6 +3475,7 @@
         "create_table_binary16_to_bytea_with_length_check": 3,
         "create_table_tinyint_to_smallint": 2,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "check_json_valid_to_native_json_validation": 1,
         "create_table_utf8mb4_collation_to_sw_type_ci": 1
       },
       "source_dir_references_rebased": false,
@@ -3517,7 +3527,8 @@
         "create_table_binary16_to_bytea_with_length_check": 4,
         "create_table_tinyint_to_smallint": 3,
         "create_table_datetime_to_timestamp_without_time_zone": 2,
-        "create_table_utf8mb4_collation_to_sw_type_ci": 1
+        "create_table_utf8mb4_collation_to_sw_type_ci": 1,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1595492052,
@@ -3537,7 +3548,8 @@
       "applied_rules": {
         "create_table_binary16_to_bytea_with_length_check": 2,
         "create_table_tinyint_to_smallint": 1,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1595492053,
@@ -3658,7 +3670,8 @@
         "create_table_mysql_options_removed": 2,
         "create_table_binary16_to_bytea_with_length_check": 5,
         "create_table_tinyint_to_smallint": 1,
-        "create_table_datetime_to_timestamp_without_time_zone": 4
+        "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1597391970,
@@ -3940,7 +3953,9 @@
         "json type/function",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1600072779,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1600072779AddSearchKeywordsToProductTranslation",
@@ -4073,7 +4088,9 @@
         "mixed-case MySQL identifier quoting needs review",
         "json type/function"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1601451838,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1601451838ChangeSearchKeywordColumnToProductTranslation",
@@ -4395,7 +4412,9 @@
         "MySQL AFTER column placement changes schema order",
         "mixed-case MySQL identifier quoting needs review"
       ],
-      "applied_rules": [],
+      "applied_rules": {
+        "check_json_valid_to_native_json_validation": 1
+      },
       "source_dir_references_rebased": false,
       "timestamp": 1605103533,
       "implementation": "Shopware\\Core\\Migration\\PostgreSQL\\V6_3\\Migration1605103533AddCookiesToAppEntity",
@@ -4539,6 +4558,7 @@
         "create_table_binary16_to_bytea_with_length_check": 5,
         "create_table_tinyint_to_smallint": 3,
         "create_table_datetime_to_timestamp_without_time_zone": 4,
+        "check_json_valid_to_native_json_validation": 1,
         "create_table_default_collation_to_sw_type_ci": 1
       },
       "source_dir_references_rebased": false,
@@ -4621,7 +4641,8 @@
         "create_table_default_collation_to_sw_type_ci": 1,
         "create_table_mysql_options_removed": 1,
         "create_table_binary16_to_bytea_with_length_check": 2,
-        "create_table_datetime_to_timestamp_without_time_zone": 2
+        "create_table_datetime_to_timestamp_without_time_zone": 2,
+        "check_json_valid_to_native_json_validation": 1
       },
       "source_dir_references_rebased": false,
       "timestamp": 1610531188,

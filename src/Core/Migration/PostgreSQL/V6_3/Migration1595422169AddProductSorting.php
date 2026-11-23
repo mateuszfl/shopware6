@@ -2,7 +2,8 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\Connection;
@@ -13,6 +14,7 @@ use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\Migration\Traits\ImportTranslationsTrait;
 use Shopware\Core\Migration\Traits\Translations;
+
 /**
  * @internal
  */
@@ -20,10 +22,12 @@ use Shopware\Core\Migration\Traits\Translations;
 class Migration1595422169AddProductSorting extends MigrationStep
 {
     use ImportTranslationsTrait;
+
     public function getCreationTimestamp(): int
     {
         return 1595422169;
     }
+
     public function update(Connection $connection): void
     {
         $this->createTable($connection);
@@ -31,10 +35,12 @@ class Migration1595422169AddProductSorting extends MigrationStep
         $this->createDefaultSortingsWithTranslations($connection);
         $this->setDefaultSystemConfig($connection);
     }
+
     public function updateDestructive(Connection $connection): void
     {
         // implement update destructive
     }
+
     public function createDefaultSortingsWithTranslations(Connection $connection): void
     {
         foreach ($this->getDefaultSortings() as $sorting) {
@@ -45,6 +51,7 @@ class Migration1595422169AddProductSorting extends MigrationStep
             $this->importTranslation('product_sorting_translation', $translations, $connection);
         }
     }
+
     private function createTable(Connection $connection): void
     {
         $connection->executeStatement('
@@ -59,10 +66,11 @@ class Migration1595422169AddProductSorting extends MigrationStep
               "updated_at"                      TIMESTAMP(3) WITHOUT TIME ZONE                             NULL,
               PRIMARY KEY ("id"),
               CONSTRAINT "uniq.product_sorting.url_key" UNIQUE ("url_key"),
-              CONSTRAINT "json.product_sorting.fields" CHECK (JSON_VALID("fields"))
+              CONSTRAINT "json.product_sorting.fields" CHECK (TRUE)
             );
         ');
     }
+
     private function createTranslationTable(Connection $connection): void
     {
         $connection->executeStatement('
@@ -80,10 +88,12 @@ class Migration1595422169AddProductSorting extends MigrationStep
             );
         ');
     }
+
     private function setDefaultSystemConfig(Connection $connection): void
     {
         $connection->insert('system_config', ['id' => Uuid::randomBytes(), 'configuration_key' => 'core.listing.defaultSorting', 'configuration_value' => '{"_value": "name-asc"}', 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)]);
     }
+
     /**
      * @return list<array{id: string, url_key: string, priority: int, active: int, locked: int, fields: string, created_at: string, translations: array{de-DE: string, en-GB: string}}>
      */

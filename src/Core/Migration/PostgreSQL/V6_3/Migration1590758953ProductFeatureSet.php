@@ -2,7 +2,8 @@
 
 // Diagnostic best-effort PostgreSQL variant; see the emitted inventory manifest for unhandled shapes.
 
-declare (strict_types=1);
+declare(strict_types=1);
+
 namespace Shopware\Core\Migration\PostgreSQL\V6_3;
 
 use Doctrine\DBAL\ArrayParameterType;
@@ -14,6 +15,7 @@ use Shopware\Core\Framework\Migration\InheritanceUpdaterTrait;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Util\Database\TableHelper;
 use Shopware\Core\Framework\Uuid\Uuid;
+
 /**
  * @internal
  */
@@ -22,10 +24,12 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
 {
     use InheritanceUpdaterTrait;
     final public const TRANSLATIONS = ['en-GB' => ['name' => 'Default', 'description' => 'Default template displaying the product\'s price per scale unit'], 'de-DE' => ['name' => 'Standard', 'description' => 'Standardtemplate, hebt den Grundpreis des Produkts hervor']];
+
     public function getCreationTimestamp(): int
     {
         return 1590758953;
     }
+
     public function update(Connection $connection): void
     {
         $defaultFeatureSetId = Uuid::randomBytes();
@@ -35,6 +39,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         $this->insertDefaultFeatureSetTranslations($connection, $defaultFeatureSetId);
         $this->assignDefaultFeatureSet($connection, $defaultFeatureSetId);
     }
+
     private function createTables(Connection $connection): void
     {
         $sql = <<<'SQL'
@@ -44,7 +49,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
             "created_at" TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL,
             "updated_at" TIMESTAMP(3) WITHOUT TIME ZONE NULL,
             PRIMARY KEY ("id"),
-            CONSTRAINT "json.product_feature_set.features" CHECK (JSON_VALID("features"))
+            CONSTRAINT "json.product_feature_set.features" CHECK (TRUE)
         );
 
         CREATE TABLE IF NOT EXISTS "product_feature_set_translation" (
@@ -63,6 +68,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         SQL;
         $connection->executeStatement($sql);
     }
+
     private function updateTables(Connection $connection): void
     {
         if (!TableHelper::columnExists($connection, 'product', 'product_feature_set_id')) {
@@ -79,10 +85,12 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
             $this->updateInheritance($connection, 'product', 'featureSet');
         }
     }
+
     private function insertDefaultFeatureSet(Connection $connection, string $featureSetId): void
     {
         $connection->insert(ProductFeatureSetDefinition::ENTITY_NAME, $this->getDefaultFeatureSet($featureSetId));
     }
+
     private function insertDefaultFeatureSetTranslations(Connection $connection, string $featureSetId): void
     {
         $languages = $this->fetchLanguageIds($connection, ['en-GB']);
@@ -100,6 +108,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
             $connection->executeStatement($sql, $this->getDefaultFeatureSetTranslation($featureSetId, $language, self::TRANSLATIONS['de-DE']));
         }
     }
+
     private function assignDefaultFeatureSet(Connection $connection, string $featureSetId): void
     {
         $sql = <<<'SQL'
@@ -107,6 +116,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         SQL;
         $connection->executeStatement($sql, ['feature_set_id' => $featureSetId]);
     }
+
     /**
      * @return array{id: string, features: string, created_at: string}
      */
@@ -114,6 +124,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
     {
         return ['id' => $featureSetId, 'features' => json_encode([['type' => 'referencePrice', 'name' => 'referencePrice', 'id' => 'd45b40f6a99c4c2abe66c410369b9d3c', 'position' => 1]], \JSON_THROW_ON_ERROR), 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
     }
+
     /**
      * @param array{name: string, description: string} $translation
      *
@@ -123,6 +134,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
     {
         return ['product_feature_set_id' => $featureSetId, 'language_id' => $languageId, 'name' => $translation['name'], 'description' => $translation['description'], 'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)];
     }
+
     /**
      * @param list<string> $localeCodes
      *
@@ -137,6 +149,7 @@ class Migration1590758953ProductFeatureSet extends MigrationStep
         ON lang.translation_code_id = loc.id AND loc.code IN (:locale_codes);
         SQL;
         $languageId = $connection->fetchOne($sql, ['locale_codes' => $localeCodes], ['locale_codes' => ArrayParameterType::STRING]);
+
         return $languageId === false ? [] : [$languageId];
     }
 }
