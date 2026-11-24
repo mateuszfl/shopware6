@@ -2132,6 +2132,31 @@ SQL;
                 return $sql;
             }
 
+            private function rewritePaymentShippingTechnicalNameUpdates(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1697112043AddPaymentAndShippingTechnicalName.php') {
+                    return $sql;
+                }
+
+                if (preg_match('/^\s*UPDATE\s+IGNORE\s+`payment_method`\s+LEFT\s+JOIN\s+`app_payment_method`/i', $sql)
+                    && str_contains($sql, '`app_payment_method`.`payment_method_id` = `payment_method`.`id`')
+                    && str_contains($sql, 'IN (:handlers)')) {
+                    $this->appliedRules['mysql_payment_method_update_left_join_to_from'] = ($this->appliedRules['mysql_payment_method_update_left_join_to_from'] ?? 0) + 1;
+
+                    return "UPDATE payment_method SET technical_name = CONCAT('payment_', LOWER(split_part(selected_payment.handler_identifier, :slash, -1))) FROM (SELECT payment_method.id, payment_method.handler_identifier FROM payment_method LEFT JOIN app_payment_method ON app_payment_method.payment_method_id = payment_method.id WHERE payment_method.technical_name IS NULL AND (app_payment_method.identifier IS NOT NULL OR payment_method.handler_identifier IN (:handlers))) AS selected_payment WHERE payment_method.id = selected_payment.id";
+                }
+
+                if (preg_match('/^\s*UPDATE\s+IGNORE\s+`shipping_method`\s+LEFT\s+JOIN\s+`app_shipping_method`/i', $sql)
+                    && str_contains($sql, '`app_shipping_method`.`shipping_method_id` = `shipping_method`.`id`')
+                    && str_contains($sql, '`shipping_method`.`technical_name` IS NULL')) {
+                    $this->appliedRules['mysql_shipping_method_update_left_join_to_from'] = ($this->appliedRules['mysql_shipping_method_update_left_join_to_from'] ?? 0) + 1;
+
+                    return "UPDATE shipping_method SET technical_name = selected_shipping.technical_name FROM (SELECT shipping_method.id, CASE WHEN app_shipping_method.shipping_method_id IS NULL THEN NULL ELSE 'shipping_' || app_shipping_method.app_name || '_' || app_shipping_method.identifier END AS technical_name FROM shipping_method LEFT JOIN app_shipping_method ON app_shipping_method.shipping_method_id = shipping_method.id WHERE shipping_method.technical_name IS NULL) AS selected_shipping WHERE shipping_method.id = selected_shipping.id";
+                }
+
+                return $sql;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2661,6 +2686,7 @@ SQL;
                     $sql = $this->preserveAppConfigPrimaryKeyColumnConstraints($sql);
                     $sql = $this->rewriteCustomerAddressStreetChunkUpdate($sql);
                     $sql = $this->rewritePaymentShippingTechnicalNameConstraints($sql);
+                    $sql = $this->rewritePaymentShippingTechnicalNameUpdates($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
