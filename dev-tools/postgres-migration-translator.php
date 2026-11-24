@@ -365,7 +365,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     'state_machine_state_translation' => ['language_id', 'state_machine_state_id'],
                     'state_machine_transition' => ['id'],
                 ];
-                if ($this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php') {
+                if (in_array($this->classFile, ['Migration1687462843ProductManufacturerMediaThumbnails.php', 'Migration1687463180ProductMediaThumbnails.php'], true)) {
                     $knownConflictKeys['media_folder_configuration_media_thumbnail_size'] = ['media_folder_configuration_id', 'media_thumbnail_size_id'];
                 }
                 if (!isset($knownConflictKeys[$baseTable])) {
@@ -394,7 +394,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 }
                 if ($updates === []) {
                     if ($baseTable === 'media_folder_configuration_media_thumbnail_size'
-                        && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php') {
+                        && in_array($this->classFile, ['Migration1687462843ProductManufacturerMediaThumbnails.php', 'Migration1687463180ProductMediaThumbnails.php'], true)) {
                         $this->appliedRules['diagnostic_relation_replace_to_do_nothing'] = ($this->appliedRules['diagnostic_relation_replace_to_do_nothing'] ?? 0) + 1;
 
                         return 'INSERT INTO ' . $table . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $valueParts) . ') ON CONFLICT (' . implode(', ', $conflictColumns) . ') DO NOTHING' . $suffix[1];
@@ -2217,7 +2217,7 @@ SQL;
                     $this->appliedRules['diagnostic_country_id_stream_read_before_queue'] = ($this->appliedRules['diagnostic_country_id_stream_read_before_queue'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
-                    && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php'
+                    && in_array($this->classFile, ['Migration1687462843ProductManufacturerMediaThumbnails.php', 'Migration1687463180ProductMediaThumbnails.php'], true)
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Stmt\If_
                     && $node->cond instanceof Node\Expr\BooleanNot
@@ -2372,6 +2372,26 @@ SQL;
                         'BINARY'
                     ));
                     $this->appliedRules['diagnostic_thumbnail_relation_uuid_bindings'] = ($this->appliedRules['diagnostic_thumbnail_relation_uuid_bindings'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1687463180ProductMediaThumbnails.php'
+                    && $node instanceof Node\Expr\StaticCall
+                    && $node->class instanceof Node\Name
+                    && $node->class->getLast() === 'StatementHelper'
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'executeStatement'
+                    && !isset($node->args[2])) {
+                    $node->args[2] = new Node\Arg(new Node\Expr\Array_([
+                        new Node\Expr\ArrayItem(new Node\Expr\ClassConstFetch(
+                            new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'),
+                            'BINARY'
+                        ), new Node\Scalar\String_('folderConfigurationId')),
+                        new Node\Expr\ArrayItem(new Node\Expr\ClassConstFetch(
+                            new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'),
+                            'BINARY'
+                        ), new Node\Scalar\String_('thumbnailSizeId')),
+                    ]));
+                    $this->appliedRules['diagnostic_product_media_thumbnail_uuid_bindings'] = ($this->appliedRules['diagnostic_product_media_thumbnail_uuid_bindings'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1677470540AddProvincesForCanada.php'
