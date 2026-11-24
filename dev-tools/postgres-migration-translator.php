@@ -2001,6 +2001,19 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteCustomerAccountTypeChunkUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1676272000AddAccountTypeToCustomer.php'
+                    || !preg_match('/^\\s*UPDATE\\s+`customer`\\s+SET\\s+`account_type`\\s*=\\s*:type\\s+WHERE\\s+`account_type`\\s*!=\\s*:type\\s+AND\\s+(EXISTS\\s*\\([\\s\\S]*?\\))\\s+ORDER\\s+BY\\s+`customer`\\s*\\.\\s*`id`\\s+LIMIT\\s+:limit\\s*;?\\s*$/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_update_order_limit_to_cte'] = ($this->appliedRules['mysql_update_order_limit_to_cte'] ?? 0) + 1;
+
+                return 'WITH account_type_chunk AS (SELECT `customer`.`id` FROM `customer` WHERE `account_type` != :type AND ' . $matches[1]
+                    . ' ORDER BY `customer`.`id` LIMIT :limit) UPDATE `customer` SET `account_type` = :type WHERE `customer`.`id` IN (SELECT `id` FROM account_type_chunk)';
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2345,6 +2358,7 @@ SQL;
                     $sql = $this->rewriteProductPricePercentageUpdate($sql);
                     $sql = $this->rewriteTemporaryVariantListingGeneratedColumn($sql);
                     $sql = $this->rewriteStateMachineHistoryZeroUuidFallback($sql);
+                    $sql = $this->rewriteCustomerAccountTypeChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
