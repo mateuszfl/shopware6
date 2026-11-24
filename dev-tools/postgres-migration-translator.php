@@ -2235,6 +2235,28 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteProductSliderNavigationQueries(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1732608755MigrateNavigationSettingsForProductSlider.php') {
+                    return $sql;
+                }
+
+                $queries = [
+                    'setDeactivatedNavigationArrows' => "UPDATE cms_slot_translation SET config = jsonb_set(cms_slot_translation.config::jsonb, '{navigationArrows}', jsonb_build_object('value', 'none', 'source', 'static'))::json FROM cms_slot WHERE cms_slot.id = cms_slot_translation.cms_slot_id AND cms_slot.type = 'product-slider' AND (cms_slot_translation.config::jsonb #> '{navigation}' IS NULL OR cms_slot_translation.config::jsonb #> '{navigation,value}' <> 'true'::jsonb)",
+                    'setActivatedNavigationArrows' => "UPDATE cms_slot_translation SET config = jsonb_set(cms_slot_translation.config::jsonb, '{navigationArrows}', jsonb_build_object('value', 'outside', 'source', 'static'))::json FROM cms_slot WHERE cms_slot.id = cms_slot_translation.cms_slot_id AND cms_slot.type = 'product-slider' AND cms_slot_translation.config::jsonb #> '{navigation}' IS NOT NULL AND cms_slot_translation.config::jsonb #> '{navigation,value}' = 'true'::jsonb",
+                    'removeOldSliderConfig' => "UPDATE cms_slot_translation SET config = (cms_slot_translation.config::jsonb #- '{navigation}')::json FROM cms_slot WHERE cms_slot.id = cms_slot_translation.cms_slot_id AND cms_slot.type = 'product-slider'",
+                ];
+                if (!isset($queries[$this->currentMethodName ?? ''])
+                    || !preg_match('/^\s*UPDATE\s+`?cms_slot_translation`?\b/i', $sql)) {
+                    return $sql;
+                }
+
+                $rule = 'diagnostic_product_slider_jsonb_update_from';
+                $this->appliedRules[$rule] = ($this->appliedRules[$rule] ?? 0) + 1;
+
+                return $queries[$this->currentMethodName];
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -3021,6 +3043,7 @@ SQL;
                     $sql = $this->rewritePaymentShippingTechnicalNameUpdates($sql);
                     $sql = $this->rewriteMediaThumbnailPathMultiTableUpdate($sql);
                     $sql = $this->rewriteEuCountryBooleanLiterals($sql);
+                    $sql = $this->rewriteProductSliderNavigationQueries($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
@@ -3124,6 +3147,11 @@ SQL;
                     'quoted UPDATE value may be a MySQL string' => '/\\bUPDATE\\b[\\s\\S]*?\\bSET\\b[\\s\\S]*?=\\s*`[^`]+`/i',
                 ];
                 foreach ($patterns as $reason => $pattern) {
+                    if ($reason === 'json type/function'
+                        && $this->classFile === 'Migration1732608755MigrateNavigationSettingsForProductSlider.php'
+                        && !preg_match('/\bJSON_(?:SET|EXTRACT|CONTAINS_PATH|REMOVE|OBJECT|UNQUOTE)\b/i', $sql)) {
+                        continue;
+                    }
                     if (preg_match($pattern, $sql)) {
                         $this->unsupported[] = $reason;
                     }
