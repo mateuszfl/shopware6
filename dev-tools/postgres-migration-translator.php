@@ -2397,6 +2397,23 @@ SQL;
                             $this->appliedRules['diagnostic_add_column_integer_type_normalized'] = ($this->appliedRules['diagnostic_add_column_integer_type_normalized'] ?? 0) + 1;
                         }
                     }
+                    $defaultArgument = null;
+                    foreach ($node->args as $index => $argument) {
+                        if (($argument->name?->toString() === 'default') || ($argument->name === null && $index === 5)) {
+                            $defaultArgument = $argument;
+
+                            break;
+                        }
+                    }
+                    if ($typeArgument?->value instanceof Node\Scalar\String_
+                        && strtoupper(trim($typeArgument->value->value)) === 'BYTEA'
+                        && $defaultArgument?->value instanceof Node\Scalar\String_
+                        && preg_match('/^0x([a-f0-9]*)$/i', $defaultArgument->value->value, $hexDefaultMatch)) {
+                        $defaultArgument->value->value = $hexDefaultMatch[1] === '' || strtolower($hexDefaultMatch[1]) === '0'
+                            ? "decode(repeat('00', 16), 'hex')"
+                            : "decode('" . strtolower($hexDefaultMatch[1]) . "', 'hex')";
+                        $this->appliedRules['diagnostic_add_column_hex_binary_default_to_bytea'] = ($this->appliedRules['diagnostic_add_column_hex_binary_default_to_bytea'] ?? 0) + 1;
+                    }
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php'
