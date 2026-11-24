@@ -2065,6 +2065,31 @@ SQL;
                     $this->appliedRules['diagnostic_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_flow_template_uuid_stream_read'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1672934282ReviewFormSendFlow.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'templateId') {
+                    $condition = new Node\Expr\Variable('templateId');
+                    $node->cond = new Node\Expr\BinaryOp\BooleanOr(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg($condition)]),
+                        new Node\Expr\BooleanNot(new Node\Expr\Variable('templateId'))
+                    );
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('templateId'),
+                        new Node\Expr\Ternary(
+                            new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Variable('templateId'))]),
+                            new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                                new Node\Name\FullyQualified('stream_get_contents'),
+                                [new Node\Arg(new Node\Expr\Variable('templateId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                            )),
+                            new Node\Expr\StaticCall(new Node\Name\FullyQualified('Shopware\\Core\\Framework\\Uuid\\Uuid'), 'randomBytes')
+                        )
+                    ))];
+                    $this->appliedRules['diagnostic_review_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_review_flow_template_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1675218708UpdateDeliverOrderedProductDownloadsFlowTemplate.php'
                     && $node instanceof Node\Expr\StaticCall
                     && $node->class instanceof Node\Name
