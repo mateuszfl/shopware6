@@ -2085,7 +2085,7 @@ SQL;
                             $this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] = ($this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] ?? 0) + count($keys);
                         }
                     }
-                    if (in_array($methodName, ['executeQuery', 'executeStatement', 'fetchAllAssociative', 'fetchAssociative', 'fetchOne', 'fetchFirstColumn'], true)) {
+                    if (in_array($methodName, ['executeQuery', 'executeStatement', 'fetchAllAssociative', 'fetchAllKeyValue', 'fetchAssociative', 'fetchOne', 'fetchFirstColumn'], true)) {
                         $this->addBinaryTypesToQueryCall($node);
                     }
                 }
