@@ -1887,10 +1887,13 @@ SQL;
                     );
                     $this->replace(
                         'alter_modify_column_to_alter_column',
-                        '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION|\s*\(\s*\d+\s*,\s*\d+\s*\))?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|TEXT|JSON|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))(?:\s+COLLATE\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?:\s+(NULL|NOT\s+NULL))?(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
+                        '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION|\s*\(\s*\d+\s*,\s*\d+\s*\))?|FLOAT|(?:TINYINT|SMALLINT|MEDIUMINT|INT(?:EGER)?|BIGINT)(?:\s*\(\s*\d+\s*\))?|BYTEA|TEXT|JSON|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))(?:\s+COLLATE\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?:\s+(NULL|NOT\s+NULL))?(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
                         static function (array $matches): string {
                             $column = str_starts_with($matches[1], '`') ? '"' . trim($matches[1], '`') . '"' : $matches[1];
                             $type = preg_replace('/^INT$/i', 'INTEGER', $matches[2]) ?? $matches[2];
+                            $type = preg_replace('/^(?:INT|INTEGER)\s*\(\s*\d+\s*\)$/i', 'INTEGER', $type) ?? $type;
+                            $type = preg_replace('/^(SMALLINT|BIGINT)\s*\(\s*\d+\s*\)$/i', '$1', $type) ?? $type;
+                            $type = preg_replace('/^MEDIUMINT(?:\s*\(\s*\d+\s*\))?$/i', 'INTEGER', $type) ?? $type;
                             $type = preg_replace('/^DOUBLE(?:\s*\(\s*\d+\s*,\s*\d+\s*\))?$/i', 'DOUBLE PRECISION', $type) ?? $type;
                             $collation = ($matches[3] ?? '') === '' ? '' : ' COLLATE ' . $matches[3];
                             $clauses = ['ALTER COLUMN ' . $column . ' TYPE ' . $type . $collation];
@@ -2302,10 +2305,23 @@ SQL;
                             break;
                         }
                     }
-                    if ($typeArgument?->value instanceof Node\Scalar\String_
-                        && preg_match('/^\\s*(?:VAR)?BINARY\\s*\\(\\s*\\d+\\s*\\)\\s*$/i', $typeArgument->value->value)) {
-                        $typeArgument->value->value = 'BYTEA';
-                        $this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] = ($this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] ?? 0) + 1;
+                    if ($typeArgument?->value instanceof Node\Scalar\String_) {
+                        $type = trim($typeArgument->value->value);
+                        if (preg_match('/^(?:VAR)?BINARY\\s*\\(\\s*\\d+\\s*\\)$/i', $type)) {
+                            $typeArgument->value->value = 'BYTEA';
+                            $this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] = ($this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] ?? 0) + 1;
+                        } elseif (preg_match('/^(TINYINT|SMALLINT|MEDIUMINT|INT|INTEGER|BIGINT)(?:\\s*\\(\\s*\\d+\\s*\\))?(?:\\s+(UNSIGNED))?$/i', $type, $integerTypeMatch)) {
+                            $baseType = strtoupper($integerTypeMatch[1]);
+                            $unsigned = strtoupper($integerTypeMatch[2] ?? '') === 'UNSIGNED';
+                            $typeArgument->value->value = match ($baseType) {
+                                'TINYINT' => 'SMALLINT',
+                                'SMALLINT' => $unsigned ? 'INTEGER' : 'SMALLINT',
+                                'MEDIUMINT' => 'INTEGER',
+                                'INT', 'INTEGER' => $unsigned ? 'BIGINT' : 'INTEGER',
+                                'BIGINT' => $unsigned ? 'NUMERIC(20,0)' : 'BIGINT',
+                            };
+                            $this->appliedRules['diagnostic_add_column_integer_type_normalized'] = ($this->appliedRules['diagnostic_add_column_integer_type_normalized'] ?? 0) + 1;
+                        }
                     }
                 }
                 if ($this->diagnosticMode
