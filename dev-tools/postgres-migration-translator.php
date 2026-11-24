@@ -2070,6 +2070,18 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteCustomerSalutationChunkUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1691057865UpdateSalutationDefaultForCustomer.php'
+                    || !preg_match('/^\s*UPDATE\s+`?customer`?\s+SET\s+`?salutation_id`?\s*=\s*:notSpecifiedId\s+WHERE\s+`?salutation_id`?\s+IS\s+NULL\s+LIMIT\s+:limit\s*;?\s*$/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_customer_salutation_update_limit_to_cte'] = ($this->appliedRules['mysql_customer_salutation_update_limit_to_cte'] ?? 0) + 1;
+
+                return 'WITH customer_salutation_chunk AS (SELECT id FROM customer WHERE salutation_id IS NULL ORDER BY id LIMIT :limit) UPDATE customer SET salutation_id = :notSpecifiedId FROM customer_salutation_chunk WHERE customer.id = customer_salutation_chunk.id';
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2313,12 +2325,36 @@ SQL;
                     );
                     $this->appliedRules['diagnostic_flow_template_uuid_bytes_stream_read'] = ($this->appliedRules['diagnostic_flow_template_uuid_bytes_stream_read'] ?? 0) + 1;
                 }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1691057865UpdateSalutationDefaultForCustomer.php'
+                    && $node instanceof Node\Expr\Assign
+                    && $node->var instanceof Node\Expr\Variable
+                    && $node->var->name === 'notSpecifiedId'
+                    && $node->expr instanceof Node\Expr\Cast\String_
+                    && $node->expr->expr instanceof Node\Expr\MethodCall
+                    && $node->expr->expr->name instanceof Node\Identifier
+                    && $node->expr->expr->name->toString() === 'fetchOne') {
+                    $node->expr->expr = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Assign(
+                            new Node\Expr\Variable('diagnosticNotSpecifiedId'),
+                            $node->expr->expr
+                        ))]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('diagnosticNotSpecifiedId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        )),
+                        new Node\Expr\Variable('diagnosticNotSpecifiedId')
+                    );
+                    $this->appliedRules['diagnostic_salutation_uuid_stream_read_before_cast'] = ($this->appliedRules['diagnostic_salutation_uuid_stream_read_before_cast'] ?? 0) + 1;
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
                     && $node->var instanceof Node\Expr\Variable
                     && is_string($node->var->name)) {
                     $this->methodArrayKeys[$node->var->name] = $this->getInsertDataKeys($node->expr);
                     $uuidColumns = $this->getUuidSelectColumns($node->expr);
-                    $this->methodUuidVariables[$node->var->name] = $this->isUuidBytesExpression($node->expr)
+                    $this->methodUuidVariables[$node->var->name] = ($this->classFile === 'Migration1691057865UpdateSalutationDefaultForCustomer.php'
+                        && $node->var->name === 'notSpecifiedId')
+                        || $this->isUuidBytesExpression($node->expr)
                         || ($node->expr instanceof Node\Expr\MethodCall && $node->expr->name instanceof Node\Identifier
                             && $node->expr->name->toString() === 'fetchOne' && isset($uuidColumns[0]));
                     $this->methodUuidRowColumns[$node->var->name] = $node->expr instanceof Node\Expr\MethodCall
@@ -2570,6 +2606,7 @@ SQL;
                     $sql = $this->rewriteVariantListingConfigChunkUpdate($sql);
                     $sql = $this->rewriteCoverMediaVersionChunkUpdate($sql);
                     $sql = $this->rewriteVersionedCapturePrimaryKeyDrop($sql);
+                    $sql = $this->rewriteCustomerSalutationChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
