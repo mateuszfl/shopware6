@@ -2082,6 +2082,22 @@ SQL;
                 return 'WITH customer_salutation_chunk AS (SELECT id FROM customer WHERE salutation_id IS NULL ORDER BY id LIMIT :limit) UPDATE customer SET salutation_id = :notSpecifiedId FROM customer_salutation_chunk WHERE customer.id = customer_salutation_chunk.id';
             }
 
+            private function preserveAppConfigPrimaryKeyColumnConstraints(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1692608216IncreaseAppConfigKeyColumnSize.php') {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'preserve_app_config_key_primary_key_constraints',
+                    '/,\\s*ALTER\\s+COLUMN\\s+"key"\\s+DROP\\s+NOT\\s+NULL\\s*,\\s*ALTER\\s+COLUMN\\s+"key"\\s+DROP\\s+DEFAULT/i',
+                    '',
+                    $sql
+                );
+
+                return $sql;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2608,6 +2624,7 @@ SQL;
                     $sql = $this->rewriteVersionedCapturePrimaryKeyDrop($sql);
                     $sql = $this->rewriteCustomerSalutationChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
+                    $sql = $this->preserveAppConfigPrimaryKeyColumnConstraints($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
