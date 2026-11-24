@@ -1890,6 +1890,24 @@ SQL;
                     }
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1625583619MoveDataFromEventActionToFlow.php'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'execute'
+                    && isset($node->args[0])
+                    && $node->args[0]->value instanceof Node\Expr\Array_
+                    && !isset($node->args[1])) {
+                    $typeItems = [];
+                    foreach (['flowId', 'eventActionId'] as $key) {
+                        $typeItems[] = new Node\Expr\ArrayItem(
+                            new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
+                            new Node\Scalar\String_($key)
+                        );
+                    }
+                    $node->args[] = new Node\Arg(new Node\Expr\Array_($typeItems));
+                    $this->appliedRules['diagnostic_retryable_flow_uuid_parameters_bind_as_binary'] = ($this->appliedRules['diagnostic_retryable_flow_uuid_parameters_bind_as_binary'] ?? 0) + 2;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1576590301FixSalesChannelDomainLanguageFk.php'
                     && $node instanceof Node\Stmt\Expression
                     && $node->expr instanceof Node\Expr\MethodCall
