@@ -585,6 +585,58 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $converted;
             }
 
+            private function castJsonObjectPlaceholderValues(string $arguments): string
+            {
+                $parts = [];
+                $start = 0;
+                $depth = 0;
+                $quote = null;
+                for ($index = 0; $index < strlen($arguments); ++$index) {
+                    $character = $arguments[$index];
+                    $next = $arguments[$index + 1] ?? '';
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+
+                        continue;
+                    }
+                    if ($character === '(') {
+                        ++$depth;
+                    } elseif ($character === ')') {
+                        --$depth;
+                    } elseif ($character === ',' && $depth === 0) {
+                        $parts[] = substr($arguments, $start, $index - $start);
+                        $start = $index + 1;
+                    }
+                }
+                $parts[] = substr($arguments, $start);
+
+                foreach ($parts as $index => $part) {
+                    if ($index % 2 === 0 || !preg_match('/^(\\s*):([A-Za-z_][A-Za-z0-9_]*)(\\s*)$/', $part, $match)) {
+                        continue;
+                    }
+                    $parts[$index] = $match[1] . 'CAST(:' . $match[2] . ' AS TEXT)' . $match[3];
+                }
+
+                return implode(',', $parts);
+            }
+
             private function rewriteJsonObjectCalls(string $sql): string
             {
                 $searchOffset = 0;
@@ -605,6 +657,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     }
 
                     $arguments = substr($sql, $open + 1, $close - $open - 1);
+                    $arguments = $this->castJsonObjectPlaceholderValues($arguments);
                     $arguments = $this->convertJsonObjectArgumentStrings($arguments);
                     $arguments = $this->rewriteJsonObjectCalls($arguments);
                     $replacement = 'jsonb_build_object(' . $arguments . ')';
