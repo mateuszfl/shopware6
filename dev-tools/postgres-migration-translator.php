@@ -2271,6 +2271,15 @@ SQL;
                         $this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] = ($this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] ?? 0) + 1;
                     }
                 }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1677470540AddProvincesForCanada.php'
+                    && $node instanceof Node\Expr\New_
+                    && $node->class instanceof Node\Name
+                    && $node->class->getLast() === 'MultiInsertQueryQueue'
+                    && isset($node->args[3])) {
+                    $node->args[3]->value = new Node\Expr\ConstFetch(new Node\Name('false'));
+                    $this->appliedRules['diagnostic_seed_queue_replace_disabled'] = ($this->appliedRules['diagnostic_seed_queue_replace_disabled'] ?? 0) + 1;
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\MethodCall
                     && $node->name instanceof Node\Identifier
                     && $node->name->toString() === 'addInsert'
