@@ -1254,12 +1254,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         ++$end;
                     }
                     $arguments = $this->splitSqlCommaList(substr($sql, $open + 1, $close - $open - 1));
-                    if (count($arguments) !== 2 || !preg_match('/^\s*[\'"]\$\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[\'"]\s*$/', $arguments[1], $pathMatch)) {
+                    if (count($arguments) !== 2 || !preg_match('/^\s*[\'"]\$(?:\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))?[\'"]\s*$/', $arguments[1], $pathMatch)) {
                         $searchOffset = $end;
 
                         continue;
                     }
-                    $path = str_replace('.', ',', $pathMatch[1]);
+                    $path = ($pathMatch[1] ?? '') === '' ? '' : str_replace('.', ',', $pathMatch[1]);
                     $operator = $unquote ? '#>>' : '#>';
                     $replacement = '(' . trim($arguments[0]) . ' ' . $operator . " '{" . $path . "}')";
                     $sql = substr_replace($sql, $replacement, $start, $end - $start);
