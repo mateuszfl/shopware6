@@ -2341,7 +2341,7 @@ SQL;
                         ],
                         'set' => [
                             'fs.config' => 'config',
-                            'JSON_SET(fs.config, "$.recipient.type", "admin")' => "jsonb_set(fs.config, '{recipient,type}', '\"admin\"'::jsonb)",
+                            'JSON_SET(fs.config, "$.recipient.type", "admin")' => "jsonb_set(fs.config::jsonb, '{recipient,type}', '\"admin\"'::jsonb)::json",
                         ],
                         'andWhere' => [
                             'JSON_EXTRACT(fs.config, "$.recipient.type") = "default"' => "fs.config #>> '{recipient,type}' = 'default'",
@@ -2356,7 +2356,7 @@ SQL;
                         && isset($node->args[1])
                         && $node->args[1]->value instanceof Node\Scalar\String_
                         && $node->args[1]->value->value === 'JSON_SET(fs.config, "$.recipient.type", "admin")') {
-                        $node->args[1]->value->value = "jsonb_set(fs.config, '{recipient,type}', '\"admin\"'::jsonb)";
+                        $node->args[1]->value->value = "jsonb_set(fs.config::jsonb, '{recipient,type}', '\"admin\"'::jsonb)::json";
                         $this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] = ($this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] ?? 0) + 1;
                     }
                 }
