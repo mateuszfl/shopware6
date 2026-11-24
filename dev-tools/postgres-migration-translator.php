@@ -639,6 +639,33 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteJsonEmptyStringComparison(string $sql): string
+            {
+                $identifierPart = '(?:"(?:[^"\\r\\n]|"")*"|`(?:[^`\\r\\n]|``)*`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $identifier = $identifierPart . '(?:\\s*\\.\\s*' . $identifierPart . ')*';
+                $pattern = '/(\\b(?:WHERE|AND|OR|ON)\\s+(?:\\(\\s*)*)(' . $identifier . ')(\\s*)(<>|!=|=)(\\s*)(\'\')/i';
+                if (!preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                    return $sql;
+                }
+
+                $changes = [];
+                foreach ($matches as $match) {
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $match[4][1])) {
+                        continue;
+                    }
+                    $replacement = $match[1][0] . 'CAST(' . $match[2][0] . ' AS TEXT)' . $match[3][0] . $match[4][0] . $match[5][0] . $match[6][0];
+                    $changes[] = [$match[0][1], strlen($match[0][0]), $replacement];
+                }
+                foreach (array_reverse($changes) as [$offset, $length, $replacement]) {
+                    $sql = substr_replace($sql, $replacement, $offset, $length);
+                }
+                if ($changes !== []) {
+                    $this->appliedRules['json_empty_string_comparison_cast_to_text'] = ($this->appliedRules['json_empty_string_comparison_cast_to_text'] ?? 0) + count($changes);
+                }
+
+                return $sql;
+            }
+
             private function rewriteJsonReplaceUpdate(string $sql): string
             {
                 $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
@@ -1510,6 +1537,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
+                    $sql = $this->rewriteJsonEmptyStringComparison($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
