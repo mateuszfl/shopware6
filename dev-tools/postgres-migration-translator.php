@@ -118,7 +118,120 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             private string $classFile;
             /** @var array<string, list<string>> */
             private array $methodArrayKeys = [];
+            /** @var array<string, bool> */
+            private array $methodUuidVariables = [];
+            /** @var array<string, list<string>> */
+            private array $methodUuidRowColumns = [];
+            /** @var array<string, bool> */
+            private array $methodUuidArrays = [];
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+
+            private function isUuidBytesExpression(Node\Expr $expression): bool
+            {
+                if ($expression instanceof Node\Expr\Variable && is_string($expression->name)) {
+                    return $this->methodUuidVariables[$expression->name] ?? false;
+                }
+                if ($expression instanceof Node\Expr\ArrayDimFetch
+                    && $expression->var instanceof Node\Expr\Variable
+                    && is_string($expression->var->name)
+                    && $expression->dim instanceof Node\Scalar\String_) {
+                    return in_array($expression->dim->value, $this->methodUuidRowColumns[$expression->var->name] ?? [], true);
+                }
+                if (!$expression instanceof Node\Expr\StaticCall
+                    || !$expression->class instanceof Node\Name
+                    || !$expression->name instanceof Node\Identifier
+                    || !in_array($expression->name->toString(), ['fromHexToBytes', 'randomBytes'], true)) {
+                    return false;
+                }
+
+                return $expression->class->getLast() === 'Uuid';
+            }
+
+            /** @return array<string, string> parameter name => binary|array_binary */
+            private function getUuidParameterTypes(Node\Expr $expression): array
+            {
+                if (!$expression instanceof Node\Expr\Array_) {
+                    return [];
+                }
+
+                $types = [];
+                foreach ($expression->items as $item) {
+                    if (!$item?->key instanceof Node\Scalar\String_) {
+                        continue;
+                    }
+                    if ($this->isUuidBytesExpression($item->value)) {
+                        $types[$item->key->value] = 'ParameterType';
+                    } elseif ($item->value instanceof Node\Expr\Variable
+                        && is_string($item->value->name)
+                        && ($this->methodUuidArrays[$item->value->name] ?? false)) {
+                        $types[$item->key->value] = 'ArrayParameterType';
+                    }
+                }
+
+                return $types;
+            }
+
+            /** @return list<string> */
+            private function getUuidSelectColumns(Node\Expr $expression): array
+            {
+                if (!$expression instanceof Node\Expr\MethodCall
+                    || !$expression->name instanceof Node\Identifier
+                    || !in_array($expression->name->toString(), ['fetchOne', 'fetchAllAssociative'], true)
+                    || !isset($expression->args[0])
+                    || !$expression->args[0]->value instanceof Node\Scalar\String_
+                    || !preg_match('/\\bSELECT\\s+([\\s\\S]+?)\\s+FROM\\b/i', $expression->args[0]->value->value, $match)) {
+                    return [];
+                }
+
+                $columns = [];
+                $selections = explode(',', $match[1]);
+                if ($expression->name->toString() === 'fetchOne') {
+                    $selections = array_slice($selections, 0, 1);
+                }
+                foreach ($selections as $selection) {
+                    $selection = preg_replace('/\\s+AS\\s+.+$/i', '', trim($selection)) ?? trim($selection);
+                    $parts = preg_split('/\\s*\\.\\s*/', $selection) ?: [];
+                    $column = trim((string) end($parts), " `\\\"");
+                    if ($column === 'id' || str_ends_with($column, '_id')) {
+                        $columns[] = $column;
+                    }
+                }
+
+                return array_values(array_unique($columns));
+            }
+
+            private function addBinaryTypesToQueryCall(Node\Expr\MethodCall $node): void
+            {
+                if (!isset($node->args[1]) || !$node->args[1]->value instanceof Node\Expr\Array_) {
+                    return;
+                }
+
+                $binaryTypes = $this->getUuidParameterTypes($node->args[1]->value);
+                if ($binaryTypes === []) {
+                    return;
+                }
+
+                if (!isset($node->args[2])) {
+                    $node->args[2] = new Node\Arg(new Node\Expr\Array_());
+                } elseif (!$node->args[2]->value instanceof Node\Expr\Array_) {
+                    return;
+                }
+
+                $existingKeys = [];
+                foreach ($node->args[2]->value->items as $item) {
+                    if ($item?->key instanceof Node\Scalar\String_) {
+                        $existingKeys[] = $item->key->value;
+                    }
+                }
+
+                foreach (array_diff_key($binaryTypes, array_flip($existingKeys)) as $key => $typeClass) {
+                    $node->args[2]->value->items[] = new Node\Expr\ArrayItem(
+                        new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\' . $typeClass), 'BINARY'),
+                        new Node\Scalar\String_($key)
+                    );
+                    $this->appliedRules['diagnostic_query_uuid_parameters_bind_as_binary'] = ($this->appliedRules['diagnostic_query_uuid_parameters_bind_as_binary'] ?? 0) + 1;
+                }
+            }
 
             /** @return list<string> */
             private function getInsertDataKeys(Node\Expr $expression): array
@@ -619,35 +732,63 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             {
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\ClassMethod) {
                     $this->methodArrayKeys = [];
+                    $this->methodUuidVariables = [];
+                    $this->methodUuidRowColumns = [];
+                    $this->methodUuidArrays = [];
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
                     && $node->var instanceof Node\Expr\Variable
                     && is_string($node->var->name)) {
                     $this->methodArrayKeys[$node->var->name] = $this->getInsertDataKeys($node->expr);
+                    $uuidColumns = $this->getUuidSelectColumns($node->expr);
+                    $this->methodUuidVariables[$node->var->name] = $this->isUuidBytesExpression($node->expr)
+                        || ($node->expr instanceof Node\Expr\MethodCall && $node->expr->name instanceof Node\Identifier
+                            && $node->expr->name->toString() === 'fetchOne' && isset($uuidColumns[0]));
+                    $this->methodUuidRowColumns[$node->var->name] = $node->expr instanceof Node\Expr\MethodCall
+                        && $node->expr->name instanceof Node\Identifier && $node->expr->name->toString() === 'fetchAllAssociative'
+                        ? $uuidColumns
+                        : [];
+                    $this->methodUuidArrays[$node->var->name] = false;
+                    if ($node->expr instanceof Node\Expr\FuncCall && $node->expr->name instanceof Node\Name
+                        && strtolower($node->expr->name->toString()) === 'array_column'
+                        && isset($node->expr->args[0], $node->expr->args[1])
+                        && $node->expr->args[0]->value instanceof Node\Expr\Variable
+                        && is_string($node->expr->args[0]->value->name)
+                        && $node->expr->args[1]->value instanceof Node\Scalar\String_) {
+                        $sourceName = $node->expr->args[0]->value->name;
+                        $column = $node->expr->args[1]->value->value;
+                        $this->methodUuidArrays[$node->var->name] = in_array($column, $this->methodUuidRowColumns[$sourceName] ?? [], true);
+                    }
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\Foreach_
                     && $node->valueVar instanceof Node\Expr\Variable
                     && is_string($node->valueVar->name)) {
                     $this->methodArrayKeys[$node->valueVar->name] = $this->getInsertDataKeys($node->expr);
+                    if ($node->expr instanceof Node\Expr\Variable && is_string($node->expr->name)) {
+                        $this->methodUuidRowColumns[$node->valueVar->name] = $this->methodUuidRowColumns[$node->expr->name] ?? [];
+                    }
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\MethodCall
                     && $node->var instanceof Node\Expr\Variable
                     && $node->var->name === 'connection'
-                    && $node->name instanceof Node\Identifier
-                    && $node->name->toString() === 'insert'
-                    && isset($node->args[1])
-                    && !isset($node->args[2])) {
-                    $keys = $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
-                    if ($keys !== []) {
-                        $typeItems = [];
-                        foreach ($keys as $key) {
-                            $typeItems[] = new Node\Expr\ArrayItem(
-                                new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
-                                new Node\Scalar\String_($key)
-                            );
+                    && $node->name instanceof Node\Identifier) {
+                    $methodName = $node->name->toString();
+                    if ($methodName === 'insert' && isset($node->args[1]) && !isset($node->args[2])) {
+                        $keys = $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
+                        if ($keys !== []) {
+                            $typeItems = [];
+                            foreach ($keys as $key) {
+                                $typeItems[] = new Node\Expr\ArrayItem(
+                                    new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
+                                    new Node\Scalar\String_($key)
+                                );
+                            }
+                            $node->args[] = new Node\Arg(new Node\Expr\Array_($typeItems));
+                            $this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] = ($this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] ?? 0) + count($keys);
                         }
-                        $node->args[] = new Node\Arg(new Node\Expr\Array_($typeItems));
-                        $this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] = ($this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] ?? 0) + count($keys);
+                    }
+                    if (in_array($methodName, ['executeQuery', 'executeStatement', 'fetchAllAssociative', 'fetchAssociative', 'fetchOne', 'fetchFirstColumn'], true)) {
+                        $this->addBinaryTypesToQueryCall($node);
                     }
                 }
                 if ($this->diagnosticMode
