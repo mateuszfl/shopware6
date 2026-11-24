@@ -1732,6 +1732,14 @@ SQL;
                     }
 
                     $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                    if ($this->classFile === 'Migration1671003201RemoveDeprecatedColumns.php'
+                        && preg_match('/^\s*ALTER\s+TABLE\s+(' . $identifier . ')\s+CHANGE(?:\s+COLUMN)?\s+(' . $identifier . ')\s+\2\s+TINYINT(?:\s*\(\s*1\s*\))?\s+DEFAULT\s+0\s*(;?)\s*$/i', $statement, $changeMatch)) {
+                        $column = $changeMatch[2];
+                        $rewritten .= 'ALTER TABLE ' . $changeMatch[1] . ' ALTER COLUMN ' . $column . ' TYPE SMALLINT, ALTER COLUMN ' . $column . ' SET DEFAULT 0, ALTER COLUMN ' . $column . ' SET NOT NULL' . $changeMatch[3];
+                        $this->appliedRules['diagnostic_same_name_tinyint_change_to_alter_column'] = ($this->appliedRules['diagnostic_same_name_tinyint_change_to_alter_column'] ?? 0) + 1;
+
+                        continue;
+                    }
                     $indexColumns = $identifier . '(?:\s*,\s*' . $identifier . ')*';
                     if ($this->diagnosticMode
                         && preg_match('/^(\s*ALTER\s+TABLE\s+' . $identifier . '\s+ADD(?:\s+COLUMN)?\s+' . $identifier . '\s+)(BIGINT|INTEGER|INT|SMALLINT)\s+(NOT\s+NULL\s+)?AUTO_INCREMENT(\s+UNIQUE)?\s*(;?)\s*$/i', $statement, $identityMatch)) {
