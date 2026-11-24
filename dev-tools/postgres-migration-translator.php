@@ -365,6 +365,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     'state_machine_state_translation' => ['language_id', 'state_machine_state_id'],
                     'state_machine_transition' => ['id'],
                 ];
+                if ($this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php') {
+                    $knownConflictKeys['media_folder_configuration_media_thumbnail_size'] = ['media_folder_configuration_id', 'media_thumbnail_size_id'];
+                }
                 if (!isset($knownConflictKeys[$baseTable])) {
                     $this->unsupported[] = 'REPLACE INTO VALUES has no known conflict key for this table';
 
@@ -390,6 +393,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $updates[] = $column . ' = EXCLUDED.' . $column;
                 }
                 if ($updates === []) {
+                    if ($baseTable === 'media_folder_configuration_media_thumbnail_size'
+                        && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php') {
+                        $this->appliedRules['diagnostic_relation_replace_to_do_nothing'] = ($this->appliedRules['diagnostic_relation_replace_to_do_nothing'] ?? 0) + 1;
+
+                        return 'INSERT INTO ' . $table . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $valueParts) . ') ON CONFLICT (' . implode(', ', $conflictColumns) . ') DO NOTHING' . $suffix[1];
+                    }
                     $this->unsupported[] = 'REPLACE INTO has no non-key columns to update';
 
                     return $sql;
