@@ -1097,6 +1097,100 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteJsonExtractCalls(string $sql): string
+            {
+                $searchOffset = 0;
+                while (preg_match('/\b(?:JSON_UNQUOTE\s*\(\s*)?JSON_EXTRACT\s*\(/i', $sql, $match, PREG_OFFSET_CAPTURE, $searchOffset)) {
+                    $start = $match[0][1];
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $start)) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $unquote = preg_match('/^JSON_UNQUOTE/i', $match[0][0]) === 1;
+                    $extractOffset = $start + ($unquote ? strpos(strtoupper($match[0][0]), 'JSON_EXTRACT') : 0);
+                    $open = strpos($sql, '(', $extractOffset);
+                    $close = $open === false ? null : $this->findClosingParenthesis($sql, $open);
+                    if ($close === null) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $end = $close + 1;
+                    if ($unquote) {
+                        while (isset($sql[$end]) && ctype_space($sql[$end])) {
+                            ++$end;
+                        }
+                        if (($sql[$end] ?? '') !== ')') {
+                            $searchOffset = $start + strlen($match[0][0]);
+
+                            continue;
+                        }
+                        ++$end;
+                    }
+                    $arguments = $this->splitSqlCommaList(substr($sql, $open + 1, $close - $open - 1));
+                    if (count($arguments) !== 2 || !preg_match('/^\s*[\'"]\$\.([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)[\'"]\s*$/', $arguments[1], $pathMatch)) {
+                        $searchOffset = $end;
+
+                        continue;
+                    }
+                    $path = str_replace('.', ',', $pathMatch[1]);
+                    $operator = $unquote ? '#>>' : '#>';
+                    $replacement = '(' . trim($arguments[0]) . ' ' . $operator . " '{" . $path . "}')";
+                    $sql = substr_replace($sql, $replacement, $start, $end - $start);
+                    $rule = $unquote ? 'json_unquote_json_extract_to_text_path' : 'json_extract_to_json_path';
+                    $this->appliedRules[$rule] = ($this->appliedRules[$rule] ?? 0) + 1;
+                    $searchOffset = $start + strlen($replacement);
+                }
+
+                return $sql;
+            }
+
+            private function rewriteGroupConcatCalls(string $sql): string
+            {
+                $searchOffset = 0;
+                while (preg_match('/\bGROUP_CONCAT\s*\(/i', $sql, $match, PREG_OFFSET_CAPTURE, $searchOffset)) {
+                    $start = $match[0][1];
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $start)) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $open = strpos($sql, '(', $start);
+                    $close = $open === false ? null : $this->findClosingParenthesis($sql, $open);
+                    if ($close === null) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $arguments = trim(substr($sql, $open + 1, $close - $open - 1));
+                    $distinct = '';
+                    if (preg_match('/^DISTINCT\b\s*/i', $arguments, $distinctMatch)) {
+                        $distinct = 'DISTINCT ';
+                        $arguments = substr($arguments, strlen($distinctMatch[0]));
+                    }
+                    $delimiter = "','";
+                    if (preg_match('/^(.*?)\s+SEPARATOR\s+(\'(?:\'\'|[^\'])*\'|"(?:""|[^"])*")\s*$/is', $arguments, $separatorMatch)) {
+                        $arguments = trim($separatorMatch[1]);
+                        $delimiter = $separatorMatch[2];
+                        if (str_starts_with($delimiter, '"')) {
+                            $delimiter = "'" . str_replace("'", "''", str_replace('""', '"', trim($delimiter, '"'))) . "'";
+                        }
+                    }
+                    if ($arguments === '') {
+                        $searchOffset = $close + 1;
+
+                        continue;
+                    }
+                    $replacement = 'string_agg(' . $distinct . $arguments . ', ' . $delimiter . ')';
+                    $sql = substr_replace($sql, $replacement, $start, $close - $start + 1);
+                    $this->appliedRules['group_concat_to_string_agg'] = ($this->appliedRules['group_concat_to_string_agg'] ?? 0) + 1;
+                    $searchOffset = $start + strlen($replacement);
+                }
+
+                return $sql;
+            }
+
             private function rewriteProductPricePercentageUpdate(string $sql): string
             {
                 if ($this->classFile !== 'Migration1627929168UpdatePriceFieldInProductTable.php') {
@@ -1817,6 +1911,8 @@ SQL;
                     $sql = $this->rewriteInsertIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
+                    $sql = $this->rewriteJsonExtractCalls($sql);
+                    $sql = $this->rewriteGroupConcatCalls($sql);
                     $sql = $this->rewriteLowerHexBinaryIdentifiers($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                     $sql = $this->rewriteJsonEmptyStringComparison($sql);
