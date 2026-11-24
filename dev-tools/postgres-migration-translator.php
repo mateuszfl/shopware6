@@ -2168,6 +2168,31 @@ SQL;
                     $this->appliedRules['diagnostic_review_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_review_flow_template_uuid_stream_read'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1677470540AddProvincesForCanada.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'countryId') {
+                    $missingCountryStatements = $node->stmts;
+                    $node->cond = new Node\Expr\FuncCall(
+                        new Node\Name\FullyQualified('is_resource'),
+                        [new Node\Arg(new Node\Expr\Variable('countryId'))]
+                    );
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('countryId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('countryId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(
+                        new Node\Expr\BooleanNot(new Node\Expr\Variable('countryId')),
+                        $missingCountryStatements
+                    )];
+                    $this->appliedRules['diagnostic_country_id_stream_read_before_queue'] = ($this->appliedRules['diagnostic_country_id_stream_read_before_queue'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1675218708UpdateDeliverOrderedProductDownloadsFlowTemplate.php'
                     && $node instanceof Node\Expr\StaticCall
                     && $node->class instanceof Node\Name
