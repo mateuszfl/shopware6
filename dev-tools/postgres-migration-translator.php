@@ -555,6 +555,55 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $target . ' FROM (' . $subquery . ') AS ' . $sourceAlias . ' WHERE ' . trim($parts[2]) . $parts[4];
             }
 
+            private function rewriteUpdateInnerJoin(string $sql): string
+            {
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $pattern = '/^\\s*UPDATE\\s+(' . $identifier . ')(?:\\s+(?:AS\\s+)?(' . $identifier . '))?\\s+INNER\\s+JOIN\\s+(' . $identifier . ')(?:\\s+(?:AS\\s+)?(' . $identifier . '))?\\s+ON\\s+([\\s\\S]*?)\\s+SET\\s+([\\s\\S]*?)(?:\\s+WHERE\\s+([\\s\\S]*?))?\\s*(;?)\\s*$/i';
+                if (!preg_match($pattern, $sql, $matches)) {
+                    return $sql;
+                }
+
+                $targetTable = $matches[1];
+                $targetAlias = $matches[2] ?? '';
+                $joinedTable = $matches[3];
+                $joinedAlias = $matches[4] ?? '';
+                $normalize = static fn (string $name): string => strtolower(trim($name, '`"'));
+                $targetNames = [$normalize($targetTable)];
+                if ($targetAlias !== '') {
+                    $targetNames[] = $normalize($targetAlias);
+                }
+
+                $assignments = [];
+                $qualifiedIdentifier = $identifier . '(?:\\s*\\.\\s*' . $identifier . ')*';
+                foreach ($this->splitSqlCommaList($matches[6]) as $assignment) {
+                    if (!preg_match('/^\\s*(' . $qualifiedIdentifier . ')\\s*=\\s*([\\s\\S]*?)\\s*$/', $assignment, $parts) || $parts[2] === '') {
+                        $this->unsupported[] = 'UPDATE INNER JOIN contains an unsupported assignment';
+
+                        return $sql;
+                    }
+                    $leftParts = preg_split('/\\s*\\.\\s*/', trim($parts[1])) ?: [];
+                    if (count($leftParts) > 1) {
+                        $qualifier = (string) $leftParts[count($leftParts) - 2];
+                        if (!in_array($normalize($qualifier), $targetNames, true)) {
+                            $this->unsupported[] = 'UPDATE INNER JOIN assignment targets a different table';
+
+                            return $sql;
+                        }
+                    }
+                    $assignments[] = (string) end($leftParts) . ' = ' . $parts[2];
+                }
+
+                $target = 'UPDATE ' . $targetTable . ($targetAlias === '' ? '' : ' AS ' . $targetAlias);
+                $source = $joinedTable . ($joinedAlias === '' ? '' : ' AS ' . $joinedAlias);
+                $conditions = ['(' . trim($matches[5]) . ')'];
+                if (isset($matches[7]) && trim($matches[7]) !== '') {
+                    $conditions[] = '(' . trim($matches[7]) . ')';
+                }
+                $this->appliedRules['update_inner_join_to_from'] = ($this->appliedRules['update_inner_join_to_from'] ?? 0) + 1;
+
+                return $target . ' SET ' . implode(', ', $assignments) . ' FROM ' . $source . ' WHERE ' . implode(' AND ', $conditions) . ($matches[8] ?? '');
+            }
+
             private function isSqlOffsetOutsideQuotes(string $sql, int $position): bool
             {
                 $quote = null;
@@ -1531,6 +1580,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
+                    $sql = $this->rewriteUpdateInnerJoin($sql);
                     $sql = $this->rewriteDerivedUpdateJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
                     $sql = $this->rewriteInsertIgnore($sql);
