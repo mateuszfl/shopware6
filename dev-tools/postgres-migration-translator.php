@@ -583,6 +583,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         static fn (array $matches): string => $matches[1] . 'TIMESTAMP' . (($matches[2] ?? '') === '' ? '' : '(' . $matches[2] . ')') . ' WITHOUT TIME ZONE',
                         $statement
                     );
+                    $this->replace(
+                        'alter_double_to_double_precision',
+                        '/(\b(?:ADD(?:\s+COLUMN)?|MODIFY(?:\s+COLUMN)?|CHANGE(?:\s+COLUMN)?)\s+' . $identifier . '(?:\s+' . $identifier . ')?\s+)DOUBLE(?!\s+PRECISION)(?=\s+(?:NULL|NOT\s+NULL|DEFAULT|UNSIGNED|COLLATE|COMMENT|AFTER)\b|\s*[,;]|\s*$)/i',
+                        '$1DOUBLE PRECISION',
+                        $statement
+                    );
                     $this->replace('alter_tinyint_to_smallint', '/\bTINYINT(?:\s*\(\s*\d+\s*\))?(?![A-Za-z0-9_])/i', 'SMALLINT', $statement);
                     // Only match types immediately following an ALTER column operation.
                     // Keeping the operation and column identifiers in the pattern avoids
