@@ -1281,6 +1281,28 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteCmsSlotJsonPathPresence(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1711418838ReplaceSortingOptionKeysWithSortingOptionIdsInCmsSlots.php') {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'mysql_json_contains_path_to_jsonb_path_presence',
+                    '/JSON_CONTAINS_PATH\s*\(\s*config\s*,\s*[\'\"]one[\'\"]\s*,\s*[\'\"]\$\.defaultSorting[\'\"]\s*\)/i',
+                    "config #> '{defaultSorting}' IS NOT NULL",
+                    $sql
+                );
+                $this->replace(
+                    'mysql_json_contains_path_to_jsonb_path_presence',
+                    '/JSON_CONTAINS_PATH\s*\(\s*config\s*,\s*[\'\"]one[\'\"]\s*,\s*[\'\"]\$\.availableSortings[\'\"]\s*\)/i',
+                    "config #> '{availableSortings}' IS NOT NULL",
+                    $sql
+                );
+
+                return $sql;
+            }
+
             private function rewriteGroupConcatCalls(string $sql): string
             {
                 $searchOffset = 0;
@@ -2839,6 +2861,7 @@ SQL;
                     $sql = $this->rewriteUpdateIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
+                    $sql = $this->rewriteCmsSlotJsonPathPresence($sql);
                     $sql = $this->rewriteJsonExtractCalls($sql);
                     $sql = $this->rewriteGroupConcatCalls($sql);
                     $sql = $this->rewriteUnhexCalls($sql);
