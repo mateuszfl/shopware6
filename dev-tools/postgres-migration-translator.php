@@ -2416,6 +2416,42 @@ SQL;
                     $this->appliedRules['diagnostic_mail_footer_uuid_bindings'] = ($this->appliedRules['diagnostic_mail_footer_uuid_bindings'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1730191192UpdateDefaultSalutation.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'salutationId') {
+                    $missingSalutationStatements = $node->stmts;
+                    $node->cond = new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Variable('salutationId'))]);
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('salutationId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('salutationId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(new Node\Expr\BooleanNot(new Node\Expr\Variable('salutationId')), $missingSalutationStatements)];
+                    $this->appliedRules['diagnostic_salutation_uuid_stream_read_before_guard'] = ($this->appliedRules['diagnostic_salutation_uuid_stream_read_before_guard'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1730191192UpdateDefaultSalutation.php'
+                    && $this->currentMethodName === 'updateSalutation'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'executeStatement'
+                    && isset($node->args[1])
+                    && $node->args[1]->value instanceof Node\Expr\Array_
+                    && isset($node->args[2])
+                    && $node->args[2]->value instanceof Node\Expr\Array_
+                    && !array_filter($node->args[2]->value->items, static fn ($item): bool => $item?->key instanceof Node\Scalar\String_ && $item->key->value === 'salutationId')) {
+                    $node->args[2]->value->items[] = new Node\Expr\ArrayItem(
+                        new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
+                        new Node\Scalar\String_('salutationId')
+                    );
+                    $this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] = ($this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1715081559AdjustSentMailActionOnReviewSent.php'
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Expr\MethodCall
