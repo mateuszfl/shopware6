@@ -563,6 +563,56 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'INSERT INTO ' . $table . ' (' . $columnList . ') VALUES (' . $valueList . ') ON CONFLICT DO NOTHING' . $suffixMatch[1];
             }
 
+            private function rewriteUpdateIgnore(string $sql): string
+            {
+                if (!preg_match('/^(\\s*)UPDATE\\s+IGNORE\\b/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $rewritten = preg_replace('/^(\\s*)UPDATE\\s+IGNORE\\b/i', '$1UPDATE', $sql, 1);
+                if ($rewritten === null) {
+                    return $sql;
+                }
+
+                $this->unsupported[] = 'UPDATE IGNORE translated without MySQL invalid-row warning semantics';
+                $this->appliedRules['diagnostic_update_ignore_removed'] = ($this->appliedRules['diagnostic_update_ignore_removed'] ?? 0) + 1;
+
+                return $rewritten;
+            }
+
+            private function rewriteUnhexCalls(string $sql): string
+            {
+                $searchOffset = 0;
+                while (preg_match('/\\bUNHEX\\s*\\(/i', $sql, $match, PREG_OFFSET_CAPTURE, $searchOffset)) {
+                    $start = $match[0][1];
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $start)) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $open = strpos($sql, '(', $start);
+                    $close = $open === false ? null : $this->findClosingParenthesis($sql, $open);
+                    if ($close === null) {
+                        $searchOffset = $start + strlen($match[0][0]);
+
+                        continue;
+                    }
+                    $argument = trim(substr($sql, $open + 1, $close - $open - 1));
+                    if ($argument === '' || count($this->splitSqlCommaList($argument)) !== 1) {
+                        $this->unsupported[] = 'UNHEX call has an unsupported argument list';
+                        $searchOffset = $close + 1;
+
+                        continue;
+                    }
+                    $replacement = "decode(" . $argument . ", 'hex')";
+                    $sql = substr_replace($sql, $replacement, $start, $close - $start + 1);
+                    $this->appliedRules['unhex_to_decode_hex'] = ($this->appliedRules['unhex_to_decode_hex'] ?? 0) + 1;
+                    $searchOffset = $start + strlen($replacement);
+                }
+
+                return $sql;
+            }
+
             private function rewriteShowIndexes(string $sql): string
             {
                 if (!preg_match('/^\\s*SHOW\\s+(?:INDEXES|INDEX|KEYS)\\s+(?:IN|FROM)\\b/i', $sql)) {
@@ -2011,10 +2061,12 @@ SQL;
                     $sql = $this->rewriteReplaceIntoSet($sql);
                     $sql = $this->rewriteReplaceIntoValues($sql);
                     $sql = $this->rewriteInsertIgnore($sql);
+                    $sql = $this->rewriteUpdateIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
                     $sql = $this->rewriteJsonExtractCalls($sql);
                     $sql = $this->rewriteGroupConcatCalls($sql);
+                    $sql = $this->rewriteUnhexCalls($sql);
                     $sql = $this->rewriteLowerHexBinaryIdentifiers($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                     $sql = $this->rewriteJsonEmptyStringComparison($sql);
