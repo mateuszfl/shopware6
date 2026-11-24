@@ -2157,6 +2157,18 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteMediaThumbnailPathMultiTableUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1697462064FixMediaPath.php'
+                    || !preg_match('/^\s*UPDATE\s+`?media_thumbnail`?\s*,\s*`?media`?\s+SET\s+`?media_thumbnail`?\.`?path`?\s*=\s*NULL\s+WHERE\s+\(\s*`?media`?\.`?file_name`?\s+IS\s+NULL\s+OR\s+`?file_name`?\s*=\s*\'\'\s*\)\s+AND\s+`?media`?\.`?id`?\s*=\s*`?media_thumbnail`?\.`?media_id`?\s*;?\s*$/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_media_thumbnail_multi_table_update_to_from'] = ($this->appliedRules['mysql_media_thumbnail_multi_table_update_to_from'] ?? 0) + 1;
+
+                return "UPDATE media_thumbnail SET path = NULL FROM media WHERE (media.file_name IS NULL OR media.file_name = '') AND media.id = media_thumbnail.media_id";
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2687,6 +2699,7 @@ SQL;
                     $sql = $this->rewriteCustomerAddressStreetChunkUpdate($sql);
                     $sql = $this->rewritePaymentShippingTechnicalNameConstraints($sql);
                     $sql = $this->rewritePaymentShippingTechnicalNameUpdates($sql);
+                    $sql = $this->rewriteMediaThumbnailPathMultiTableUpdate($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
