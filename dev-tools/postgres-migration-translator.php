@@ -2067,9 +2067,11 @@ SQL;
                     && $node->name->toString() === 'addInsert'
                     && isset($node->args[1])
                     && !isset($node->args[2])) {
-                    $keys = $this->classFile === 'Migration1625583619MoveDataFromEventActionToFlow.php'
-                        ? ['id', 'flow_id', 'rule_id', 'parent_id', 'sales_channel_id']
-                        : $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
+                    $keys = match ($this->classFile) {
+                        'Migration1625583619MoveDataFromEventActionToFlow.php' => ['id', 'flow_id', 'rule_id', 'parent_id', 'sales_channel_id'],
+                        'Migration1659257296GenerateFlowTemplateDataFromEventAction.php' => ['id'],
+                        default => $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value)),
+                    };
                     if ($keys !== []) {
                         $typeItems = [];
                         foreach ($keys as $key) {
