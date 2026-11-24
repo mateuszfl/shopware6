@@ -358,6 +358,90 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'DELETE FROM ' . $matches[2] . ' AS ' . $matches[3] . ' USING ' . $matches[4] . ' AS ' . $matches[5] . ' WHERE ' . $matches[6] . $matches[7];
             }
 
+            private function isSqlOffsetOutsideQuotes(string $sql, int $position): bool
+            {
+                $quote = null;
+                for ($index = 0; $index < $position; ++$index) {
+                    $character = $sql[$index];
+                    $next = $sql[$index + 1] ?? '';
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if (($character === '-' && $next === '-') || ($character === '/' && $next === '*')) {
+                        $endMarker = $character === '-' ? "\n" : '*/';
+                        $end = strpos($sql, $endMarker, $index + 2);
+                        if ($end === false || $end >= $position) {
+                            return false;
+                        }
+                        $index = $end + strlen($endMarker) - 1;
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+                    }
+                }
+
+                return $quote === null;
+            }
+
+            private function rewriteLikeIdentifierOperands(string $sql): string
+            {
+                $identifierPart = '(?:"(?:[^"\\r\\n]|"")*"|`(?:[^`\\r\\n]|``)*`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $identifier = $identifierPart . '(?:\\s*\\.\\s*' . $identifierPart . ')*';
+                $string = '\'(?:\'\'|[^\'])*\'';
+                $operand = '(?:' . $identifier . '|' . $string . ')';
+                $pattern = '/(' . $operand . ')(\\s+)(NOT\\s+)?(LIKE)(\\s+)(' . $operand . ')/i';
+                if (!preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                    return $sql;
+                }
+
+                $changes = [];
+                foreach ($matches as $match) {
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $match[4][1])) {
+                        continue;
+                    }
+                    $left = $match[1][0];
+                    $right = $match[6][0];
+                    $leftIsIdentifier = preg_match('/\\A' . $identifier . '\\z/i', $left) === 1;
+                    $rightIsIdentifier = preg_match('/\\A' . $identifier . '\\z/i', $right) === 1;
+                    if (!$leftIsIdentifier && !$rightIsIdentifier) {
+                        continue;
+                    }
+                    if ($leftIsIdentifier) {
+                        $left = 'CAST(' . $left . ' AS TEXT)';
+                    }
+                    if ($rightIsIdentifier) {
+                        $right = 'CAST(' . $right . ' AS TEXT)';
+                    }
+
+                    $replacement = $left . $match[2][0] . $match[3][0] . $match[4][0] . $match[5][0] . $right;
+                    $changes[] = [$match[0][1], strlen($match[0][0]), $replacement];
+                }
+                foreach (array_reverse($changes) as [$offset, $length, $replacement]) {
+                    $sql = substr_replace($sql, $replacement, $offset, $length);
+                }
+                if ($changes !== []) {
+                    $this->appliedRules['json_like_identifier_operand_cast_to_text'] = ($this->appliedRules['json_like_identifier_operand_cast_to_text'] ?? 0) + count($changes);
+                }
+
+                return $sql;
+            }
+
             /** @return list<string> */
             private function getInsertDataKeys(Node\Expr $expression): array
             {
@@ -991,6 +1075,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
+                    $sql = $this->rewriteLikeIdentifierOperands($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
@@ -998,12 +1083,6 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         'check_json_valid_to_native_json_validation',
                         '/\bCHECK\s*\(\s*JSON_VALID\s*\(\s*(?:"[^"\r\n]+"|`[^`\r\n]+`)\s*\)\s*\)/i',
                         'CHECK (TRUE)',
-                        $sql
-                    );
-                    $this->replace(
-                        'json_config_like_cast_to_text',
-                        '/(?<![A-Za-z0-9_])(?:"config"|`config`|config)(?![A-Za-z0-9_])\\s+LIKE\\s+(\'(?:\'\'|[^\'])*\')/i',
-                        static fn (array $matches): string => 'CAST("config" AS TEXT) LIKE ' . $matches[1],
                         $sql
                     );
                 }
