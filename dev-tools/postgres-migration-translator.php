@@ -850,6 +850,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         'CHECK (TRUE)',
                         $sql
                     );
+                    $this->replace(
+                        'json_config_like_cast_to_text',
+                        '/(?<![A-Za-z0-9_])(?:"config"|`config`|config)(?![A-Za-z0-9_])\\s+LIKE\\s+(\'(?:\'\'|[^\'])*\')/i',
+                        static fn (array $matches): string => 'CAST("config" AS TEXT) LIKE ' . $matches[1],
+                        $sql
+                    );
                 }
                 $this->replace(
                     'comparison_double_quoted_literal_to_single_quoted',
