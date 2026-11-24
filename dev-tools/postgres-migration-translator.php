@@ -612,6 +612,14 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     }
 
                     $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                    $indexColumns = $identifier . '(?:\s*,\s*' . $identifier . ')*';
+                    if (preg_match('/^\s*ALTER\s+TABLE\s+(' . $identifier . ')\s+ADD\s+(UNIQUE\s+)?(?:INDEX|KEY)\s+(' . $identifier . ')\s*\(\s*(' . $indexColumns . ')\s*\)\s*;?\s*$/i', $statement, $indexMatch)) {
+                        $unique = ($indexMatch[2] ?? '') !== '' ? 'UNIQUE ' : '';
+                        $rewritten .= 'CREATE ' . $unique . 'INDEX ' . $indexMatch[3] . ' ON ' . $indexMatch[1] . ' (' . $indexMatch[4] . ');';
+                        $this->appliedRules['alter_add_index_to_create_index'] = ($this->appliedRules['alter_add_index_to_create_index'] ?? 0) + 1;
+
+                        continue;
+                    }
                     $this->replace(
                         'alter_add_unique_to_constraint',
                         '/\bADD\s+UNIQUE\s+(?:(?:KEY|INDEX)\s+)?' . $identifier . '\s*\(\s*' . $identifier . '(?:\s*,\s*' . $identifier . ')*\s*\)/i',
