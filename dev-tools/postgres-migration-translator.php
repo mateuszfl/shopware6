@@ -496,6 +496,38 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 }
                 $columnList = trim(substr($sql, $openColumns + 1, $closeColumns - $openColumns - 1));
                 $tail = substr($sql, $closeColumns + 1);
+                if (preg_match('/^\\s*SELECT\\b/i', $tail)) {
+                    $columnParts = $this->splitSqlCommaList($columnList);
+                    foreach ($columnParts as $columnPart) {
+                        if (!preg_match('/^\\s*' . $identifier . '\\s*$/', $columnPart)) {
+                            $this->unsupported[] = 'INSERT IGNORE SELECT contains a complex column list';
+
+                            return $sql;
+                        }
+                    }
+                    $statements = array_values(array_filter($this->splitSqlStatements($sql), static fn (string $statement): bool => trim($statement) !== ''));
+                    if (count($statements) !== 1) {
+                        $this->unsupported[] = 'INSERT IGNORE SELECT contains multiple statements';
+
+                        return $sql;
+                    }
+
+                    $rewritten = preg_replace('/^(\\s*)INSERT\\s+IGNORE\\s+INTO\\b/i', '$1INSERT INTO', $sql, 1);
+                    if ($rewritten === null) {
+                        $this->unsupported[] = 'INSERT IGNORE SELECT could not be rewritten';
+
+                        return $sql;
+                    }
+                    if (preg_match('/;(\\s*)$/', $rewritten, $semicolon, PREG_OFFSET_CAPTURE)) {
+                        $offset = $semicolon[0][1];
+                        $rewritten = substr_replace($rewritten, ' ON CONFLICT DO NOTHING;', $offset, strlen($semicolon[0][0]));
+                    } else {
+                        $rewritten = rtrim($rewritten) . ' ON CONFLICT DO NOTHING';
+                    }
+                    $this->appliedRules['diagnostic_insert_ignore_select_to_on_conflict'] = ($this->appliedRules['diagnostic_insert_ignore_select_to_on_conflict'] ?? 0) + 1;
+
+                    return $rewritten;
+                }
                 if (!preg_match('/^\\s*VALUES\\s*\\(/i', $tail, $valuesStart)) {
                     $this->unsupported[] = 'INSERT IGNORE supports only a simple VALUES tuple';
 
