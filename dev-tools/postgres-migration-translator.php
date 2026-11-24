@@ -310,6 +310,138 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'INSERT INTO ' . $matches[1] . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')' . $matches[3];
             }
 
+            /** @return list<string> */
+            private function splitSqlCommaList(string $value): array
+            {
+                $parts = [];
+                $start = 0;
+                $depth = 0;
+                $quote = null;
+                for ($index = 0; $index < strlen($value); ++$index) {
+                    $character = $value[$index];
+                    $next = $value[$index + 1] ?? '';
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if (($character === '-' && $next === '-') || ($character === '/' && $next === '*')) {
+                        $endMarker = $character === '-' ? "\n" : '*/';
+                        $end = strpos($value, $endMarker, $index + 2);
+                        if ($end === false) {
+                            return [];
+                        }
+                        $index = $end + strlen($endMarker) - 1;
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+
+                        continue;
+                    }
+                    if ($character === '(') {
+                        ++$depth;
+                    } elseif ($character === ')') {
+                        --$depth;
+                    } elseif ($character === ',' && $depth === 0) {
+                        $parts[] = substr($value, $start, $index - $start);
+                        $start = $index + 1;
+                    }
+                }
+                $parts[] = substr($value, $start);
+
+                return $parts;
+            }
+
+            private function rewriteInsertIgnore(string $sql): string
+            {
+                if (!preg_match('/^\\s*INSERT\\s+IGNORE\\s+INTO\\b/i', $sql)) {
+                    return $sql;
+                }
+
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                if (preg_match('/^\\s*INSERT\\s+IGNORE\\s+INTO\\s+(' . $identifier . ')\\s+SET\\s+([\\s\\S]*?)\\s*(;?)\\s*$/i', $sql, $setMatch)) {
+                    $columns = [];
+                    $values = [];
+                    foreach ($this->splitSqlCommaList($setMatch[2]) as $assignment) {
+                        if (!preg_match('/^\\s*(' . $identifier . ')\\s*=\\s*([\\s\\S]*?)\\s*$/', $assignment, $parts) || $parts[2] === '') {
+                            $this->unsupported[] = 'INSERT IGNORE INTO SET contains an unsupported assignment';
+
+                            return $sql;
+                        }
+                        $columns[] = $parts[1];
+                        $values[] = $parts[2];
+                    }
+                    $this->unsupported[] = 'INSERT IGNORE translated as ON CONFLICT DO NOTHING; MySQL warning semantics for other invalid values are not represented';
+                    $this->appliedRules['diagnostic_insert_ignore_set_to_on_conflict'] = ($this->appliedRules['diagnostic_insert_ignore_set_to_on_conflict'] ?? 0) + 1;
+
+                    return 'INSERT INTO ' . $setMatch[1] . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ') ON CONFLICT DO NOTHING' . $setMatch[3];
+                }
+
+                $startPattern = '/^\\s*INSERT\\s+IGNORE\\s+INTO\\s+(' . $identifier . ')\\s*\\(/i';
+                if (!preg_match($startPattern, $sql, $insertMatch, PREG_OFFSET_CAPTURE)) {
+                    $this->unsupported[] = 'INSERT IGNORE uses an unsupported form';
+
+                    return $sql;
+                }
+                $table = $insertMatch[1][0];
+                $openColumns = strpos($sql, '(', $insertMatch[0][1]);
+                $closeColumns = $openColumns === false ? null : $this->findClosingParenthesis($sql, $openColumns);
+                if ($closeColumns === null) {
+                    $this->unsupported[] = 'INSERT IGNORE has an unterminated column list';
+
+                    return $sql;
+                }
+                $columnList = trim(substr($sql, $openColumns + 1, $closeColumns - $openColumns - 1));
+                $tail = substr($sql, $closeColumns + 1);
+                if (!preg_match('/^\\s*VALUES\\s*\\(/i', $tail, $valuesStart)) {
+                    $this->unsupported[] = 'INSERT IGNORE supports only a simple VALUES tuple';
+
+                    return $sql;
+                }
+                $openValues = strpos($tail, '(', $valuesStart[0] === '' ? 0 : strlen($valuesStart[0]) - 1);
+                $closeValues = $openValues === false ? null : $this->findClosingParenthesis($tail, $openValues);
+                if ($closeValues === null || !preg_match('/^\\s*(;?)\\s*$/', substr($tail, $closeValues + 1), $suffixMatch)) {
+                    $this->unsupported[] = 'INSERT IGNORE has a complex VALUES suffix';
+
+                    return $sql;
+                }
+
+                $columnParts = $this->splitSqlCommaList($columnList);
+                $valueList = substr($tail, $openValues + 1, $closeValues - $openValues - 1);
+                $valueParts = $this->splitSqlCommaList($valueList);
+                foreach ($columnParts as $columnPart) {
+                    if (!preg_match('/^\\s*' . $identifier . '\\s*$/', $columnPart)) {
+                        $this->unsupported[] = 'INSERT IGNORE contains a complex column list';
+
+                        return $sql;
+                    }
+                }
+                if ($columnParts === [] || count($columnParts) !== count($valueParts)) {
+                    $this->unsupported[] = 'INSERT IGNORE column and value counts do not match';
+
+                    return $sql;
+                }
+
+                $this->unsupported[] = 'INSERT IGNORE translated as ON CONFLICT DO NOTHING; MySQL warning semantics for other invalid values are not represented';
+                $this->appliedRules['diagnostic_insert_ignore_values_to_on_conflict'] = ($this->appliedRules['diagnostic_insert_ignore_values_to_on_conflict'] ?? 0) + 1;
+
+                return 'INSERT INTO ' . $table . ' (' . $columnList . ') VALUES (' . $valueList . ') ON CONFLICT DO NOTHING' . $suffixMatch[1];
+            }
+
             private function rewriteShowIndexes(string $sql): string
             {
                 if (!preg_match('/^\\s*SHOW\\s+(?:INDEXES|INDEX|KEYS)\\s+(?:IN|FROM)\\b/i', $sql)) {
@@ -1308,6 +1440,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
+                    $sql = $this->rewriteInsertIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
