@@ -2152,6 +2152,27 @@ SQL;
                     $this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] = ($this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1689257577AddMissingTransactionMailFlow.php'
+                    && $this->currentMethodName === 'getMailTemplates'
+                    && $node instanceof Node\Stmt\Return_
+                    && $node->expr instanceof Node\Expr\MethodCall
+                    && $node->expr->name instanceof Node\Identifier
+                    && $node->expr->name->toString() === 'fetchOne'
+                    && isset($node->expr->args[0])
+                    && $node->expr->args[0]->value instanceof Node\Scalar\String_
+                    && str_contains($node->expr->args[0]->value->value, 'SELECT id FROM mail_template WHERE mail_template_type_id')) {
+                    $result = new Node\Expr\Variable('diagnosticMailTemplateId');
+                    $node->expr = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Assign($result, $node->expr))]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('diagnosticMailTemplateId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        )),
+                        new Node\Expr\Variable('diagnosticMailTemplateId')
+                    );
+                    $this->appliedRules['diagnostic_transaction_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_transaction_flow_template_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1659257396DownloadFlow.php'
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Stmt\If_
