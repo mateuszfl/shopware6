@@ -84,7 +84,7 @@ class DomainLoader extends AbstractDomainLoader
         $query->leftJoin('theme_sales_channel', 'theme', 'theme', 'theme_sales_channel.theme_id = theme.id');
         $query->leftJoin('theme', 'theme', 'parentTheme', 'theme.parent_theme_id = parentTheme.id');
         $query->where('sales_channel.type_id = :typeId');
-        $query->andWhere('sales_channel.active');
+        $query->andWhere('sales_channel.active = 1');
         $query->setParameter('typeId', Uuid::fromHexToBytes(Defaults::SALES_CHANNEL_TYPE_STOREFRONT), ParameterType::BINARY);
 
         /** @var array<string, Domain> $domains */
