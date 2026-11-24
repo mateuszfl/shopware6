@@ -2217,6 +2217,31 @@ SQL;
                     $this->appliedRules['diagnostic_country_id_stream_read_before_queue'] = ($this->appliedRules['diagnostic_country_id_stream_read_before_queue'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'configurationId') {
+                    $missingConfigurationStatements = $node->stmts;
+                    $node->cond = new Node\Expr\FuncCall(
+                        new Node\Name\FullyQualified('is_resource'),
+                        [new Node\Arg(new Node\Expr\Variable('configurationId'))]
+                    );
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('configurationId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('configurationId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(
+                        new Node\Expr\BooleanNot(new Node\Expr\Variable('configurationId')),
+                        $missingConfigurationStatements
+                    )];
+                    $this->appliedRules['diagnostic_thumbnail_configuration_uuid_stream_read'] = ($this->appliedRules['diagnostic_thumbnail_configuration_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1675218708UpdateDeliverOrderedProductDownloadsFlowTemplate.php'
                     && $node instanceof Node\Expr\StaticCall
                     && $node->class instanceof Node\Name
@@ -2332,6 +2357,21 @@ SQL;
                             $this->appliedRules['diagnostic_add_column_integer_type_normalized'] = ($this->appliedRules['diagnostic_add_column_integer_type_normalized'] ?? 0) + 1;
                         }
                     }
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1687462843ProductManufacturerMediaThumbnails.php'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'bindValue'
+                    && isset($node->args[0])
+                    && $node->args[0]->value instanceof Node\Scalar\String_
+                    && in_array($node->args[0]->value->value, ['folderConfigurationId', 'thumbnailSizeId'], true)
+                    && !isset($node->args[2])) {
+                    $node->args[] = new Node\Arg(new Node\Expr\ClassConstFetch(
+                        new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'),
+                        'BINARY'
+                    ));
+                    $this->appliedRules['diagnostic_thumbnail_relation_uuid_bindings'] = ($this->appliedRules['diagnostic_thumbnail_relation_uuid_bindings'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1677470540AddProvincesForCanada.php'
