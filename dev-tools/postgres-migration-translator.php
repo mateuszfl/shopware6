@@ -2474,6 +2474,25 @@ SQL;
                     $this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] = ($this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1736824370MigrationMailTemplateForDocument.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'mailTemplateId') {
+                    $missingMailTemplateStatements = $node->stmts;
+                    $node->cond = new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Variable('mailTemplateId'))]);
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('mailTemplateId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('mailTemplateId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(new Node\Expr\BooleanNot(new Node\Expr\Variable('mailTemplateId')), $missingMailTemplateStatements)];
+                    $this->appliedRules['diagnostic_document_mail_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_document_mail_template_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1715081559AdjustSentMailActionOnReviewSent.php'
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Expr\MethodCall
