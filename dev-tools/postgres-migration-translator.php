@@ -118,6 +118,8 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             private string $classFile;
             /** @var array<string, list<string>> */
             private array $methodArrayKeys = [];
+            /** @var array<string, list<string>> */
+            private array $methodPropertyArrayKeys = [];
             /** @var array<string, bool> */
             private array $methodUuidVariables = [];
             /** @var array<string, list<string>> */
@@ -1245,6 +1247,12 @@ SQL;
                 if ($expression instanceof Node\Expr\Variable && is_string($expression->name)) {
                     return $this->methodArrayKeys[$expression->name] ?? [];
                 }
+                if ($expression instanceof Node\Expr\PropertyFetch
+                    && $expression->var instanceof Node\Expr\Variable
+                    && $expression->var->name === 'this'
+                    && $expression->name instanceof Node\Identifier) {
+                    return $this->methodPropertyArrayKeys[$expression->name->toString()] ?? [];
+                }
                 if (!$expression instanceof Node\Expr\Array_) {
                     return [];
                 }
@@ -1792,6 +1800,7 @@ SQL;
             {
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\ClassMethod) {
                     $this->methodArrayKeys = [];
+                    $this->methodPropertyArrayKeys = [];
                     $this->methodUuidVariables = [];
                     $this->methodUuidRowColumns = [];
                     $this->methodUuidArrays = [];
@@ -1819,6 +1828,15 @@ SQL;
                         $column = $node->expr->args[1]->value->value;
                         $this->methodUuidArrays[$node->var->name] = in_array($column, $this->methodUuidRowColumns[$sourceName] ?? [], true);
                     }
+                }
+                if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
+                    && $node->var instanceof Node\Expr\ArrayDimFetch
+                    && $node->var->var instanceof Node\Expr\PropertyFetch
+                    && $node->var->var->var instanceof Node\Expr\Variable
+                    && $node->var->var->var->name === 'this'
+                    && $node->var->var->name instanceof Node\Identifier
+                    && $node->expr instanceof Node\Expr\Array_) {
+                    $this->methodPropertyArrayKeys[$node->var->var->name->toString()] = $this->getInsertDataKeys($node->expr);
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\Foreach_
                     && $node->valueVar instanceof Node\Expr\Variable
@@ -1849,6 +1867,24 @@ SQL;
                     }
                     if (in_array($methodName, ['executeQuery', 'executeStatement', 'fetchAllAssociative', 'fetchAssociative', 'fetchOne', 'fetchFirstColumn'], true)) {
                         $this->addBinaryTypesToQueryCall($node);
+                    }
+                }
+                if ($this->diagnosticMode && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'addInsert'
+                    && isset($node->args[1])
+                    && !isset($node->args[2])) {
+                    $keys = $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
+                    if ($keys !== []) {
+                        $typeItems = [];
+                        foreach ($keys as $key) {
+                            $typeItems[] = new Node\Expr\ArrayItem(
+                                new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
+                                new Node\Scalar\String_($key)
+                            );
+                        }
+                        $node->args[] = new Node\Arg(new Node\Expr\Array_($typeItems));
+                        $this->appliedRules['diagnostic_multi_insert_uuid_columns_bind_as_binary'] = ($this->appliedRules['diagnostic_multi_insert_uuid_columns_bind_as_binary'] ?? 0) + count($keys);
                     }
                 }
                 if ($this->diagnosticMode
