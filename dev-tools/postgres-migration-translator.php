@@ -2213,6 +2213,28 @@ SQL;
                 return "UPDATE media_thumbnail SET path = NULL FROM media WHERE (media.file_name IS NULL OR media.file_name = '') AND media.id = media_thumbnail.media_id";
             }
 
+            private function rewriteEuCountryBooleanLiterals(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1718615305AddEuToCountryTable.php') {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'mysql_boolean_numeric_literals_to_boolean_keywords',
+                    '/(\bBOOLEAN\s+NOT\s+NULL\s+DEFAULT\s+)0\b/i',
+                    '$1FALSE',
+                    $sql
+                );
+                $this->replace(
+                    'mysql_boolean_numeric_literals_to_boolean_keywords',
+                    '/(\bSET\s+`?is_eu`?\s*=\s*)1\b/i',
+                    '$1TRUE',
+                    $sql
+                );
+
+                return $sql;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2890,6 +2912,7 @@ SQL;
                     $sql = $this->rewritePaymentShippingTechnicalNameConstraints($sql);
                     $sql = $this->rewritePaymentShippingTechnicalNameUpdates($sql);
                     $sql = $this->rewriteMediaThumbnailPathMultiTableUpdate($sql);
+                    $sql = $this->rewriteEuCountryBooleanLiterals($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
