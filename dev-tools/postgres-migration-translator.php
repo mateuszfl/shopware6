@@ -1998,6 +1998,33 @@ SQL;
                     );
                     $this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] = ($this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] ?? 0) + 1;
                 }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1659257396DownloadFlow.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BinaryOp\Identical
+                    && $node->cond->left instanceof Node\Expr\Variable
+                    && $node->cond->left->name === 'templateId'
+                    && $node->cond->right instanceof Node\Expr\ConstFetch
+                    && strtolower($node->cond->right->name->toString()) === 'false') {
+                    $result = new Node\Expr\Variable('templateId');
+                    $node->cond = new Node\Expr\FuncCall(
+                        new Node\Name\FullyQualified('is_resource'),
+                        [new Node\Arg($result)]
+                    );
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('templateId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('templateId'))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(
+                        new Node\Expr\BinaryOp\Identical(new Node\Expr\Variable('templateId'), new Node\Expr\ConstFetch(new Node\Name('false'))),
+                        [new Node\Stmt\Expression(new Node\Expr\Assign(new Node\Expr\Variable('templateId'), new Node\Expr\ConstFetch(new Node\Name('null'))))]
+                    )];
+                    $this->appliedRules['diagnostic_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_flow_template_uuid_stream_read'] ?? 0) + 1;
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
                     && $node->var instanceof Node\Expr\Variable
                     && is_string($node->var->name)) {
