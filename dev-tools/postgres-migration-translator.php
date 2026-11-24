@@ -983,6 +983,18 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteInvalidFlowSequenceDistinct(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1648803451FixInvalidMigrationOfBusinessEventToFlow.php'
+                    || !preg_match('/^(\\s*)SELECT\\s+DISTINCT\\s+(HEX\\s*\\(\\s*`flow`\\s*\\.\\s*`id`\\s*\\))\\s*,/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['flow_sequence_distinct_to_distinct_on_ids'] = ($this->appliedRules['flow_sequence_distinct_to_distinct_on_ids'] ?? 0) + 1;
+
+                return $matches[1] . 'SELECT DISTINCT ON (`flow`.`id`, `flow_sequence`.`id`) ' . $matches[2] . ',' . substr($sql, strlen($matches[0]));
+            }
+
             private function rewriteJsonReplaceUpdate(string $sql): string
             {
                 $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
@@ -2096,6 +2108,7 @@ SQL;
                     $sql = $this->rewriteJsonExtractCalls($sql);
                     $sql = $this->rewriteGroupConcatCalls($sql);
                     $sql = $this->rewriteUnhexCalls($sql);
+                    $sql = $this->rewriteInvalidFlowSequenceDistinct($sql);
                     $sql = $this->rewriteLowerHexBinaryIdentifiers($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                     $sql = $this->rewriteJsonEmptyStringComparison($sql);
