@@ -2248,6 +2248,34 @@ SQL;
                     $this->methodUuidVariables = [];
                     $this->methodUuidRowColumns = [];
                     $this->methodUuidArrays = [];
+                    if ($this->classFile === 'Migration1698682149MakeTranslatableFieldsNullable.php'
+                        && $this->currentMethodName === 'update') {
+                        $format = new Node\Scalar\String_('ALTER TABLE %1$s ALTER COLUMN %2$s DROP NOT NULL, ALTER COLUMN %2$s DROP DEFAULT');
+                        $formatCall = new Node\Expr\FuncCall(new Node\Name('sprintf'), [
+                            new Node\Arg($format),
+                            new Node\Arg(new Node\Expr\Variable('table')),
+                            new Node\Arg(new Node\Expr\Variable('column')),
+                        ]);
+                        $execute = new Node\Stmt\Expression(new Node\Expr\MethodCall(
+                            new Node\Expr\Variable('connection'),
+                            'executeStatement',
+                            [new Node\Arg($formatCall)]
+                        ));
+                        $innerLoop = new Node\Stmt\Foreach_(
+                            new Node\Expr\Variable('columns'),
+                            new Node\Expr\Variable('column'),
+                            ['stmts' => [$execute]]
+                        );
+                        $node->stmts = [new Node\Stmt\Foreach_(
+                            new Node\Expr\PropertyFetch(new Node\Expr\Variable('this'), 'toUpdate'),
+                            new Node\Expr\Variable('columns'),
+                            ['keyVar' => new Node\Expr\Variable('table'), 'stmts' => [$innerLoop]]
+                        )];
+                        $this->appliedRules['diagnostic_translatable_fields_nullable_only'] = 1;
+                    } elseif ($this->classFile === 'Migration1698682149MakeTranslatableFieldsNullable.php'
+                        && $this->currentMethodName === 'getFieldType') {
+                        $node->stmts = [];
+                    }
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1657173907DownloadMailTemplate.php'
@@ -2653,7 +2681,14 @@ SQL;
                 if ($node instanceof Node\Expr\FuncCall && $node->name instanceof Node\Name && strtolower($node->name->toString()) === 'sprintf') {
                     $format = $node->args[0]->value ?? null;
                     if ($format instanceof Node\Scalar\String_ && preg_match(self::SQL, $format->value)) {
-                        $this->unsupported[] = 'formatted dynamic SQL';
+                        if ($this->diagnosticMode
+                            && $this->classFile === 'Migration1698682149MakeTranslatableFieldsNullable.php'
+                            && $this->currentMethodName === 'update'
+                            && preg_match('/^ALTER TABLE %1\$s ALTER COLUMN %2\$s DROP NOT NULL, ALTER COLUMN %2\$s DROP DEFAULT$/i', $format->value)) {
+                            $this->appliedRules['diagnostic_translatable_fields_nullable_only'] = ($this->appliedRules['diagnostic_translatable_fields_nullable_only'] ?? 0) + 1;
+                        } else {
+                            $this->unsupported[] = 'formatted dynamic SQL';
+                        }
                     }
                 }
                 if ($node instanceof Node\Expr\BinaryOp\Concat) {
@@ -2814,6 +2849,18 @@ SQL;
                     ++$this->translated;
                     $node->value = $converted;
                 }
+                return null;
+            }
+
+            public function leaveNode(Node $node)
+            {
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1698682149MakeTranslatableFieldsNullable.php'
+                    && $node instanceof Node\Stmt\ClassMethod
+                    && $node->name->toString() === 'getFieldType') {
+                    return NodeTraverser::REMOVE_NODE;
+                }
+
                 return null;
             }
         };
