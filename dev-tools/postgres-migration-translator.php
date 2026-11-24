@@ -1947,6 +1947,18 @@ SQL;
 
             public function enterNode(Node $node): ?Node
             {
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1654839361ProductDownloadMedia.php'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'folderId') {
+                    array_unshift($node->stmts, new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('folderId'),
+                        new Node\Expr\StaticCall(new Node\Name\FullyQualified('Shopware\\Core\\Framework\\Uuid\\Uuid'), 'randomBytes')
+                    )));
+                    $this->appliedRules['diagnostic_missing_media_folder_id_generated'] = ($this->appliedRules['diagnostic_missing_media_folder_id_generated'] ?? 0) + 1;
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\ClassMethod) {
                     $this->methodArrayKeys = [];
                     $this->methodPropertyArrayKeys = [];
