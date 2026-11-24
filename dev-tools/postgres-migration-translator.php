@@ -358,16 +358,20 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     return $sql;
                 }
 
-                if ($baseTable !== 'state_machine_state_translation') {
+                $knownConflictKeys = [
+                    'state_machine_state_translation' => ['language_id', 'state_machine_state_id'],
+                    'state_machine_transition' => ['id'],
+                ];
+                if (!isset($knownConflictKeys[$baseTable])) {
                     $this->unsupported[] = 'REPLACE INTO VALUES has no known conflict key for this table';
 
                     return $sql;
                 }
 
                 $columnNames = array_map(static fn (string $column): string => strtolower(trim($column, '`"')), $columns);
-                $conflictNames = ['language_id', 'state_machine_state_id'];
+                $conflictNames = $knownConflictKeys[$baseTable];
                 if (array_diff($conflictNames, $columnNames) !== []) {
-                    $this->unsupported[] = 'REPLACE INTO state_machine_state_translation omits a known conflict key';
+                    $this->unsupported[] = 'REPLACE INTO omits a known conflict key';
 
                     return $sql;
                 }
