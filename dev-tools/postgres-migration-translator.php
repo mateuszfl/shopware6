@@ -718,6 +718,18 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 );
                 if ($this->diagnosticMode) {
                     $this->replace(
+                        'update_target_column_qualification_removed',
+                        '/(\\bUPDATE\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s+SET\\s+)([\\s\\S]*?)(?=\\s+WHERE\\b|;?\\s*$)/i',
+                        static function (array $matches): string {
+                            $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                            $table = preg_quote($matches[2], '/');
+                            $assignments = preg_replace('/(^|,\\s*)' . $table . '\\s*\\.\\s*(' . $identifier . ')\\s*=/i', '$1$2 =', $matches[3]) ?? $matches[3];
+
+                            return $matches[1] . $assignments;
+                        },
+                        $sql
+                    );
+                    $this->replace(
                         'mysql_order_currency_multi_table_update_to_postgresql_update_from',
                         '/^\s*UPDATE\s+("order"|`order`|order)\s*,\s*("currency"|`currency`|currency)\s+SET\s+(.+?)\s+WHERE\s+(.+?)\s*;?\s*$/is',
                         static function (array $matches): string {
