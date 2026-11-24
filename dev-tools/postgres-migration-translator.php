@@ -364,7 +364,20 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         [$statement, $indexes] = $this->extractTableLevelKeys($statement);
                     }
 
-                    if (preg_match('/\\bCOLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+/i', $statement)) {
+                    $hasUtf8TableCollation = preg_match('/\\bCOLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+/i', $statement) === 1;
+                    $hasUnsupportedTableCollation = preg_match('/\\bCOLLATE\\s*=\\s*(?!utf8mb4?_)[A-Za-z0-9_]+/i', $statement) === 1;
+                    $mysqlTableOptions = 'ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+';
+                    if ($this->diagnosticMode) {
+                        $mysqlTableOptions .= '|AUTO_INCREMENT\\s*=\\s*[0-9]+';
+                    }
+                    $this->replace(
+                        'create_table_mysql_options_removed',
+                        '/(\\))\\s*(?:' . $mysqlTableOptions . ')(?:\\s+(?:' . $mysqlTableOptions . '))*\\s*(?=;?\\s*$)/i',
+                        '$1',
+                        $statement
+                    );
+
+                    if ($hasUtf8TableCollation) {
                         $this->replace(
                             'create_table_default_collation_to_sw_type_ci',
                             '/(?m)^([ \\t]*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)[ \\t]+(?:VARCHAR|CHAR|TINYTEXT|MEDIUMTEXT|LONGTEXT|TEXT)(?:[ \\t]*\\([0-9]+\\))?)(?![^\\r\\n]*\\bCOLLATE\\b)/i',
@@ -372,20 +385,9 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                             $statement
                         );
                     }
-                    if (preg_match('/\\bCOLLATE\\s*=\\s*(?!utf8mb4?_)[A-Za-z0-9_]+/i', $statement)) {
+                    if ($hasUnsupportedTableCollation) {
                         $this->unsupported[] = 'unsupported MySQL table default collation needs explicit mapping';
                     }
-
-                    $mysqlTableOptions = 'ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+';
-                    if ($this->diagnosticMode) {
-                        $mysqlTableOptions .= '|AUTO_INCREMENT\\s*=\\s*[0-9]+';
-                    }
-                    $this->replace(
-                        'create_table_mysql_options_removed',
-                        '/(?:\\s+(?:' . $mysqlTableOptions . '))+(?=\\s*(?:;|$))/i',
-                        '',
-                        $statement
-                    );
                     $this->replace(
                         'create_table_binary16_to_bytea_with_length_check',
                         '/(?m)^([ \\t]*)(?:"(?<double>[^"\\r\\n]+)"|`(?<tick>[^`\\r\\n]+)`|(?<plain>[A-Za-z_][A-Za-z0-9_$]*))([ \\t]+)BINARY\\s*\\(\\s*16\\s*\\)/i',
