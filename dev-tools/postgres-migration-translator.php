@@ -1894,6 +1894,35 @@ SQL;
                     // the old and new column names are identical. Keep renames
                     // untouched because they need separate PostgreSQL handling.
                     $this->replace(
+                        'alter_change_same_name_general_to_alter_column',
+                        '/\\bCHANGE(?:\\s+COLUMN)?\\s+(' . $identifier . ')\\s+\\1\\s+(VARCHAR\\s*\\(\\s*\\d+\\s*\\)|CHARACTER\\s+VARYING\\s*\\(\\s*\\d+\\s*\\)|DOUBLE(?:\\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|TEXT|JSON|DECIMAL\\s*\\(\\s*\\d+\\s*,\\s*\\d+\\s*\\))(?:\\s+COLLATE\\s+(' . $identifier . '))?(?:\\s+(NULL|NOT\\s+NULL))?(?:\\s+DEFAULT\\s+(' . $defaultLiteralPattern . '))?(?:\\s+AFTER\\s+' . $identifier . ')?(?=\\s*(?:,|;|$))/i',
+                        static function (array $matches): string {
+                            $column = str_starts_with($matches[1], '`') ? '"' . trim($matches[1], '`') . '"' : $matches[1];
+                            $type = preg_replace('/^INT$/i', 'INTEGER', $matches[2]) ?? $matches[2];
+                            $type = preg_replace('/^DOUBLE$/i', 'DOUBLE PRECISION', $type) ?? $type;
+                            $collation = ($matches[3] ?? '') === '' ? '' : ' COLLATE ' . $matches[3];
+                            $clauses = ['ALTER COLUMN ' . $column . ' TYPE ' . $type . $collation];
+                            $nullability = strtoupper(preg_replace('/\\s+/', ' ', $matches[4] ?? '') ?? ($matches[4] ?? ''));
+                            $clauses[] = $nullability === '' || $nullability === 'NULL'
+                                ? 'ALTER COLUMN ' . $column . ' DROP NOT NULL'
+                                : 'ALTER COLUMN ' . $column . ' SET NOT NULL';
+                            if (($matches[5] ?? '') === '') {
+                                $clauses[] = 'ALTER COLUMN ' . $column . ' DROP DEFAULT';
+                            } elseif (strtoupper($matches[5]) === 'NULL') {
+                                $clauses[] = 'ALTER COLUMN ' . $column . ' DROP DEFAULT';
+                            } else {
+                                $default = $matches[5];
+                                if (str_starts_with($default, '"')) {
+                                    $default = "'" . str_replace("'", "''", str_replace('""', '"', trim($default, '"'))) . "'";
+                                }
+                                $clauses[] = 'ALTER COLUMN ' . $column . ' SET DEFAULT ' . $default;
+                            }
+
+                            return implode(', ', $clauses);
+                        },
+                        $statement
+                    );
+                    $this->replace(
                         'alter_change_same_column_to_alter_column',
                         '/\\bCHANGE(?:\\s+COLUMN)?\\s+(`[^`\\r\\n]+`|"[^"\\r\\n]+"|[A-Za-z_][A-Za-z0-9_$]*)\\s+(`[^`\\r\\n]+`|"[^"\\r\\n]+"|[A-Za-z_][A-Za-z0-9_$]*)\\s+(VARCHAR\\s*\\(\\s*\\d+\\s*\\)|CHARACTER\\s+VARYING\\s*\\(\\s*\\d+\\s*\\)|DOUBLE(?:\\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|DECIMAL\\s*\\(\\s*\\d+\\s*,\\s*\\d+\\s*\\))\\s+(NULL|NOT\\s+NULL)(?:\\s+DEFAULT\\s+(NULL|[-+]?[0-9]+(?:\\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\\s+AFTER\\s+(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\\s*(?:,|;|$))/i',
                         static function (array $matches): string {
