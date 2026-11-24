@@ -2041,6 +2041,18 @@ SQL;
                 return 'WITH product_chunk AS (SELECT product_tmp.id, product_tmp.version_id, product_tmp.variant_listing_config FROM product_tmp JOIN product ON product.id = product_tmp.id AND product.version_id = product_tmp.version_id WHERE product.variant_listing_config IS NULL ORDER BY product_tmp.id, product_tmp.version_id LIMIT 1000) UPDATE product SET variant_listing_config = product_chunk.variant_listing_config FROM product_chunk WHERE product.id = product_chunk.id AND product.version_id = product_chunk.version_id';
             }
 
+            private function rewriteCoverMediaVersionChunkUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1688556247FixCoverMediaVersionID.php'
+                    || !preg_match('/^\s*UPDATE\s+`?product`?\s+SET\s+`?product_media_version_id`?\s*=\s*0x([a-f0-9]+)\s+WHERE\s+`?product_media_id`?\s+IS\s+NOT\s+NULL\s+AND\s+`?product_media_version_id`?\s+IS\s+NULL\s+LIMIT\s+100\s*;?\s*$/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_product_media_version_update_limit_to_composite_cte'] = ($this->appliedRules['mysql_product_media_version_update_limit_to_composite_cte'] ?? 0) + 1;
+
+                return "WITH product_cover_chunk AS (SELECT id, version_id FROM product WHERE product_media_id IS NOT NULL AND product_media_version_id IS NULL ORDER BY id, version_id LIMIT 100) UPDATE product SET product_media_version_id = decode('" . strtolower($matches[1]) . "', 'hex') FROM product_cover_chunk WHERE product.id = product_cover_chunk.id AND product.version_id = product_cover_chunk.version_id";
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2494,6 +2506,7 @@ SQL;
                     $sql = $this->rewriteStateMachineHistoryZeroUuidFallback($sql);
                     $sql = $this->rewriteCustomerAccountTypeChunkUpdate($sql);
                     $sql = $this->rewriteVariantListingConfigChunkUpdate($sql);
+                    $sql = $this->rewriteCoverMediaVersionChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
