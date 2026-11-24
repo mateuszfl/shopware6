@@ -968,6 +968,54 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteProductPricePercentageUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1627929168UpdatePriceFieldInProductTable.php') {
+                    return $sql;
+                }
+                if (!preg_match('/^\\s*UPDATE\\s+product\\s+SET\\s+price\\s*=\\s*JSON_SET\\s*\\(/i', $sql)) {
+                    $this->unsupported[] = 'product price percentage migration SQL did not match its diagnostic rewrite';
+
+                    return $sql;
+                }
+
+                $this->appliedRules['product_price_json_percentage_to_jsonb'] = 1;
+
+                return <<<'SQL'
+UPDATE product
+SET price = jsonb_set(
+    price,
+    '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,percentage}'::text[],
+    jsonb_build_object(
+        'net', COALESCE(
+            ROUND(
+                CASE
+                    WHEN COALESCE((price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,listPrice,net}')::numeric, 0) = 0 THEN 0
+                    ELSE 100 - (price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,net}')::numeric
+                        / (price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,listPrice,net}')::numeric * 100
+                END,
+                2
+            ),
+            0
+        ),
+        'gross', COALESCE(
+            ROUND(
+                CASE
+                    WHEN COALESCE((price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,listPrice,gross}')::numeric, 0) = 0 THEN 0
+                    ELSE 100 - (price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,gross}')::numeric
+                        / (price #>> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,listPrice,gross}')::numeric * 100
+                END,
+                2
+            ),
+            0
+        )
+    ),
+    true
+)
+WHERE price #> '{cb7d2554b0ce847cd82f3ac9bd1c0dfca,listPrice}'::text[] IS NOT NULL
+SQL;
+            }
+
             /** @return list<string> */
             private function getInsertDataKeys(Node\Expr $expression): array
             {
@@ -1629,6 +1677,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $originalSql = $node->value;
                 $sql = $this->rewriteCreateTable($originalSql);
                 if ($this->diagnosticMode) {
+                    $sql = $this->rewriteProductPricePercentageUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
