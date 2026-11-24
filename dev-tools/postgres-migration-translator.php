@@ -2320,10 +2320,10 @@ SQL;
                     $columnKey = $node->cond->left->var->dim->value;
                     $node->cond->left->dim->value = 'extra';
                     $node->cond = new Node\Expr\BinaryOp\BooleanAnd(
-                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('isset'), [new Node\Arg(new Node\Expr\ArrayDimFetch(
-                            new Node\Expr\Variable('columns'),
-                            new Node\Scalar\String_($columnKey)
-                        ))]),
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('array_key_exists'), [
+                            new Node\Arg(new Node\Scalar\String_($columnKey)),
+                            new Node\Arg(new Node\Expr\Variable('columns')),
+                        ]),
                         $node->cond
                     );
                     $this->appliedRules['diagnostic_missing_generated_column_guard'] = ($this->appliedRules['diagnostic_missing_generated_column_guard'] ?? 0) + 1;
