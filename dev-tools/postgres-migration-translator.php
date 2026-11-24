@@ -263,9 +263,13 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         $this->unsupported[] = 'unsupported MySQL table default collation needs explicit mapping';
                     }
 
+                    $mysqlTableOptions = 'ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+';
+                    if ($this->diagnosticMode) {
+                        $mysqlTableOptions .= '|AUTO_INCREMENT\\s*=\\s*[0-9]+';
+                    }
                     $this->replace(
                         'create_table_mysql_options_removed',
-                        '/(?:\\s+(?:ENGINE\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARSET\\s*=\\s*[A-Za-z0-9_]+|DEFAULT\\s+CHARACTER\\s+SET\\s*=?\\s*[A-Za-z0-9_]+|CHARSET\\s*=\\s*[A-Za-z0-9_]+|COLLATE\\s*=\\s*utf8mb4?_[A-Za-z0-9_]+))+(?=\\s*(?:;|$))/i',
+                        '/(?:\\s+(?:' . $mysqlTableOptions . '))+(?=\\s*(?:;|$))/i',
                         '',
                         $statement
                     );
