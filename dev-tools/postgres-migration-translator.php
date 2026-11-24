@@ -124,7 +124,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             private array $methodUuidRowColumns = [];
             /** @var array<string, bool> */
             private array $methodUuidArrays = [];
-            private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+            private const SQL = '/\\b(SELECT|INSERT|REPLACE|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
 
             private function isUuidBytesExpression(Node\Expr $expression): bool
             {
@@ -231,6 +231,83 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     );
                     $this->appliedRules['diagnostic_query_uuid_parameters_bind_as_binary'] = ($this->appliedRules['diagnostic_query_uuid_parameters_bind_as_binary'] ?? 0) + 1;
                 }
+            }
+
+            private function rewriteReplaceIntoSet(string $sql): string
+            {
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                if (!preg_match('/^\\s*REPLACE\\s+INTO\\s+' . $identifier . '\\s+SET\\b/i', $sql)) {
+                    return $sql;
+                }
+                if (!preg_match('/^\\s*REPLACE\\s+INTO\\s+(' . $identifier . ')\\s+SET\\s+([\\s\\S]*?)\\s*(;?)\\s*$/i', $sql, $matches)) {
+                    $this->unsupported[] = 'REPLACE INTO SET has unsupported target or suffix syntax';
+
+                    return $sql;
+                }
+
+                $assignments = [];
+                $start = 0;
+                $depth = 0;
+                $quote = null;
+                $value = $matches[2];
+                for ($index = 0; $index < strlen($value); ++$index) {
+                    $character = $value[$index];
+                    $next = $value[$index + 1] ?? '';
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+
+                        continue;
+                    }
+                    if ($character === '(') {
+                        ++$depth;
+
+                        continue;
+                    }
+                    if ($character === ')') {
+                        --$depth;
+
+                        continue;
+                    }
+                    if ($character === ',' && $depth === 0) {
+                        $assignments[] = substr($value, $start, $index - $start);
+                        $start = $index + 1;
+                    }
+                }
+                $assignments[] = substr($value, $start);
+
+                $columns = [];
+                $values = [];
+                foreach ($assignments as $assignment) {
+                    if (!preg_match('/^\\s*(' . $identifier . ')\\s*=\\s*([\\s\\S]*?)\\s*$/', $assignment, $parts) || $parts[2] === '') {
+                        $this->unsupported[] = 'REPLACE INTO SET contains an unsupported assignment';
+
+                        return $sql;
+                    }
+                    $columns[] = $parts[1];
+                    $values[] = $parts[2];
+                }
+
+                $this->unsupported[] = 'REPLACE INTO SET translated as INSERT; duplicate-key replacement semantics are not represented';
+                $this->appliedRules['diagnostic_replace_into_set_to_insert'] = ($this->appliedRules['diagnostic_replace_into_set_to_insert'] ?? 0) + 1;
+
+                return 'INSERT INTO ' . $matches[1] . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')' . $matches[3];
             }
 
             /** @return list<string> */
@@ -849,6 +926,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $sql = $this->rewriteCreateTable($originalSql);
                 if ($this->diagnosticMode) {
                     $sql = $this->rewriteAlterTable($sql);
+                    $sql = $this->rewriteReplaceIntoSet($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
