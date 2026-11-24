@@ -1968,6 +1968,22 @@ SQL;
                 return $matches[1] . ' NULL' . ($matches[2] ?? '');
             }
 
+            private function rewriteStateMachineHistoryZeroUuidFallback(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1673426317ImproveStateMachineHistoryQueryPerformance.php') {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'mysql_zero_binary_uuid_fallback_to_bytea',
+                    '/,\\s*0x0\\s*\\)/i',
+                    ", decode(repeat('00', 16), 'hex'))",
+                    $sql
+                );
+
+                return $sql;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2311,6 +2327,7 @@ SQL;
                 if ($this->diagnosticMode) {
                     $sql = $this->rewriteProductPricePercentageUpdate($sql);
                     $sql = $this->rewriteTemporaryVariantListingGeneratedColumn($sql);
+                    $sql = $this->rewriteStateMachineHistoryZeroUuidFallback($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
