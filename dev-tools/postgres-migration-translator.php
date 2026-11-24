@@ -1438,6 +1438,14 @@ SQL;
                             '$1',
                             $statement
                         );
+                        if ($this->classFile === 'Migration1635388654CreateIncrementTable.php') {
+                            $this->replace(
+                                'create_table_increment_bigint_unsigned_removed',
+                                '/(\\bBIGINT)\\s+UNSIGNED\\b/i',
+                                '$1',
+                                $statement
+                            );
+                        }
                     }
                     $this->replace(
                         'create_table_utf8mb4_collation_to_sw_type_ci',
