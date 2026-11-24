@@ -442,6 +442,41 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteJsonReplaceUpdate(string $sql): string
+            {
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $qualifiedIdentifier = $identifier . '(?:\\s*\\.\\s*' . $identifier . ')*';
+                $string = '\'(?:\'\'|[^\'])*\'';
+                $pattern = '/^\\s*UPDATE\\s+(' . $identifier . ')\\s+SET\\s+(' . $qualifiedIdentifier . ')\\s*=\\s*REPLACE\\s*\\(\\s*(' . $qualifiedIdentifier . ')\\s*,\\s*(' . $string . ')\\s*,\\s*(' . $string . ')\\s*\\)\\s*(WHERE\\s+[\\s\\S]*?)\\s*(;?)\\s*$/i';
+                if (!preg_match($pattern, $sql, $matches)) {
+                    return $sql;
+                }
+
+                $normalize = static function (string $value): string {
+                    $parts = preg_split('/\\s*\\.\\s*/', trim($value)) ?: [];
+
+                    return implode('.', array_map(static fn (string $part): string => strtolower(trim($part, '`"')), $parts));
+                };
+                $table = $normalize($matches[1]);
+                $leftColumn = $normalize($matches[2]);
+                $replaceColumn = $normalize($matches[3]);
+                $columnParts = explode('.', $leftColumn);
+                $column = (string) end($columnParts);
+                $jsonColumns = [
+                    'product_stream' => ['api_filter'],
+                    'category_translation' => ['slot_config'],
+                    'cms_slot_translation' => ['config'],
+                    'product_sorting' => ['fields'],
+                ];
+                if ($leftColumn !== $replaceColumn || !in_array($column, $jsonColumns[$table] ?? [], true)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['json_replace_update_cast_to_text_and_jsonb'] = ($this->appliedRules['json_replace_update_cast_to_text_and_jsonb'] ?? 0) + 1;
+
+                return 'UPDATE ' . $matches[1] . ' SET ' . $matches[2] . ' = REPLACE(CAST(' . $matches[3] . ' AS TEXT), ' . $matches[4] . ', ' . $matches[5] . ')::jsonb ' . $matches[6] . $matches[7];
+            }
+
             /** @return list<string> */
             private function getInsertDataKeys(Node\Expr $expression): array
             {
@@ -1075,6 +1110,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
+                    $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
