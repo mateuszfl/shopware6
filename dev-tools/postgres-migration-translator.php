@@ -2053,6 +2053,23 @@ SQL;
                 return "WITH product_cover_chunk AS (SELECT id, version_id FROM product WHERE product_media_id IS NOT NULL AND product_media_version_id IS NULL ORDER BY id, version_id LIMIT 100) UPDATE product SET product_media_version_id = decode('" . strtolower($matches[1]) . "', 'hex') FROM product_cover_chunk WHERE product.id = product_cover_chunk.id AND product.version_id = product_cover_chunk.version_id";
             }
 
+            private function rewriteVersionedCapturePrimaryKeyDrop(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1689856589AddVersioningForOrderTransactionCaptures.php'
+                    || $this->currentMethodName !== 'reAddVersionedPrimaryKey') {
+                    return $sql;
+                }
+
+                $this->replace(
+                    'mysql_primary_key_drop_to_postgresql_constraint',
+                    '/\\bDROP\\s+PRIMARY\\s+KEY\\b/i',
+                    'DROP CONSTRAINT "%1$s_pkey"',
+                    $sql
+                );
+
+                return $sql;
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2552,6 +2569,7 @@ SQL;
                     $sql = $this->rewriteCustomerAccountTypeChunkUpdate($sql);
                     $sql = $this->rewriteVariantListingConfigChunkUpdate($sql);
                     $sql = $this->rewriteCoverMediaVersionChunkUpdate($sql);
+                    $sql = $this->rewriteVersionedCapturePrimaryKeyDrop($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
