@@ -116,6 +116,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             public array $appliedRules = [];
             public bool $diagnosticMode = false;
             private string $classFile;
+            private ?string $currentMethodName = null;
             /** @var array<string, list<string>> */
             private array $methodArrayKeys = [];
             /** @var array<string, list<string>> */
@@ -1972,11 +1973,30 @@ SQL;
                     $this->appliedRules['diagnostic_missing_media_folder_id_generated'] = ($this->appliedRules['diagnostic_missing_media_folder_id_generated'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Stmt\ClassMethod) {
+                    $this->currentMethodName = $node->name->toString();
                     $this->methodArrayKeys = [];
                     $this->methodPropertyArrayKeys = [];
                     $this->methodUuidVariables = [];
                     $this->methodUuidRowColumns = [];
                     $this->methodUuidArrays = [];
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1657173907DownloadMailTemplate.php'
+                    && $this->currentMethodName === 'fetchLanguageIdByName'
+                    && $node instanceof Node\Stmt\Return_
+                    && $node->expr instanceof Node\Expr\Cast\String_
+                    && $node->expr->expr instanceof Node\Expr\Variable
+                    && $node->expr->expr->name === 'result') {
+                    $resultForCheck = new Node\Expr\Variable('result');
+                    $node->expr = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg($resultForCheck)]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('result'))]
+                        )),
+                        new Node\Expr\Cast\String_(new Node\Expr\Variable('result'))
+                    );
+                    $this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] = ($this->appliedRules['diagnostic_language_uuid_stream_read_before_cast'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
                     && $node->var instanceof Node\Expr\Variable
