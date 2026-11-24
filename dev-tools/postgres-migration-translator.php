@@ -2474,7 +2474,7 @@ SQL;
                     $this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] = ($this->appliedRules['diagnostic_salutation_uuid_parameter_binary_binding'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
-                    && $this->classFile === 'Migration1736824370MigrationMailTemplateForDocument.php'
+                    && in_array($this->classFile, ['Migration1736824370MigrationMailTemplateForDocument.php', 'Migration1737105721MigrateOrderStateChangeDocumentToA11Y.php'], true)
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Stmt\If_
                     && $node->cond instanceof Node\Expr\BooleanNot
