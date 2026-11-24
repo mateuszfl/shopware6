@@ -2111,6 +2111,24 @@ SQL;
                         $this->addBinaryTypesToQueryCall($node);
                     }
                 }
+                if ($this->diagnosticMode
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'addColumn') {
+                    $typeArgument = null;
+                    foreach ($node->args as $index => $argument) {
+                        if (($argument->name?->toString() === 'type') || ($argument->name === null && $index === 3)) {
+                            $typeArgument = $argument;
+
+                            break;
+                        }
+                    }
+                    if ($typeArgument?->value instanceof Node\Scalar\String_
+                        && preg_match('/^\\s*(?:VAR)?BINARY\\s*\\(\\s*\\d+\\s*\\)\\s*$/i', $typeArgument->value->value)) {
+                        $typeArgument->value->value = 'BYTEA';
+                        $this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] = ($this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] ?? 0) + 1;
+                    }
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\MethodCall
                     && $node->name instanceof Node\Identifier
                     && $node->name->toString() === 'addInsert'
