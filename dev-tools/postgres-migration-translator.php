@@ -2016,6 +2016,19 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteStateMachineReferencedIdAlter(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1673964565MigrateToReferencedColumns.php'
+                    || !preg_match('/^\s*ALTER\s+TABLE\s+`state_machine_history`\s+MODIFY\s+COLUMN\s+`(referenced_id|referenced_version_id)`\s+BINARY\s*\(\s*16\s*\)\s+NOT\s+NULL\s*;?\s*$/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $column = $matches[1];
+                $this->appliedRules['diagnostic_referenced_generated_uuid_drop_expression'] = ($this->appliedRules['diagnostic_referenced_generated_uuid_drop_expression'] ?? 0) + 1;
+
+                return 'ALTER TABLE state_machine_history ALTER COLUMN ' . $column . ' DROP EXPRESSION, ALTER COLUMN ' . $column . ' TYPE BYTEA, ALTER COLUMN ' . $column . ' SET NOT NULL';
+            }
+
             private function rewriteCustomerAccountTypeChunkUpdate(string $sql): string
             {
                 if ($this->classFile !== 'Migration1676272000AddAccountTypeToCustomer.php'
@@ -2276,6 +2289,44 @@ SQL;
                         && $this->currentMethodName === 'getFieldType') {
                         $node->stmts = [];
                     }
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1673964565MigrateToReferencedColumns.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'fetchAllAssociativeIndexed'
+                    && isset($node->args[0])
+                    && $node->args[0]->value instanceof Node\Scalar\String_
+                    && str_contains(strtoupper($node->args[0]->value->value), 'INFORMATION_SCHEMA.COLUMNS')) {
+                    $node->args[0]->value->value = "SELECT column_name, CASE WHEN is_generated = 'ALWAYS' THEN 'STORED GENERATED' ELSE '' END AS extra FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'state_machine_history' AND column_name IN ('referenced_id', 'referenced_version_id', 'entity_id')";
+                    unset($node->args[1]);
+                    $node->args = array_values($node->args);
+                    $this->appliedRules['diagnostic_generated_column_metadata_from_information_schema'] = ($this->appliedRules['diagnostic_generated_column_metadata_from_information_schema'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1673964565MigrateToReferencedColumns.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BinaryOp\Identical
+                    && $node->cond->left instanceof Node\Expr\ArrayDimFetch
+                    && $node->cond->left->dim instanceof Node\Scalar\String_
+                    && strtoupper($node->cond->left->dim->value) === 'EXTRA'
+                    && $node->cond->left->var instanceof Node\Expr\ArrayDimFetch
+                    && $node->cond->left->var->var instanceof Node\Expr\Variable
+                    && $node->cond->left->var->var->name === 'columns'
+                    && $node->cond->left->var->dim instanceof Node\Scalar\String_
+                    && in_array($node->cond->left->var->dim->value, ['referenced_id', 'referenced_version_id'], true)) {
+                    $columnKey = $node->cond->left->var->dim->value;
+                    $node->cond->left->dim->value = 'extra';
+                    $node->cond = new Node\Expr\BinaryOp\BooleanAnd(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('isset'), [new Node\Arg(new Node\Expr\ArrayDimFetch(
+                            new Node\Expr\Variable('columns'),
+                            new Node\Scalar\String_($columnKey)
+                        ))]),
+                        $node->cond
+                    );
+                    $this->appliedRules['diagnostic_missing_generated_column_guard'] = ($this->appliedRules['diagnostic_missing_generated_column_guard'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1657173907DownloadMailTemplate.php'
@@ -2724,6 +2775,7 @@ SQL;
                     $sql = $this->rewriteProductPricePercentageUpdate($sql);
                     $sql = $this->rewriteTemporaryVariantListingGeneratedColumn($sql);
                     $sql = $this->rewriteStateMachineHistoryZeroUuidFallback($sql);
+                    $sql = $this->rewriteStateMachineReferencedIdAlter($sql);
                     $sql = $this->rewriteCustomerAccountTypeChunkUpdate($sql);
                     $sql = $this->rewriteVariantListingConfigChunkUpdate($sql);
                     $sql = $this->rewriteCoverMediaVersionChunkUpdate($sql);
