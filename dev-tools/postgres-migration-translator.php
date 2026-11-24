@@ -490,6 +490,71 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'DELETE FROM ' . $matches[2] . ' AS ' . $matches[3] . ' USING ' . $matches[4] . ' AS ' . $matches[5] . ' WHERE ' . $matches[6] . $matches[7];
             }
 
+            private function rewriteDerivedUpdateJoin(string $sql): string
+            {
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $prefixPattern = '/^\\s*UPDATE\\s+(' . $identifier . ')(?:\\s+(?:AS\\s+)?(' . $identifier . '))?\\s+INNER\\s+JOIN\\s*\\(/i';
+                if (!preg_match($prefixPattern, $sql, $prefix, PREG_OFFSET_CAPTURE)) {
+                    return $sql;
+                }
+
+                $open = $prefix[0][1] + strlen($prefix[0][0]) - 1;
+                if (($sql[$open] ?? '') !== '(') {
+                    $this->unsupported[] = 'derived-table UPDATE JOIN has an invalid subquery start';
+
+                    return $sql;
+                }
+                $close = $this->findClosingParenthesis($sql, $open);
+                if ($close === null) {
+                    $this->unsupported[] = 'derived-table UPDATE JOIN has an unterminated subquery';
+
+                    return $sql;
+                }
+
+                $suffix = substr($sql, $close + 1);
+                if (!preg_match('/^\\s+(?:AS\\s+)?(' . $identifier . ')\\s+ON\\s+([\\s\\S]+?)\\s+SET\\s+([\\s\\S]*?)\\s*(;?)\\s*$/i', $suffix, $parts)) {
+                    $this->unsupported[] = 'derived-table UPDATE JOIN uses an unsupported suffix';
+
+                    return $sql;
+                }
+
+                $targetTable = $prefix[1][0];
+                $targetAlias = $prefix[2][0] ?? '';
+                $normalize = static fn (string $name): string => strtolower(trim($name, '`"'));
+                $targetNames = [$normalize($targetTable)];
+                if ($targetAlias !== '') {
+                    $targetNames[] = $normalize($targetAlias);
+                }
+                $assignments = [];
+                foreach ($this->splitSqlCommaList($parts[3]) as $assignment) {
+                    $qualifiedIdentifier = $identifier . '(?:\\s*\\.\\s*' . $identifier . ')*';
+                    if (!preg_match('/^\\s*(' . $qualifiedIdentifier . ')\\s*=\\s*([\\s\\S]*?)\\s*$/', $assignment, $assignmentParts) || $assignmentParts[2] === '') {
+                        $this->unsupported[] = 'derived-table UPDATE JOIN has an unsupported assignment';
+
+                        return $sql;
+                    }
+                    $leftParts = preg_split('/\\s*\\.\\s*/', trim($assignmentParts[1])) ?: [];
+                    if (count($leftParts) > 1) {
+                        $qualifier = (string) $leftParts[count($leftParts) - 2];
+                        if (!in_array($normalize($qualifier), $targetNames, true)) {
+                            $this->unsupported[] = 'derived-table UPDATE JOIN assignment targets a different table';
+
+                            return $sql;
+                        }
+                    }
+                    $column = (string) end($leftParts);
+                    $assignments[] = $column . ' = ' . $assignmentParts[2];
+                }
+
+                $subquery = trim(substr($sql, $open + 1, $close - $open - 1));
+                $target = 'UPDATE ' . $targetTable . ($targetAlias === '' ? '' : ' AS ' . $targetAlias);
+                $target = $target . ' SET ' . implode(', ', $assignments);
+                $sourceAlias = $parts[1];
+                $this->appliedRules['derived_update_join_to_from'] = ($this->appliedRules['derived_update_join_to_from'] ?? 0) + 1;
+
+                return $target . ' FROM (' . $subquery . ') AS ' . $sourceAlias . ' WHERE ' . trim($parts[2]) . $parts[4];
+            }
+
             private function isSqlOffsetOutsideQuotes(string $sql, int $position): bool
             {
                 $quote = null;
@@ -1439,6 +1504,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
+                    $sql = $this->rewriteDerivedUpdateJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
                     $sql = $this->rewriteInsertIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
