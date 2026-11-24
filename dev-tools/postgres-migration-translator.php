@@ -310,6 +310,89 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'INSERT INTO ' . $matches[1] . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')' . $matches[3];
             }
 
+            private function rewriteReplaceIntoValues(string $sql): string
+            {
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                if (!preg_match('/^\\s*REPLACE\\s+INTO\\s+(' . $identifier . ')\\s*\\(/i', $sql, $matches, PREG_OFFSET_CAPTURE)) {
+                    return $sql;
+                }
+
+                $table = $matches[1][0];
+                $baseTable = strtolower(trim($table, '`"'));
+                $openColumns = strpos($sql, '(', $matches[0][1]);
+                $closeColumns = $openColumns === false ? null : $this->findClosingParenthesis($sql, $openColumns);
+                if ($closeColumns === null) {
+                    $this->unsupported[] = 'REPLACE INTO has an unterminated column list';
+
+                    return $sql;
+                }
+
+                $tail = substr($sql, $closeColumns + 1);
+                if (!preg_match('/^\\s*VALUES\\s*\\(/i', $tail, $valuesStart)) {
+                    $this->unsupported[] = 'REPLACE INTO supports only a single VALUES tuple';
+
+                    return $sql;
+                }
+                $openValues = strpos($tail, '(', $valuesStart[0] === '' ? 0 : strlen($valuesStart[0]) - 1);
+                $closeValues = $openValues === false ? null : $this->findClosingParenthesis($tail, $openValues);
+                if ($closeValues === null || !preg_match('/^\\s*(;?)\\s*$/', substr($tail, $closeValues + 1), $suffix)) {
+                    $this->unsupported[] = 'REPLACE INTO has a complex VALUES suffix';
+
+                    return $sql;
+                }
+
+                $columnParts = $this->splitSqlCommaList(substr($sql, $openColumns + 1, $closeColumns - $openColumns - 1));
+                $valueParts = $this->splitSqlCommaList(substr($tail, $openValues + 1, $closeValues - $openValues - 1));
+                $columns = [];
+                foreach ($columnParts as $columnPart) {
+                    if (!preg_match('/^\\s*(' . $identifier . ')\\s*$/', $columnPart, $columnMatch)) {
+                        $this->unsupported[] = 'REPLACE INTO has a complex column list';
+
+                        return $sql;
+                    }
+                    $columns[] = $columnMatch[1];
+                }
+                if (count($columns) !== count($valueParts) || in_array('', array_map('trim', $valueParts), true)) {
+                    $this->unsupported[] = 'REPLACE INTO column and value counts do not match';
+
+                    return $sql;
+                }
+
+                if ($baseTable !== 'state_machine_state_translation') {
+                    $this->unsupported[] = 'REPLACE INTO VALUES has no known conflict key for this table';
+
+                    return $sql;
+                }
+
+                $columnNames = array_map(static fn (string $column): string => strtolower(trim($column, '`"')), $columns);
+                $conflictNames = ['language_id', 'state_machine_state_id'];
+                if (array_diff($conflictNames, $columnNames) !== []) {
+                    $this->unsupported[] = 'REPLACE INTO state_machine_state_translation omits a known conflict key';
+
+                    return $sql;
+                }
+
+                $conflictColumns = [];
+                $updates = [];
+                foreach ($columns as $index => $column) {
+                    if (in_array($columnNames[$index], $conflictNames, true)) {
+                        $conflictColumns[] = $column;
+
+                        continue;
+                    }
+                    $updates[] = $column . ' = EXCLUDED.' . $column;
+                }
+                if ($updates === []) {
+                    $this->unsupported[] = 'REPLACE INTO has no non-key columns to update';
+
+                    return $sql;
+                }
+
+                $this->appliedRules['diagnostic_replace_into_known_key_upsert'] = ($this->appliedRules['diagnostic_replace_into_known_key_upsert'] ?? 0) + 1;
+
+                return 'INSERT INTO ' . $table . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $valueParts) . ') ON CONFLICT (' . implode(', ', $conflictColumns) . ') DO UPDATE SET ' . implode(', ', $updates) . $suffix[1];
+            }
+
             /** @return list<string> */
             private function splitSqlCommaList(string $value): array
             {
@@ -1726,6 +1809,7 @@ SQL;
                     $sql = $this->rewriteUpdateInnerJoin($sql);
                     $sql = $this->rewriteDerivedUpdateJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
+                    $sql = $this->rewriteReplaceIntoValues($sql);
                     $sql = $this->rewriteInsertIgnore($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
                     $sql = $this->rewriteJsonObjectCalls($sql);
