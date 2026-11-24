@@ -656,6 +656,12 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         $statement
                     );
                     $this->replace(
+                        'create_table_blob_to_bytea',
+                        '/(?m)^([ \\t]*' . '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)' . '[ \\t]+)(?:TINYBLOB|MEDIUMBLOB|LONGBLOB|BLOB)(?=[ \\t]*(?:NULL|NOT[ \\t]+NULL|DEFAULT|COLLATE|COMMENT)\\b|[ \\t]*[,)]|[ \\t]*$)/i',
+                        '$1BYTEA',
+                        $statement
+                    );
+                    $this->replace(
                         'create_table_utf8mb4_collation_to_sw_type_ci',
                         '/\\bCOLLATE\\s+[" ]?utf8mb4?_[A-Za-z0-9_]+[" ]?/i',
                         'COLLATE sw_type_ci',
