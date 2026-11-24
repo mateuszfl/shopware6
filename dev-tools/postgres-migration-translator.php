@@ -477,6 +477,145 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return 'UPDATE ' . $matches[1] . ' SET ' . $matches[2] . ' = REPLACE(CAST(' . $matches[3] . ' AS TEXT), ' . $matches[4] . ', ' . $matches[5] . ')::jsonb ' . $matches[6] . $matches[7];
             }
 
+            private function findClosingParenthesis(string $sql, int $open): ?int
+            {
+                $depth = 1;
+                $quote = null;
+                for ($index = $open + 1; $index < strlen($sql); ++$index) {
+                    $character = $sql[$index];
+                    $next = $sql[$index + 1] ?? '';
+                    if ($quote !== null) {
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            ++$index;
+
+                            continue;
+                        }
+                        if ($character === $quote) {
+                            if ($next === $quote) {
+                                ++$index;
+
+                                continue;
+                            }
+                            $quote = null;
+                        }
+
+                        continue;
+                    }
+                    if (($character === '-' && $next === '-') || ($character === '/' && $next === '*')) {
+                        $endMarker = $character === '-' ? "\n" : '*/';
+                        $end = strpos($sql, $endMarker, $index + 2);
+                        if ($end === false) {
+                            return null;
+                        }
+                        $index = $end + strlen($endMarker) - 1;
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '"' || $character === '`') {
+                        $quote = $character;
+
+                        continue;
+                    }
+                    if ($character === '(') {
+                        ++$depth;
+                    } elseif ($character === ')' && --$depth === 0) {
+                        return $index;
+                    }
+                }
+
+                return null;
+            }
+
+            private function convertJsonObjectArgumentStrings(string $arguments): string
+            {
+                $converted = '';
+                $quote = null;
+                for ($index = 0; $index < strlen($arguments); ++$index) {
+                    $character = $arguments[$index];
+                    $next = $arguments[$index + 1] ?? '';
+                    if ($quote === "'" || $quote === '`') {
+                        $converted .= $character;
+                        if ($character === '\\' && $quote !== '`' && $next !== '') {
+                            $converted .= $next;
+                            ++$index;
+                        } elseif ($character === $quote) {
+                            if ($next === $quote) {
+                                $converted .= $next;
+                                ++$index;
+                            } else {
+                                $quote = null;
+                            }
+                        }
+
+                        continue;
+                    }
+                    if ($character === "'" || $character === '`') {
+                        $quote = $character;
+                        $converted .= $character;
+
+                        continue;
+                    }
+                    if ($character !== '"') {
+                        $converted .= $character;
+
+                        continue;
+                    }
+
+                    $literal = '';
+                    for (++$index; $index < strlen($arguments); ++$index) {
+                        $character = $arguments[$index];
+                        $next = $arguments[$index + 1] ?? '';
+                        if ($character === '\\' && $next !== '') {
+                            $literal .= $next === '"' ? '"' : $character . $next;
+                            ++$index;
+                        } elseif ($character === '"') {
+                            if ($next === '"') {
+                                $literal .= '"';
+                                ++$index;
+                            } else {
+                                break;
+                            }
+                        } else {
+                            $literal .= $character;
+                        }
+                    }
+                    $converted .= '\'' . str_replace("'", "''", $literal) . '\'';
+                }
+
+                return $converted;
+            }
+
+            private function rewriteJsonObjectCalls(string $sql): string
+            {
+                $searchOffset = 0;
+                while (preg_match('/\\bJSON_OBJECT\\s*\\(/i', $sql, $match, PREG_OFFSET_CAPTURE, $searchOffset)) {
+                    $functionOffset = $match[0][1];
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $functionOffset)) {
+                        $searchOffset = $functionOffset + strlen($match[0][0]);
+
+                        continue;
+                    }
+
+                    $open = strpos($sql, '(', $functionOffset);
+                    $close = $open === false ? null : $this->findClosingParenthesis($sql, $open);
+                    if ($close === null) {
+                        $searchOffset = $functionOffset + strlen($match[0][0]);
+
+                        continue;
+                    }
+
+                    $arguments = substr($sql, $open + 1, $close - $open - 1);
+                    $arguments = $this->convertJsonObjectArgumentStrings($arguments);
+                    $arguments = $this->rewriteJsonObjectCalls($arguments);
+                    $replacement = 'jsonb_build_object(' . $arguments . ')';
+                    $sql = substr_replace($sql, $replacement, $functionOffset, $close - $functionOffset + 1);
+                    $this->appliedRules['json_object_to_jsonb_build_object'] = ($this->appliedRules['json_object_to_jsonb_build_object'] ?? 0) + 1;
+                    $searchOffset = $functionOffset + strlen($replacement);
+                }
+
+                return $sql;
+            }
+
             /** @return list<string> */
             private function getInsertDataKeys(Node\Expr $expression): array
             {
@@ -1117,6 +1256,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
                     $sql = $this->rewriteJsonReplaceUpdate($sql);
+                    $sql = $this->rewriteJsonObjectCalls($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
