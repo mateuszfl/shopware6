@@ -1431,6 +1431,14 @@ SQL;
                         '$1BYTEA',
                         $statement
                     );
+                    if ($this->diagnosticMode) {
+                        $this->replace(
+                            'create_table_unsigned_removed',
+                            '/(?m)^([ \\t]*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)[ \\t]+(?:TINYINT|SMALLINT|MEDIUMINT|INT(?:EGER)?|BIGINT|DECIMAL|NUMERIC)(?:[ \\t]*\\([0-9]+(?:[ \\t]*,[ \\t]*[0-9]+)?[ \\t]*\\))?)[ \\t]+UNSIGNED\\b',
+                            '$1',
+                            $statement
+                        );
+                    }
                     $this->replace(
                         'create_table_utf8mb4_collation_to_sw_type_ci',
                         '/\\bCOLLATE\\s+[" ]?utf8mb4?_[A-Za-z0-9_]+["]?([ \\t]*)/i',
