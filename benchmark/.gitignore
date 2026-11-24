@@ -1,4 +1,5 @@
 .env
-data/*.json
+data/*.generated.json
+data/catalog.generated.json
 results/*
 !results/.gitkeep

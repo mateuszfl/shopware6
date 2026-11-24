@@ -44,6 +44,14 @@ Przed i po każdym przebiegu zapisz natywne liczniki bazy. PostgreSQL: wiersz z 
 
 ## Dane i import
 
-JSON fixture powinien być generowany deterministycznie, z tymi samymi ID/SKU dla obu baz. Import przez Sync API należy mierzyć jako oddzielny scenariusz: czas całego importu, produkty/s, wielkość batcha, błędy i czas do zakończenia indeksowania. Po nim sprawdź liczność i próbki danych, odśwież indeksy, a dopiero potem uruchom scenariusze odczytowe. Nie licz czasu seedowania do wyniku k6 listingu.
+Katalog źródłowy w `data/product-families.en.json` zawiera 48 fikcyjnych anglojęzycznych rodzin produktów, nazwy, opisy i właściwości. Teksty przygotowano lokalnie modelem Ollama `qwen2.5:1.5b-instruct` (około 1 GB); model nie jest potrzebny do odtworzenia fixture. `build_catalog.py` deterministycznie tworzy 5 000 rekordów: rodziny, stabilne UUID/SKU, ceny, stany i warianty w dwóch osiach. Plik wynikowy jest ignorowany przez Git.
 
-Wyniki benchmarku i wygenerowane fixture w `results/` oraz `data/` są ignorowane przez Git; w repo trafiają skrypty i konfiguracja, nigdy sekrety ani kopia bazy.
+```sh
+python3 benchmark/build_catalog.py
+# mniejszy fixture do szybkiego importu
+python3 benchmark/build_catalog.py --count 500
+```
+
+Wynikowy JSON to neutralny format fixture z wariantami i metadanymi; przed importem do konkretnego Shopware należy zmapować kategorie, podatki, walutę, sales channel, grupy/opcje właściwości i dostępność do ID tej instalacji. Import przez Sync API należy mierzyć jako oddzielny scenariusz: czas całego importu, produkty/s, wielkość batcha, błędy i czas do zakończenia indeksowania. Po nim sprawdź liczność i próbki danych, odśwież indeksy, a dopiero potem uruchom scenariusze odczytowe. Nie licz czasu seedowania do wyniku k6 listingu.
+
+Wyniki benchmarku i wygenerowany plik `data/catalog.generated.json` są ignorowane przez Git. Repo zawiera źródłowe rodziny produktów i generator, nigdy sekrety ani kopię bazy.

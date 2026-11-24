@@ -1,0 +1,1211 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "generatedWith": {
+    "model": "qwen2.5:1.5b-instruct",
+    "seed": 20261124,
+    "purpose": "fictional benchmark product copy"
+  },
+  "families": [
+    {
+      "familyKey": "outdoor-travel-001",
+      "category": "Outdoor & Travel",
+      "productConcept": "compact hiking lantern",
+      "name": "Hiking Lanterns",
+      "description": "Portable and durable lantern for outdoor adventures. Offers 1000 lumens of brightness. Features a compact design for easy portability. Waterproof and windproof, perfect for night hikes. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Brightness",
+          "value": "1000 lumens"
+        },
+        {
+          "group": "Portability",
+          "value": "Compact design"
+        },
+        {
+          "group": "Durability",
+          "value": "Waterproof and windproof"
+        },
+        {
+          "group": "Weather",
+          "value": "Perfect for night hikes"
+        }
+      ]
+    },
+    {
+      "familyKey": "outdoor-travel-002",
+      "category": "Outdoor & Travel",
+      "productConcept": "lightweight daypack",
+      "name": "Lightweight Daypack",
+      "description": "Sleek and lightweight daypack for travel and outdoor activities. Features a comfortable padded back and chest straps. Holds up to 15 liters of luggage. Made from durable materials with a reflective strip for safety. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Weight",
+          "value": "Lightweight"
+        },
+        {
+          "group": "Capacity",
+          "value": "15 liters"
+        },
+        {
+          "group": "Comfort",
+          "value": "Padded back and chest straps"
+        },
+        {
+          "group": "Reflective",
+          "value": "Reflective strip for safety"
+        }
+      ]
+    },
+    {
+      "familyKey": "outdoor-travel-003",
+      "category": "Outdoor & Travel",
+      "productConcept": "insulated travel bottle",
+      "name": "Insulated Travel Bottle",
+      "description": "Stylish insulated travel bottle for keeping drinks warm on long journeys. Features a stainless steel construction for durability. Holds up to 2 liters of beverage. Comes with a travel cover and a handy strap for easy carrying. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Capacity",
+          "value": "2 liters"
+        },
+        {
+          "group": "Durability",
+          "value": "Stainless steel construction"
+        },
+        {
+          "group": "Insulation",
+          "value": "Insulated for warmth"
+        },
+        {
+          "group": "Carrying",
+          "value": "Travel cover and strap for easy carrying"
+        }
+      ]
+    },
+    {
+      "familyKey": "outdoor-travel-004",
+      "category": "Outdoor & Travel",
+      "productConcept": "folding camp stool",
+      "name": "Outdoor Camping Accessories",
+      "description": "Comprehensive bundle for outdoor enthusiasts, featuring a foldable camping stool for comfort and a weatherproof picnic blanket for your meals on the go. Includes a packing cube set for organization. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Size",
+          "value": "Compact Foldable"
+        },
+        {
+          "group": "Weather Protection",
+          "value": "Weatherproof"
+        },
+        {
+          "group": "Portability",
+          "value": "Packing Cube Set"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "outdoor-travel-005",
+      "category": "Outdoor & Travel",
+      "productConcept": "weatherproof picnic blanket",
+      "name": "All-Weather Outdoor Blankets",
+      "description": "Ideal for outdoor activities, these picnic blankets provide protection from rain and sun. Designed for easy set-up and quick removal, perfect for spontaneous outdoor adventures. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Outdoor Waterproof"
+        },
+        {
+          "group": "Size",
+          "value": "Variable"
+        },
+        {
+          "group": "Durable",
+          "value": "Weatherproof"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "outdoor-travel-006",
+      "category": "Outdoor & Travel",
+      "productConcept": "packing cube set",
+      "name": "Travel Packing Essentials",
+      "description": "Essential items for a hassle-free trip, this set includes a foldable camp stool for easy setup and a weatherproof picnic blanket for enjoying meals outdoors. Includes a set of packing cubes for organization. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Size",
+          "value": "Compact Foldable"
+        },
+        {
+          "group": "Weather Protection",
+          "value": "Weatherproof"
+        },
+        {
+          "group": "Portability",
+          "value": "Packing Cube Set"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-007",
+      "category": "Kitchen & Dining",
+      "productConcept": "pour-over coffee kettle",
+      "name": "Brewing Bliss Pour-Over Coffee Kettle",
+      "description": "Experience the finest coffee brewing with our premium pour-over coffee kettle. Perfectly crafted for your daily coffee ritual, this kettle ensures perfect extraction every time. Features include a sleek stainless steel design, ergonomic handle, and easy-to-fill water reservoir. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Usage",
+          "value": "Ideal for Brewing"
+        },
+        {
+          "group": "Capacity",
+          "value": "1.5L"
+        },
+        {
+          "group": "Dimensions",
+          "value": "Diameter: 17cm, Height: 21cm"
+        },
+        {
+          "group": "Noise Level",
+          "value": "Low"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-008",
+      "category": "Kitchen & Dining",
+      "productConcept": "stoneware serving bowl",
+      "name": "Creamy Comfort Stoneware Serving Bowl",
+      "description": "Unwrap the perfect serving experience with our stoneware serving bowl. Designed with a comforting warmth to your kitchen, this bowl is perfect for daily meals and gatherings. Features a smooth texture and high thermal conductivity, ensuring your food stays deliciously warm without drying out. Comes in a timeless cream color for a touch of elegance. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Usage",
+          "value": "Serving"
+        },
+        {
+          "group": "Diameter",
+          "value": "35cm"
+        },
+        {
+          "group": "Dimensions",
+          "value": "Height: 10cm"
+        },
+        {
+          "group": "Weight",
+          "value": "0.7kg"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-009",
+      "category": "Kitchen & Dining",
+      "productConcept": "stackable food container",
+      "name": "Compact Harmony Stackable Food Container",
+      "description": "Nestle your kitchen organization to a whole new level with our stackable food container. Perfectly designed for space-saving storage, this container allows you to easily store various dishes without overcrowding your cabinets. Features a compact design, wide mouth for easy access, and a sleek, modern finish. Perfect for keeping your kitchen tidy and your hands free. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Capacity",
+          "value": "3L"
+        },
+        {
+          "group": "Dimensions",
+          "value": "Height: 15cm, Width: 20cm, Depth: 12cm"
+        },
+        {
+          "group": "Capacity",
+          "value": "4 Layers"
+        },
+        {
+          "group": "Material",
+          "value": "BPA-free, Stainless Steel"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-010",
+      "category": "Kitchen & Dining",
+      "productConcept": "linen kitchen apron",
+      "name": "Kitchen Apron",
+      "description": "A durable, breathable linen apron for kitchen use. Features an adjustable back and pockets for easy access. Perfect for keeping clean and protecting work clothes. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Linen, breathable"
+        },
+        {
+          "group": "Comfort",
+          "value": "Adjustable back, pockets"
+        },
+        {
+          "group": "Durability",
+          "value": "Durable, washable"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-011",
+      "category": "Kitchen & Dining",
+      "productConcept": "cast iron grill pan",
+      "name": "Cast Iron Grill Pan",
+      "description": "A versatile cast iron grill pan designed for both cooking and grilling. Features a thick, evenly heated surface and a non-stick coating for easy cleanup. Ideal for preparing meals and outdoor grilling. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Cast iron"
+        },
+        {
+          "group": "Heating",
+          "value": "Thick surface, evenly heated"
+        },
+        {
+          "group": "Cleaning",
+          "value": "Non-stick coating, easy cleanup"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "kitchen-dining-012",
+      "category": "Kitchen & Dining",
+      "productConcept": "reusable lunch set",
+      "name": "Reusable Lunch Set",
+      "description": "A set of reusable lunch options including a lunchbox, sandwich bag, snack bag, and water bottle. Made with durable, BPA-free materials for long-lasting use. Perfect for students, professionals, and anyone looking to reduce waste. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Materials",
+          "value": "Durable, BPA-free"
+        },
+        {
+          "group": "Durability",
+          "value": "Long-lasting, easy cleanup"
+        },
+        {
+          "group": "Waste Reduction",
+          "value": "Reusable, eco-friendly"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-013",
+      "category": "Home & Living",
+      "productConcept": "woven storage basket",
+      "name": "Storage & Organization",
+      "description": "Woven storage baskets come in a variety of sizes, making them perfect for organizing and storing all sorts of household items. Ideal for keeping your kitchen, bedroom, and garage clutter-free. Features an adjustable handle for easy placement and storage in high traffic areas. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Woven"
+        },
+        {
+          "group": "Size",
+          "value": "Various Sizes"
+        },
+        {
+          "group": "Usage",
+          "value": "Home Storage"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-014",
+      "category": "Home & Living",
+      "productConcept": "adjustable reading lamp",
+      "name": "Lighting & Decor",
+      "description": "Adjustable reading lamps provide the perfect balance of task lighting and ambient mood lighting. These lamps offer a soft, warm glow that enhances the ambiance of any room. With a simple push, you can adjust the height, perfect for placing over a coffee table or next to your favorite chair. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Type",
+          "value": "Adjustable Lamp"
+        },
+        {
+          "group": "Lighting",
+          "value": "Mood & Task Lighting"
+        },
+        {
+          "group": "Usage",
+          "value": "Room Decor & Task Lighting"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-015",
+      "category": "Home & Living",
+      "productConcept": "cotton throw blanket",
+      "name": "Comfort & Bedding",
+      "description": "Cotton throw blankets add a touch of comfort and warmth to your living space. These soft, cozy blankets feature a unique textured weave, perfect for snuggling up on the couch or cozying up with a book. Available in a variety of colors and patterns to match any decor. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Cotton"
+        },
+        {
+          "group": "Texture",
+          "value": "Soft & Cozy"
+        },
+        {
+          "group": "Usage",
+          "value": "Bedding & Decor"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-016",
+      "category": "Home & Living",
+      "productConcept": "modular wall shelf",
+      "name": "Wall Decor Series",
+      "description": "Elevate your living space with our modular wall shelves. Ideal for displaying art, books, or decorations. Easy to install and versatile, perfect for any room. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "MDF with powder-coated finish"
+        },
+        {
+          "group": "Size",
+          "value": "Adjustable from 18 inches to 48 inches"
+        },
+        {
+          "group": "Design",
+          "value": "Geometric shapes and vibrant colors"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-017",
+      "category": "Home & Living",
+      "productConcept": "ceramic table vase",
+      "name": "Vase Collection",
+      "description": "Add charm and color to your home with our ceramic table vases. Perfect for adding a touch of nature to your decor, available in various sizes and styles. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Capacity",
+          "value": "Holds 4 large flowers or 6 medium flowers"
+        },
+        {
+          "group": "Material",
+          "value": "High-quality ceramic"
+        },
+        {
+          "group": "Care",
+          "value": "Wipe clean with a damp cloth"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "home-living-018",
+      "category": "Home & Living",
+      "productConcept": "wooden coat rack",
+      "name": "Rack of the Seasons",
+      "description": "Stylish wooden coat racks that keep your clothes organized and in style. Ideal for hanging jackets, scarves, and more, ensuring your wardrobe stays neat and stylish year-round. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Solid wood, painted for durability"
+        },
+        {
+          "group": "Storage",
+          "value": "Multiple rods for easy access to all items"
+        },
+        {
+          "group": "Design",
+          "value": "Seasonal themes: fall leaves, winter snow, spring blossoms"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-019",
+      "category": "Fitness & Recovery",
+      "productConcept": "adjustable resistance band set",
+      "name": "Resistance Band Set",
+      "description": "A set of 5 adjustable resistance bands for versatile strength training. Perfect for bodyweight exercises, functional movements, and hypertrophy. Features include comfortable cotton-braided construction, non-slip grip, and adjustable lengths. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Cotton-Braided"
+        },
+        {
+          "group": "Strength",
+          "value": "Functional Movements"
+        },
+        {
+          "group": "Weight",
+          "value": "5 Bands"
+        },
+        {
+          "group": "Compatibility",
+          "value": "Bodyweight Exercises"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-020",
+      "category": "Fitness & Recovery",
+      "productConcept": "cork yoga block",
+      "name": "Cork Yoga Block",
+      "description": "A high-quality, lightweight cork yoga block designed for precision, support, and comfort during yoga and pilates. Features include anti-slip rubber grip, adjustable height, and ergonomic design for a supportive yet non-restrictive hold. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Cork"
+        },
+        {
+          "group": "Support",
+          "value": "Ergonomic Hold"
+        },
+        {
+          "group": "Strength",
+          "value": "Precision"
+        },
+        {
+          "group": "Comfort",
+          "value": "Anti-Slip Grip"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-021",
+      "category": "Fitness & Recovery",
+      "productConcept": "foam massage roller",
+      "name": "Foam Massage Roller",
+      "description": "A long-lasting, non-slip foam massage roller designed for deep muscle relaxation, improved circulation, and enhanced recovery. Features include lightweight design, multiple pressure points, and built-in rubber grip for enhanced stability. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Foam"
+        },
+        {
+          "group": "Pressure",
+          "value": "Multiple Points"
+        },
+        {
+          "group": "Weight",
+          "value": "Lightweight"
+        },
+        {
+          "group": "Grip",
+          "value": "Non-Slip Rubber"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-022",
+      "category": "Fitness & Recovery",
+      "productConcept": "stainless training shaker",
+      "name": "Training Stainless Shaker",
+      "description": "A durable stainless steel water bottle designed for intense workouts. Features a secure, ergonomic grip and clear, see-through lid for easy monitoring of hydration. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Stainless Steel"
+        },
+        {
+          "group": "Grip",
+          "value": "Ergonomic"
+        },
+        {
+          "group": "Visibility",
+          "value": "Clear Lid"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-023",
+      "category": "Fitness & Recovery",
+      "productConcept": "foldable exercise mat",
+      "name": "Foldable Exercise Mat",
+      "description": "A lightweight, compact mat that converts into a small, portable exercise mat. Ideal for travel or quick workouts, it easily folds into a compact size for easy transport. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Size",
+          "value": "Compact Foldable"
+        },
+        {
+          "group": "Weight",
+          "value": "Lightweight"
+        },
+        {
+          "group": "Portability",
+          "value": "Compact Size"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "fitness-recovery-024",
+      "category": "Fitness & Recovery",
+      "productConcept": "weighted jump rope",
+      "name": "Weighted Jump Rope",
+      "description": "A high-quality weighted jump rope designed for improved cardio and strength training. The weighted handles provide a challenging workout for upper body and core muscles while adding a new level of intensity to traditional jumping exercises. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Weight",
+          "value": "Weighted Handles"
+        },
+        {
+          "group": "Usability",
+          "value": "Challenging Workout"
+        },
+        {
+          "group": "Core Engagement",
+          "value": "Core Muscles"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-025",
+      "category": "Office & Stationery",
+      "productConcept": "recycled paper notebook",
+      "name": "Sustainable Office",
+      "description": "A notebook made from recycled paper, featuring a durable cover and lined pages for detailed writing. Properties: Made from 100% recycled content, lightweight, tear-resistant, lined interior. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Recycled paper"
+        },
+        {
+          "group": "Durability",
+          "value": "Tear-resistant, Lightweight"
+        },
+        {
+          "group": "Functionality",
+          "value": "Lined interior"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-026",
+      "category": "Office & Stationery",
+      "productConcept": "desk cable organizer",
+      "name": "Stationery Organizer",
+      "description": "An organized desk cable organizer with multiple compartments for easy storage and a clear viewing area. Properties: Compact design, 4 compartments, 2 USB ports, 1 power strip socket, 1 additional USB port. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Storage",
+          "value": "4 compartments"
+        },
+        {
+          "group": "Power",
+          "value": "2 USB ports, 1 power strip socket, 1 additional USB port"
+        },
+        {
+          "group": "Size",
+          "value": "Compact"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-027",
+      "category": "Office & Stationery",
+      "productConcept": "felt laptop sleeve",
+      "name": "Felt Laptop Sleeve",
+      "description": "A high-quality, padded laptop sleeve made from soft, felted fabric. Features include adjustable straps, clear window, and a padded interior. Properties: Lightweight, water-resistant, padded interior, adjustable straps. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Felted fabric"
+        },
+        {
+          "group": "Durability",
+          "value": "Water-resistant, Adjustable straps, Padded interior"
+        },
+        {
+          "group": "Functionality",
+          "value": "Clear window"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-028",
+      "category": "Office & Stationery",
+      "productConcept": "weekly planning pad",
+      "name": "Office Planner",
+      "description": "A sleek, durable weekly planning pad for organization and productivity. Features a smooth, glossy finish and is made from high-quality paper for easy writing and erasing. Includes a pocket for notes, a clear section for appointments, and a cover to protect the pages. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Glossy, high-quality paper"
+        },
+        {
+          "group": "Size",
+          "value": "A5"
+        },
+        {
+          "group": "Features",
+          "value": "Pocket, appointment section, cover"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-029",
+      "category": "Office & Stationery",
+      "productConcept": "wooden pen holder",
+      "name": "Wooden Pen Holder",
+      "description": "A stylish wooden pen holder perfect for keeping your writing tools organized. Made from natural wood with a smooth, rustic finish. Holds 6 pens, is 4 Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Natural wood"
+        },
+        {
+          "group": "Capacity",
+          "value": "6 pens"
+        },
+        {
+          "group": "Size",
+          "value": "4"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "office-stationery-030",
+      "category": "Office & Stationery",
+      "productConcept": "compact desk lamp",
+      "name": "Compact Desk Lamp",
+      "description": "A versatile compact desk lamp with adjustable settings. Provides 100W of brightness and offers a swivel head for easy placement. Features a sturdy base, dimmable settings, and a modern design. Ideal for task lighting or reading. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Brightness",
+          "value": "100W"
+        },
+        {
+          "group": "Adjustable",
+          "value": "Yes"
+        },
+        {
+          "group": "Size",
+          "value": "Compact"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-031",
+      "category": "Audio & Electronics",
+      "productConcept": "portable bluetooth speaker",
+      "name": "Portable Bluetooth Speaker",
+      "description": "Compact, high-volume Bluetooth speaker designed for outdoor use. Features include 10 hours of battery life, 40mm woofer, and 2 audio outputs. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Sound Quality",
+          "value": "10 hours of battery life, 40mm woofer"
+        },
+        {
+          "group": "Design",
+          "value": "Compact, outdoor-friendly design"
+        },
+        {
+          "group": "Ports",
+          "value": "2 audio outputs"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-032",
+      "category": "Audio & Electronics",
+      "productConcept": "over-ear travel headphones",
+      "name": "Over-Ear Travel Headphones",
+      "description": "Lightweight, comfortable over-ear headphones optimized for travel. Includes noise cancellation, 18 hours of battery life, and a 3.5mm audio jack. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Sound Quality",
+          "value": "Noise cancellation, 18 hours of battery life"
+        },
+        {
+          "group": "Comfort",
+          "value": "Comfortable over-ear fit"
+        },
+        {
+          "group": "Ports",
+          "value": "3.5mm audio jack"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-033",
+      "category": "Audio & Electronics",
+      "productConcept": "braided charging cable",
+      "name": "Braided Charging Cable",
+      "description": "Strong, durable braided charging cable with multiple cores and a quick-charging technology, suitable for travel and daily use. Features 20 meters of cable length and supports 3.0 and 2.0 USB ports. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Sound Quality",
+          "value": "20 meters of cable length"
+        },
+        {
+          "group": "Ports",
+          "value": "3.0 and 2.0 USB ports"
+        },
+        {
+          "group": "Speed",
+          "value": "Supports 3.0 and 2.0 USB ports"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-034",
+      "category": "Audio & Electronics",
+      "productConcept": "multiport USB charger",
+      "name": "Multiport USB Charger Family",
+      "description": "A versatile set of USB charging ports for your portable devices. Easy to charge multiple devices at once with this compact and sleek design. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Power",
+          "value": "Up to 10 ports, up to 20W each"
+        },
+        {
+          "group": "Design",
+          "value": "Compact, lightweight, and durable"
+        },
+        {
+          "group": "Ease of Use",
+          "value": "Plug-and-play, no cables required"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-035",
+      "category": "Audio & Electronics",
+      "productConcept": "compact wireless mouse",
+      "name": "Compact Wireless Mouse Family",
+      "description": "A sleek and ergonomic mouse that is perfect for your daily computing tasks. With its compact design, it effortlessly fits into any workspace. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Design",
+          "value": "Compact, lightweight, and comfortable"
+        },
+        {
+          "group": "Functionality",
+          "value": "Wireless, precise, and easy to use"
+        },
+        {
+          "group": "Comfort",
+          "value": "Adjustable scroll wheel and ergonomic shape"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "audio-electronics-036",
+      "category": "Audio & Electronics",
+      "productConcept": "foldable phone stand",
+      "name": "Foldable Phone Stand Family",
+      "description": "A stylish and practical accessory for your phone. Designed to elevate your phone to the perfect viewing angle, this foldable stand offers easy storage and protection. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Design",
+          "value": "Foldable, compact, and stylish"
+        },
+        {
+          "group": "Functionality",
+          "value": "Elevates your phone to the perfect viewing angle, protects it, and easily folds for storage"
+        },
+        {
+          "group": "Safety",
+          "value": "Water-resistant, shock-resistant, and easy to clean"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-037",
+      "category": "Apparel & Accessories",
+      "productConcept": "merino blend hiking socks",
+      "name": "Merino Blend Hiking Socks",
+      "description": "Comfortable, moisture-wicking socks made from 80% merino wool and 20% nylon, perfect for hikers and outdoor enthusiasts. Features a reinforced toe for durability and a seamless toe for seamless foot movement. Available in neutral tones for versatility. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Merino Wool 80%, Nylon 20%"
+        },
+        {
+          "group": "Features",
+          "value": "Reinforced Toe, Seamless Toe"
+        },
+        {
+          "group": "Color",
+          "value": "Neutral Tones"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-038",
+      "category": "Apparel & Accessories",
+      "productConcept": "canvas weekend tote",
+      "name": "Canvas Weekend Tote",
+      "description": "A durable, spacious tote bag crafted from durable canvas for everyday use. Features a spacious interior with multiple compartments for organization and a padded bottom for comfort. Comes in classic tan and black colors. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Canvas"
+        },
+        {
+          "group": "Capacity",
+          "value": "Multiple Compartments, Padded Bottom"
+        },
+        {
+          "group": "Color",
+          "value": "Tan, Black"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-039",
+      "category": "Apparel & Accessories",
+      "productConcept": "lightweight rain shell",
+      "name": "Lightweight Rain Shell",
+      "description": "A lightweight, waterproof rain shell made from high-performance materials for a breathable and comfortable fit. Features a rainproof exterior, a zippered front, and adjustable cuffs for added protection. Available in a range of colors. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "High-Performance Materials, Waterproof"
+        },
+        {
+          "group": "Features",
+          "value": "Rainproof Exterior, Zippered Front, Adjustable Cuffs"
+        },
+        {
+          "group": "Color",
+          "value": "Range of Colors"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-040",
+      "category": "Apparel & Accessories",
+      "productConcept": "ribbed cotton beanie",
+      "name": "Cotton Beanie",
+      "description": "Soft, ribbed beanie for warmth and style. Features a comfortable elastic band for a secure fit. Available in neutral colors for versatility. Machine washable, perfect for everyday wear. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Ribbed Cotton"
+        },
+        {
+          "group": "Type",
+          "value": "Beanie"
+        },
+        {
+          "group": "Fabric",
+          "value": "Cotton"
+        },
+        {
+          "group": "Color",
+          "value": "Neutral"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-041",
+      "category": "Apparel & Accessories",
+      "productConcept": "everyday leather belt",
+      "name": "Leather Belt",
+      "description": "Stylish everyday belt with a classic, sturdy design. Durable leather for long-lasting wear. Adjustable for custom fit. Available in various colors. Easy to clean, perfect for both casual and formal wear. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Leather"
+        },
+        {
+          "group": "Type",
+          "value": "Belt"
+        },
+        {
+          "group": "Finish",
+          "value": "Stylish"
+        },
+        {
+          "group": "Material",
+          "value": "Leather"
+        }
+      ]
+    },
+    {
+      "familyKey": "apparel-accessories-042",
+      "category": "Apparel & Accessories",
+      "productConcept": "reversible woven scarf",
+      "name": "Woven Scarf",
+      "description": "Versatile, reversible scarf with two textured sides. Perfect for adding a touch of color to outfits. Lightweight, breathable, and easy to care for. Comes in a variety of patterns to choose from. Perfect for dressing up or down. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Woven"
+        },
+        {
+          "group": "Type",
+          "value": "Scarf"
+        },
+        {
+          "group": "Color",
+          "value": "Reversible"
+        },
+        {
+          "group": "Material",
+          "value": "Woven"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-043",
+      "category": "Garden & Workshop",
+      "productConcept": "pruning shear set",
+      "name": "Pruning Shear Set",
+      "description": "A versatile set of pruners designed for cutting through branches and foliage in the garden. Ideal for pruning hedges, shrubs, and trees. Features include a comfortable ergonomic handle, adjustable length, and durable stainless steel blades. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Performance",
+          "value": "Durable Stainless Steel Blades"
+        },
+        {
+          "group": "Portability",
+          "value": "Adjustable Handle"
+        },
+        {
+          "group": "Tool Type",
+          "value": "Pruning Shears"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-044",
+      "category": "Garden & Workshop",
+      "productConcept": "galvanized watering can",
+      "name": "Galvanized Watering Can",
+      "description": "A practical and durable watering can made from high-quality galvanized steel for reliable watering in the garden. Features a wide spout for efficient watering, a sturdy base for stability, and a simple, no-slip handle for easy grip. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Galvanized Steel"
+        },
+        {
+          "group": "Capacity",
+          "value": "2 Gallons"
+        },
+        {
+          "group": "Function",
+          "value": "Watering"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-045",
+      "category": "Garden & Workshop",
+      "productConcept": "modular tool organizer",
+      "name": "Modular Tool Organizer",
+      "description": "A compact and customizable tool storage solution designed to keep your gardening and workshop tools organized and easily accessible. Features include multiple compartments for different types of tools, clear labeling, and a sleek, modern design that matches any decor. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Organization",
+          "value": "Multiple Compartments"
+        },
+        {
+          "group": "Display",
+          "value": "Clear Labeling"
+        },
+        {
+          "group": "Sustainability",
+          "value": "Sleek, Modern Design"
+        },
+        {
+          "group": "Design",
+          "value": "Everyday utility"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-046",
+      "category": "Garden & Workshop",
+      "productConcept": "canvas garden apron",
+      "name": "Canvas Garden Apron",
+      "description": "A durable canvas apron designed for gardening, featuring adjustable straps for a secure fit. The soft canvas fabric keeps your hands clean, while the adjustable design ensures a comfortable fit. Ideal for gardeners and outdoor enthusiasts, this apron is perfect for protecting your clothes and ensuring comfort. Lightweight yet sturdy, perfect for all seasons. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Material",
+          "value": "Durable Canvas"
+        },
+        {
+          "group": "Adjustable Design",
+          "value": "Adjustable Straps"
+        },
+        {
+          "group": "Protection",
+          "value": "Protects Clothes"
+        },
+        {
+          "group": "Comfort",
+          "value": "Comfortable Fit"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-047",
+      "category": "Garden & Workshop",
+      "productConcept": "stackable planter box",
+      "name": "Stackable Planting Box",
+      "description": "A compact and versatile stackable planter box, perfect for small spaces. Made from sturdy, high-quality materials, this box ensures your plants stay healthy and thrive. The innovative stacking design allows for easy organization and easy access to different parts of your garden. Features adjustable handles for easy lifting and a simple, clean design that complements any decor. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Design",
+          "value": "Stackable"
+        },
+        {
+          "group": "Materials",
+          "value": "Sturdy, High-Quality"
+        },
+        {
+          "group": "Health",
+          "value": "Healthy Plants"
+        },
+        {
+          "group": "Ease",
+          "value": "Easy Organization"
+        }
+      ]
+    },
+    {
+      "familyKey": "garden-workshop-048",
+      "category": "Garden & Workshop",
+      "productConcept": "precision screwdriver kit",
+      "name": "Precision Screwdriver Kit",
+      "description": "A versatile precision screwdriver kit featuring a wide range of tools and accessories designed for efficiency and precision. Equipped with 15 different sizes of screwdrivers, including a hex key set, Allen wrench, and adjustable driver bits, this kit ensures you can tackle any screw size with ease. The ergonomic design and clear labeling make it a valuable addition to any workshop or DIY enthusiast's toolkit. Lightweight and easy to carry, perfect for frequent use. Designed for dependable everyday use, it packs easily into a routine and pairs practical details with a clean, considered finish.",
+      "properties": [
+        {
+          "group": "Size",
+          "value": "15 Different Sizes"
+        },
+        {
+          "group": "Ergonomics",
+          "value": "Ergonomic Design"
+        },
+        {
+          "group": "Efficiency",
+          "value": "Precision Tools"
+        },
+        {
+          "group": "Portability",
+          "value": "Lightweight"
+        }
+      ]
+    }
+  ]
+}
