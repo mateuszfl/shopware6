@@ -2257,6 +2257,18 @@ SQL;
                 return $queries[$this->currentMethodName];
             }
 
+            private function rewriteMediaFileNamePrefixIndex(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1738661307AddMediaIndices.php'
+                    || !preg_match('/^\s*CREATE\s+INDEX\s+`idx\.media\.file_name`\s+ON\s+`media`\s*\(\s*`file_name`\s*\(\s*768\s*\)\s*\)\s*;?\s*$/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_prefix_index_length_removed'] = ($this->appliedRules['mysql_prefix_index_length_removed'] ?? 0) + 1;
+
+                return 'CREATE INDEX `idx.media.file_name` ON `media` (`file_name`);';
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -3063,6 +3075,7 @@ SQL;
                     $sql = $this->rewriteMediaThumbnailPathMultiTableUpdate($sql);
                     $sql = $this->rewriteEuCountryBooleanLiterals($sql);
                     $sql = $this->rewriteProductSliderNavigationQueries($sql);
+                    $sql = $this->rewriteMediaFileNamePrefixIndex($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
@@ -3166,6 +3179,11 @@ SQL;
                     'quoted UPDATE value may be a MySQL string' => '/\\bUPDATE\\b[\\s\\S]*?\\bSET\\b[\\s\\S]*?=\\s*`[^`]+`/i',
                 ];
                 foreach ($patterns as $reason => $pattern) {
+                    if ($reason === 'generated or virtual column'
+                        && $this->classFile === 'Migration1738661307AddMediaIndices.php'
+                        && !preg_match('/\bVIRTUAL\b/i', $sql)) {
+                        continue;
+                    }
                     if ($reason === 'json type/function'
                         && $this->classFile === 'Migration1732608755MigrateNavigationSettingsForProductSlider.php'
                         && !preg_match('/\bJSON_(?:SET|EXTRACT|CONTAINS_PATH|REMOVE|OBJECT|UNQUOTE)\b/i', $sql)) {
