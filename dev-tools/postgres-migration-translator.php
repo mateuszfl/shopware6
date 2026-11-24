@@ -643,7 +643,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             {
                 $identifierPart = '(?:"(?:[^"\\r\\n]|"")*"|`(?:[^`\\r\\n]|``)*`|[A-Za-z_][A-Za-z0-9_$]*)';
                 $identifier = $identifierPart . '(?:\\s*\\.\\s*' . $identifierPart . ')*';
-                $pattern = '/(\\b(?:WHERE|AND|OR|ON)\\s+(?:\\(\\s*)*)(' . $identifier . ')(\\s*)(<>|!=|=)(\\s*)(\'\')/i';
+                $pattern = '/(\\b(?:WHERE|AND|OR|ON)\\s+(?:\\(\\s*)*)(' . $identifier . ')(\\s*)(<>|!=|=)(\\s*)(\'\'|"")/i';
                 if (!preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                     return $sql;
                 }
