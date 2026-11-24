@@ -2017,6 +2017,18 @@ SQL;
                     . ' ORDER BY `customer`.`id` LIMIT :limit) UPDATE `customer` SET `account_type` = :type WHERE `customer`.`id` IN (SELECT `id` FROM account_type_chunk)';
             }
 
+            private function rewriteVariantListingConfigChunkUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1678197291ConvertVariantListingConfig.php'
+                    || !preg_match('/^\\s*UPDATE\\s+`product`[\\s\\S]*\\bLIMIT\\s+1000\\s*;?\\s*$/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_product_update_limit_to_composite_cte'] = ($this->appliedRules['mysql_product_update_limit_to_composite_cte'] ?? 0) + 1;
+
+                return 'WITH product_chunk AS (SELECT product_tmp.id, product_tmp.version_id, product_tmp.variant_listing_config FROM product_tmp JOIN product ON product.id = product_tmp.id AND product.version_id = product_tmp.version_id WHERE product.variant_listing_config IS NULL ORDER BY product_tmp.id, product_tmp.version_id LIMIT 1000) UPDATE product SET variant_listing_config = product_chunk.variant_listing_config FROM product_chunk WHERE product.id = product_chunk.id AND product.version_id = product_chunk.version_id';
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2396,6 +2408,7 @@ SQL;
                     $sql = $this->rewriteTemporaryVariantListingGeneratedColumn($sql);
                     $sql = $this->rewriteStateMachineHistoryZeroUuidFallback($sql);
                     $sql = $this->rewriteCustomerAccountTypeChunkUpdate($sql);
+                    $sql = $this->rewriteVariantListingConfigChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
