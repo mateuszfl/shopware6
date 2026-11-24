@@ -124,7 +124,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             private array $methodUuidRowColumns = [];
             /** @var array<string, bool> */
             private array $methodUuidArrays = [];
-            private const SQL = '/\\b(SELECT|INSERT|REPLACE|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+            private const SQL = '/\\b(SELECT|SHOW|INSERT|REPLACE|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
 
             private function isUuidBytesExpression(Node\Expr $expression): bool
             {
@@ -308,6 +308,54 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $this->appliedRules['diagnostic_replace_into_set_to_insert'] = ($this->appliedRules['diagnostic_replace_into_set_to_insert'] ?? 0) + 1;
 
                 return 'INSERT INTO ' . $matches[1] . ' (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $values) . ')' . $matches[3];
+            }
+
+            private function rewriteShowIndexes(string $sql): string
+            {
+                if (!preg_match('/^\\s*SHOW\\s+(?:INDEXES|INDEX|KEYS)\\s+(?:IN|FROM)\\b/i', $sql)) {
+                    return $sql;
+                }
+
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                if (!preg_match('/^\\s*SHOW\\s+(?:INDEXES|INDEX|KEYS)\\s+(?:IN|FROM)\\s+(' . $identifier . ')\\s+WHERE\\s+(?:"?Key_name"?|`Key_name`|Key_name)\\s*=\\s*\'((?:\'\'|[^\'])*)\'\\s*;?\\s*$/i', $sql, $matches)) {
+                    $this->unsupported[] = 'SHOW INDEXES uses an unsupported form';
+
+                    return $sql;
+                }
+
+                $table = trim(str_replace('""', '"', str_replace('``', '`', $matches[1])), '`"');
+                $index = str_replace("''", "'", $matches[2]);
+                $tableLiteral = str_replace("'", "''", $table);
+                $indexLiteral = str_replace("'", "''", $index);
+                $this->appliedRules['show_indexes_to_pg_indexes_exists'] = ($this->appliedRules['show_indexes_to_pg_indexes_exists'] ?? 0) + 1;
+
+                return "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = current_schema() AND tablename = '" . $tableLiteral . "' AND indexname = '" . $indexLiteral . "')";
+            }
+
+            private function rewriteDeleteSelfJoin(string $sql): string
+            {
+                if (!preg_match('/^\\s*DELETE\\s+\\S+\\s+FROM\\b/i', $sql)) {
+                    return $sql;
+                }
+
+                $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+                $pattern = '/^\\s*DELETE\\s+(' . $identifier . ')\\s+FROM\\s+(' . $identifier . ')(?:\\s+AS)?\\s+(' . $identifier . ')\\s+INNER\\s+JOIN\\s+(' . $identifier . ')(?:\\s+AS)?\\s+(' . $identifier . ')\\s+WHERE\\s+([\\s\\S]*?)\\s*(;?)\\s*$/i';
+                if (!preg_match($pattern, $sql, $matches)) {
+                    $this->unsupported[] = 'multi-table DELETE uses an unsupported form';
+
+                    return $sql;
+                }
+
+                $normalize = static fn (string $identifier): string => strtolower(trim($identifier, '`"'));
+                if ($normalize($matches[1]) !== $normalize($matches[3]) || $normalize($matches[2]) !== $normalize($matches[4])) {
+                    $this->unsupported[] = 'multi-table DELETE is not a simple self-join';
+
+                    return $sql;
+                }
+
+                $this->appliedRules['delete_self_join_to_using'] = ($this->appliedRules['delete_self_join_to_using'] ?? 0) + 1;
+
+                return 'DELETE FROM ' . $matches[2] . ' AS ' . $matches[3] . ' USING ' . $matches[4] . ' AS ' . $matches[5] . ' WHERE ' . $matches[6] . $matches[7];
             }
 
             /** @return list<string> */
@@ -934,6 +982,8 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 $sql = $this->rewriteCreateTable($originalSql);
                 if ($this->diagnosticMode) {
                     $sql = $this->rewriteAlterTable($sql);
+                    $sql = $this->rewriteShowIndexes($sql);
+                    $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteReplaceIntoSet($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
