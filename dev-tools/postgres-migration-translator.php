@@ -1375,6 +1375,32 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     // nullability/defaults. Keep this deliberately limited to a
                     // single, simple MODIFY definition; more complex MySQL forms
                     // stay in the inventory as unsupported syntax.
+                    $defaultLiteralPattern = "(?:NULL|[-+]?[0-9]+(?:\\.[0-9]+)?|'(?:''|[^'])*'|\"(?:[^\"]|\"\")*\")";
+                    $this->replace(
+                        'alter_same_name_change_column_to_alter_column',
+                        '/\\bCHANGE(?:\\s+COLUMN)?\\s+(' . $identifier . ')\\s+\\1\\s+(VARCHAR\\s*\\(\\s*\\d+\\s*\\)|CHARACTER\\s+VARYING\\s*\\(\\s*\\d+\\s*\\)|CHAR(?:ACTER)?(?:\\s+VARYING)?(?:\\s*\\(\\s*\\d+\\s*\\))?)(?:\\s+COLLATE\\s+(' . $identifier . '))?\\s+(NULL|NOT\\s+NULL)(?:\\s+DEFAULT\\s+(' . $defaultLiteralPattern . '))?(?=\\s*(?:,|;|$))/i',
+                        static function (array $matches): string {
+                            $column = $matches[1];
+                            $type = $matches[2];
+                            $collation = ($matches[3] ?? '') === '' ? '' : ' COLLATE ' . $matches[3];
+                            $clauses = ['ALTER COLUMN ' . $column . ' TYPE ' . $type . $collation];
+                            $clauses[] = strtoupper(preg_replace('/\\s+/', ' ', $matches[4]) ?? $matches[4]) === 'NULL'
+                                ? 'ALTER COLUMN ' . $column . ' DROP NOT NULL'
+                                : 'ALTER COLUMN ' . $column . ' SET NOT NULL';
+                            if (($matches[5] ?? '') !== '') {
+                                $default = $matches[5];
+                                if (str_starts_with($default, '"')) {
+                                    $default = "'" . str_replace("'", "''", str_replace('""', '"', trim($default, '"'))) . "'";
+                                }
+                                $clauses[] = strtoupper($default) === 'NULL'
+                                    ? 'ALTER COLUMN ' . $column . ' DROP DEFAULT'
+                                    : 'ALTER COLUMN ' . $column . ' SET DEFAULT ' . $default;
+                            }
+
+                            return implode(', ', $clauses);
+                        },
+                        $statement
+                    );
                     $this->replace(
                         'alter_modify_column_to_alter_column',
                         '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))\s+(NULL|NOT\s+NULL)(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
