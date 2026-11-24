@@ -57,6 +57,18 @@ class SetupDatabaseAdapter
                 $connection->executeStatement($query);
             }
             $connection->executeStatement($this->getBaseSchema($connection));
+
+            if ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+                $directory = $this->getCoreDirectory();
+                foreach (['collations', 'data', 'checks', 'post'] as $section) {
+                    $path = $directory . '/schema.postgresql.' . $section . '.sql';
+                    if (!is_file($path) || !is_readable($path)) {
+                        throw MaintenanceException::couldNotReadFile($path);
+                    }
+
+                    $connection->executeStatement((string) file_get_contents($path));
+                }
+            }
         }
 
         (new DatabaseFunctionInstaller())->install($connection);
@@ -114,14 +126,19 @@ class SetupDatabaseAdapter
 
     private function getBaseSchema(Connection $connection): string
     {
-        $kernelClass = new \ReflectionClass(Kernel::class);
-        $directory = \dirname((string) $kernelClass->getFileName());
-
+        $directory = $this->getCoreDirectory();
         $path = $directory . ($connection->getDatabasePlatform() instanceof PostgreSQLPlatform ? '/schema.postgresql.sql' : '/schema.sql');
         if (!is_file($path) || !is_readable($path)) {
             throw MaintenanceException::couldNotReadFile($path);
         }
 
         return (string) file_get_contents($path);
+    }
+
+    private function getCoreDirectory(): string
+    {
+        $kernelClass = new \ReflectionClass(Kernel::class);
+
+        return \dirname((string) $kernelClass->getFileName());
     }
 }

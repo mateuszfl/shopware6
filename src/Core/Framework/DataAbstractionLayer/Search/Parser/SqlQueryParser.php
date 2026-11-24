@@ -5,11 +5,13 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Search\Parser;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Shopware\Core\Framework\Adapter\Database\DatabasePlatformResolver;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\IdField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ListField;
@@ -240,9 +242,19 @@ class SqlQueryParser
             $value = array_filter(array_map(static fn (bool|float|int|string $id): string => Uuid::fromHexToBytes((string) $id), $value));
         }
 
+        $postgresBoolean = $field instanceof BoolField && $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
+        if ($postgresBoolean) {
+            $value = array_map(static fn (mixed $boolean): int => $boolean ? 1 : 0, $value);
+        }
+
         $where = [];
         if ($value !== []) {
-            $result->addParameter($key, $value, $field instanceof IdField || $field instanceof FkField ? ArrayParameterType::BINARY : ArrayParameterType::STRING);
+            $type = match (true) {
+                $field instanceof IdField, $field instanceof FkField => ArrayParameterType::BINARY,
+                $postgresBoolean => ArrayParameterType::INTEGER,
+                default => ArrayParameterType::STRING,
+            };
+            $result->addParameter($key, $value, $type);
 
             $inFilter = $select . ' IN (:' . $key . ')';
             if ($negated && !$hasNulls) {
@@ -304,7 +316,16 @@ class SqlQueryParser
             $value = Uuid::fromHexToBytes((string) $value);
         }
 
-        $result->addParameter($key, $value, $field instanceof IdField || $field instanceof FkField ? ParameterType::BINARY : ParameterType::STRING);
+        $type = match (true) {
+            $field instanceof IdField, $field instanceof FkField => ParameterType::BINARY,
+            $field instanceof BoolField && $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform => ParameterType::INTEGER,
+            default => ParameterType::STRING,
+        };
+        if ($field instanceof BoolField && $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform) {
+            $value = $value ? 1 : 0;
+        }
+
+        $result->addParameter($key, $value, $type);
 
         return $result;
     }

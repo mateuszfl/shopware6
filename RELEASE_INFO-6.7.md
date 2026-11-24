@@ -6,6 +6,10 @@
 
 The installer and `system:setup --database-driver=pdo_pgsql` accept PostgreSQL connections, including encoded credentials, IPv6 and TLS DSN options. Database creation uses a separate connection to the PostgreSQL `postgres` maintenance database. Bootstrap creates only the plugin and migration tables; installation stops explicitly when a historical migration has no PostgreSQL variant. See [installer setup and validation](dev-tools/database/INSTALLER_CONTRACT.md).
 
+### PostgreSQL clean-install baseline
+
+Clean PostgreSQL installations now start from a versioned schema and seed-data baseline for the current Shopware trunk. Upgrading an existing MySQL database to PostgreSQL and upgrading between baseline snapshots are not supported.
+
 ### Explicit PostgreSQL migration variants
 
 PostgreSQL migrations now require an explicit implementation registered against the original class and creation timestamp. Unsupported plugin migrations fail before any selected step executes. History and progress retain the original migration identity. PostgreSQL variants must use the runtime transaction boundary and run outside caller transactions. MySQL/MariaDB continue to execute their original classes. Historical PostgreSQL migration ports remain pending; see [the migration runtime contract](dev-tools/database/MIGRATION_RUNTIME_CONTRACT.md).
