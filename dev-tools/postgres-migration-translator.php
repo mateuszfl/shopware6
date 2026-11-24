@@ -1891,12 +1891,10 @@ SQL;
                 }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1625583619MoveDataFromEventActionToFlow.php'
-                    && $node instanceof Node\Expr\MethodCall
-                    && $node->name instanceof Node\Identifier
-                    && $node->name->toString() === 'execute'
-                    && isset($node->args[0])
-                    && $node->args[0]->value instanceof Node\Expr\Array_
-                    && !isset($node->args[1])) {
+                    && $node instanceof Node\Expr\New_
+                    && $node->class instanceof Node\Name
+                    && $node->class->getLast() === 'RetryableQuery'
+                    && count($node->args) === 2) {
                     $typeItems = [];
                     foreach (['flowId', 'eventActionId'] as $key) {
                         $typeItems[] = new Node\Expr\ArrayItem(
