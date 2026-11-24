@@ -1,0 +1,27 @@
+services:
+  app:
+    image: shopware-pg-benchmark-app:local
+    build:
+      context: ..
+      dockerfile: benchmark/Dockerfile
+      args:
+        SHOPWARE_FRANKENPHP_IMAGE: ${SHOPWARE_FRANKENPHP_IMAGE:-ghcr.io/shopware/docker-base:8.4.28-frankenphp@sha256:3676a352c995ed07216d2b1dcae980e552955b7420d222db4bb191fa42dde9db}
+    working_dir: /var/www/html
+    volumes:
+      - ..:/var/www/html
+      - ./config/packages/prod/benchmark.yaml:/var/www/html/config/packages/prod/benchmark.yaml:ro
+    ports:
+      - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    cpus: ${APP_CPUS:-2.0}
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: ${APP_SECRET:-benchmark_only_change_me}
+      APP_URL: ${SHOP_URL:-http://localhost:8000}
+      COMPOSER_ROOT_VERSION: 6.7.x-dev
+      MAILER_DSN: null://null
+      SHOPWARE_HTTP_CACHE_ENABLED: "0"
+      OPENSEARCH_URL: ""
+      ADMIN_OPENSEARCH_URL: ""
+      FRANKENPHP_CONFIG: ""

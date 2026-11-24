@@ -1,0 +1,40 @@
+name: shopware-benchmark-mysql
+
+services:
+  app:
+    extends:
+      file: compose.common.yaml
+      service: app
+    environment:
+      DATABASE_URL: "mysql://${BENCHMARK_DB_USER:-shopware_bench}:${BENCHMARK_DB_PASSWORD:-bench_only_change_me}@db:3306/${BENCHMARK_DB_NAME:-shopware_bench}?serverVersion=8.4.11&charset=utf8mb4"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4.11@sha256:0f51e63e537a1f176423fa03ef559aabe6fa4372a53160a44bc7e75da7d15364
+    cpus: ${DB_CPUS:-2.0}
+    mem_limit: ${DB_MEMORY_LIMIT:-4g}
+    environment:
+      MYSQL_ROOT_PASSWORD: ${BENCHMARK_DB_ADMIN_PASSWORD:-bench_admin_only_change_me}
+      MYSQL_DATABASE: ${BENCHMARK_DB_NAME:-shopware_bench}
+      MYSQL_USER: ${BENCHMARK_DB_USER:-shopware_bench}
+      MYSQL_PASSWORD: ${BENCHMARK_DB_PASSWORD:-bench_only_change_me}
+      TZ: UTC
+    command:
+      - --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+      - --max_connections=100
+      - --innodb_buffer_pool_size=1G
+      - --innodb_redo_log_capacity=1G
+      - --default-time-zone=+00:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'mysqladmin ping -h 127.0.0.1 -uroot -p"$${MYSQL_ROOT_PASSWORD}"']
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+
+volumes:
+  mysql-data:

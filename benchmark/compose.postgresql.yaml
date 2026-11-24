@@ -1,0 +1,52 @@
+name: shopware-benchmark-postgresql
+
+services:
+  app:
+    extends:
+      file: compose.common.yaml
+      service: app
+    environment:
+      DATABASE_URL: "postgresql://${BENCHMARK_DB_USER:-shopware_bench}:${BENCHMARK_DB_PASSWORD:-bench_only_change_me}@db:5432/${BENCHMARK_DB_NAME:-shopware_bench}?serverVersion=18.6&charset=utf8"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    cpus: ${DB_CPUS:-2.0}
+    mem_limit: ${DB_MEMORY_LIMIT:-4g}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${BENCHMARK_DB_ADMIN_PASSWORD:-bench_admin_only_change_me}
+      POSTGRES_DB: ${BENCHMARK_DB_NAME:-shopware_bench}
+      BENCHMARK_DB_USER: ${BENCHMARK_DB_USER:-shopware_bench}
+      BENCHMARK_DB_PASSWORD: ${BENCHMARK_DB_PASSWORD:-bench_only_change_me}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - timezone=UTC
+      - -c
+      - track_io_timing=on
+    volumes:
+      - postgresql-data:/var/lib/postgresql
+      - ./postgresql-init-user.sh:/docker-entrypoint-initdb.d/10-benchmark-user.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U postgres -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+volumes:
+  postgresql-data:
