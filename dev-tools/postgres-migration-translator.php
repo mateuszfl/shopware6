@@ -1669,6 +1669,23 @@ SQL;
                         }
                         continue;
                     }
+                    if ($this->classFile === 'Migration1669124190AddDoctrineMessengerTable.php'
+                        && preg_match('/^\\s*INDEX\\s*\\((.*)\\)\\s*$/is', $clause, $anonymousIndexMatch)) {
+                        $columns = trim($anonymousIndexMatch[1]);
+                        $columnParts = $this->splitSqlCommaList($columns);
+                        if ($columnParts === [] || array_filter($columnParts, static fn (string $column): bool => !preg_match('/^\\s*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*$/', $column)) !== []) {
+                            $this->unsupported[] = 'anonymous table-level INDEX has unsupported column expression';
+                            $kept[] = $clause;
+
+                            continue;
+                        }
+                        $columnNames = array_map(static fn (string $column): string => trim(trim($column), '`"'), $columnParts);
+                        $indexName = '"' . trim($table, '`"') . '_' . implode('_', $columnNames) . '_idx"';
+                        $indexes[] = [$indexName, $table, $columns];
+                        $changed = true;
+
+                        continue;
+                    }
                     if (!preg_match('/^\\s*(?:KEY|INDEX)\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $match)) {
                         $kept[] = $clause;
                         continue;
