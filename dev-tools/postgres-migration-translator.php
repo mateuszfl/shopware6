@@ -1992,7 +1992,7 @@ SQL;
                         new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg($resultForCheck)]),
                         new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
                             new Node\Name\FullyQualified('stream_get_contents'),
-                            [new Node\Arg(new Node\Expr\Variable('result'))]
+                            [new Node\Arg(new Node\Expr\Variable('result')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
                         )),
                         new Node\Expr\Cast\String_(new Node\Expr\Variable('result'))
                     );
@@ -2016,7 +2016,7 @@ SQL;
                         new Node\Expr\Variable('templateId'),
                         new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
                             new Node\Name\FullyQualified('stream_get_contents'),
-                            [new Node\Arg(new Node\Expr\Variable('templateId'))]
+                            [new Node\Arg(new Node\Expr\Variable('templateId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
                         ))
                     ))];
                     $node->elseifs = [new Node\Stmt\ElseIf_(
@@ -2041,7 +2041,7 @@ SQL;
                         new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg($result)]),
                         new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
                             new Node\Name\FullyQualified('stream_get_contents'),
-                            [new Node\Arg(new Node\Expr\Variable($variableName))]
+                            [new Node\Arg(new Node\Expr\Variable($variableName)), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
                         )),
                         new Node\Expr\Variable($variableName)
                     );
