@@ -2338,6 +2338,39 @@ SQL;
                     $this->appliedRules['diagnostic_missing_generated_column_guard'] = ($this->appliedRules['diagnostic_missing_generated_column_guard'] ?? 0) + 1;
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1707064042CartRemoveFK.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Stmt\TryCatch
+                    && isset($node->stmts[0])
+                    && $node->stmts[0] instanceof Node\Stmt\Expression
+                    && $node->stmts[0]->expr instanceof Node\Expr\MethodCall
+                    && $node->stmts[0]->expr->name instanceof Node\Identifier
+                    && $node->stmts[0]->expr->name->toString() === 'executeStatement'
+                    && isset($node->stmts[0]->expr->args[0])
+                    && $node->stmts[0]->expr->args[0]->value instanceof Node\Scalar\String_
+                    && preg_match('/CHANGE\\s+COLUMN\\s+`(price|line_item_count|currency_id|shipping_method_id|payment_method_id|country_id|sales_channel_id)`\\s+`\\1`\\s+(FLOAT|VARCHAR\\s*\\(\\s*42\\s*\\)|BINARY\\s*\\(\\s*16\\s*\\))\\s+NULL/i', $node->stmts[0]->expr->args[0]->value->value, $cartColumnMatch)) {
+                    $column = $cartColumnMatch[1];
+                    $mysqlType = strtoupper(preg_replace('/\\s+/', '', $cartColumnMatch[2]) ?? $cartColumnMatch[2]);
+                    $type = match ($mysqlType) {
+                        'FLOAT' => 'REAL',
+                        'VARCHAR(42)' => 'VARCHAR(42)',
+                        'BINARY(16)' => 'BYTEA',
+                    };
+                    $sql = 'ALTER TABLE cart ALTER COLUMN ' . $column . ' TYPE ' . $type
+                        . ', ALTER COLUMN ' . $column . ' DROP NOT NULL, ALTER COLUMN ' . $column . ' DROP DEFAULT';
+                    $this->appliedRules['diagnostic_cart_column_change_try_catch_to_guarded_alter'] = ($this->appliedRules['diagnostic_cart_column_change_try_catch_to_guarded_alter'] ?? 0) + 1;
+                    $connection = new Node\Expr\Variable('connection');
+                    return new Node\Stmt\If_(new Node\Expr\MethodCall(
+                        new Node\Expr\Variable('this'),
+                        'columnExists',
+                        [new Node\Arg($connection), new Node\Arg(new Node\Scalar\String_('cart')), new Node\Arg(new Node\Scalar\String_($column))]
+                    ), ['stmts' => [new Node\Stmt\Expression(new Node\Expr\MethodCall(
+                        new Node\Expr\Variable('connection'),
+                        'executeStatement',
+                        [new Node\Arg(new Node\Scalar\String_($sql))]
+                    ))]]);
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1657173907DownloadMailTemplate.php'
                     && $this->currentMethodName === 'fetchLanguageIdByName'
                     && $node instanceof Node\Stmt\Return_
