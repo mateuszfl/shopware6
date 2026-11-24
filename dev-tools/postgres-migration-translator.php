@@ -2344,6 +2344,78 @@ SQL;
                     }
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1727768690UpdateDefaultEnglishPlainMailFooter.php'
+                    && $this->currentMethodName === 'fetchDefaultLanguageId'
+                    && $node instanceof Node\Stmt\If_
+                    && $node->cond instanceof Node\Expr\BooleanNot
+                    && $node->cond->expr instanceof Node\Expr\Variable
+                    && $node->cond->expr->name === 'langId') {
+                    $fallbackStatements = $node->stmts;
+                    $node->cond = new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Variable('langId'))]);
+                    $node->stmts = [new Node\Stmt\Expression(new Node\Expr\Assign(
+                        new Node\Expr\Variable('langId'),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('langId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        ))
+                    ))];
+                    $node->elseifs = [new Node\Stmt\ElseIf_(new Node\Expr\BooleanNot(new Node\Expr\Variable('langId')), $fallbackStatements)];
+                    $this->appliedRules['diagnostic_mail_footer_language_uuid_stream_read'] = ($this->appliedRules['diagnostic_mail_footer_language_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1727768690UpdateDefaultEnglishPlainMailFooter.php'
+                    && $this->currentMethodName === 'fetchDefaultLanguageId'
+                    && $node instanceof Node\Stmt\Return_
+                    && $node->expr instanceof Node\Expr\Variable
+                    && $node->expr->name === 'langId') {
+                    $node->expr = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Variable('langId'))]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('langId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        )),
+                        new Node\Expr\Variable('langId')
+                    );
+                    $this->appliedRules['diagnostic_mail_footer_language_uuid_stream_read'] = ($this->appliedRules['diagnostic_mail_footer_language_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1727768690UpdateDefaultEnglishPlainMailFooter.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Expr\Assign
+                    && $node->var instanceof Node\Expr\Variable
+                    && $node->var->name === 'systemDefaultMailHeaderFooterId'
+                    && $node->expr instanceof Node\Expr\MethodCall
+                    && $node->expr->name instanceof Node\Identifier
+                    && $node->expr->name->toString() === 'fetchOne') {
+                    $node->expr = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg(new Node\Expr\Assign(
+                            new Node\Expr\Variable('diagnosticMailHeaderFooterId'),
+                            $node->expr
+                        ))]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable('diagnosticMailHeaderFooterId')), new Node\Arg(new Node\Scalar\Int_(-1)), new Node\Arg(new Node\Scalar\Int_(0))]
+                        )),
+                        new Node\Expr\Variable('diagnosticMailHeaderFooterId')
+                    );
+                    $this->appliedRules['diagnostic_mail_footer_header_footer_uuid_stream_read'] = ($this->appliedRules['diagnostic_mail_footer_header_footer_uuid_stream_read'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1727768690UpdateDefaultEnglishPlainMailFooter.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'executeStatement'
+                    && isset($node->args[1])
+                    && $node->args[1]->value instanceof Node\Expr\Array_
+                    && !isset($node->args[2])) {
+                    $node->args[2] = new Node\Arg(new Node\Expr\Array_([
+                        new Node\Expr\ArrayItem(new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'), new Node\Scalar\String_('mailHeaderFooterId')),
+                        new Node\Expr\ArrayItem(new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'), new Node\Scalar\String_('enLangId')),
+                    ]));
+                    $this->appliedRules['diagnostic_mail_footer_uuid_bindings'] = ($this->appliedRules['diagnostic_mail_footer_uuid_bindings'] ?? 0) + 1;
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1715081559AdjustSentMailActionOnReviewSent.php'
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Expr\MethodCall
