@@ -1874,7 +1874,9 @@ SQL;
                     && $node->name->toString() === 'addInsert'
                     && isset($node->args[1])
                     && !isset($node->args[2])) {
-                    $keys = $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
+                    $keys = $this->classFile === 'Migration1625583619MoveDataFromEventActionToFlow.php'
+                        ? ['id', 'flow_id', 'rule_id', 'parent_id', 'sales_channel_id']
+                        : $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
                     if ($keys !== []) {
                         $typeItems = [];
                         foreach ($keys as $key) {
