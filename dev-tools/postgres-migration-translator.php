@@ -2098,6 +2098,18 @@ SQL;
                 return $sql;
             }
 
+            private function rewriteCustomerAddressStreetChunkUpdate(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1695778183UpdateStreetOfTableCustomerAddressToNotNull.php'
+                    || !preg_match('/^\s*UPDATE\s+`?customer_address`?\s+SET\s+`?street`?\s*=\s*(?:""|\'\')\s+WHERE\s+`?street`?\s+IS\s+NULL\s+LIMIT\s+1000\s*;?\s*$/i', $sql)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['mysql_customer_address_street_update_limit_to_cte'] = ($this->appliedRules['mysql_customer_address_street_update_limit_to_cte'] ?? 0) + 1;
+
+                return "WITH customer_address_street_chunk AS (SELECT id FROM customer_address WHERE street IS NULL ORDER BY id LIMIT 1000) UPDATE customer_address SET street = '' FROM customer_address_street_chunk WHERE customer_address.id = customer_address_street_chunk.id";
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2625,6 +2637,7 @@ SQL;
                     $sql = $this->rewriteCustomerSalutationChunkUpdate($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->preserveAppConfigPrimaryKeyColumnConstraints($sql);
+                    $sql = $this->rewriteCustomerAddressStreetChunkUpdate($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
                     $sql = $this->rewriteUpdateInnerJoin($sql);
