@@ -2322,6 +2322,45 @@ SQL;
                     }
                 }
                 if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1715081559AdjustSentMailActionOnReviewSent.php'
+                    && $this->currentMethodName === 'update'
+                    && $node instanceof Node\Expr\MethodCall
+                    && $node->name instanceof Node\Identifier
+                    && isset($node->args[0])
+                    && $node->args[0]->value instanceof Node\Scalar\String_) {
+                    $method = $node->name->toString();
+                    $expression = $node->args[0]->value->value;
+                    $rewrites = [
+                        'select' => [
+                            'LOWER(HEX(mt.id))' => "LOWER(encode(mt.id, 'hex'))",
+                        ],
+                        'where' => [
+                            'mtt.technical_name = "review_form"' => "mtt.technical_name = 'review_form'",
+                            'f.event_name = "review_form.send"' => "f.event_name = 'review_form.send'",
+                            'fs.action_name = "action.mail.send"' => "fs.action_name = 'action.mail.send'",
+                        ],
+                        'set' => [
+                            'fs.config' => 'config',
+                            'JSON_SET(fs.config, "$.recipient.type", "admin")' => "jsonb_set(fs.config, '{recipient,type}', '\"admin\"'::jsonb)",
+                        ],
+                        'andWhere' => [
+                            'JSON_EXTRACT(fs.config, "$.recipient.type") = "default"' => "fs.config #>> '{recipient,type}' = 'default'",
+                            'JSON_EXTRACT(fs.config, "$.mailTemplateId") IN (:mailTemplateIds)' => "fs.config #>> '{mailTemplateId}' IN (:mailTemplateIds)",
+                        ],
+                    ];
+                    if (isset($rewrites[$method][$expression])) {
+                        $node->args[0]->value->value = $rewrites[$method][$expression];
+                        $this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] = ($this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] ?? 0) + 1;
+                    }
+                    if ($method === 'set'
+                        && isset($node->args[1])
+                        && $node->args[1]->value instanceof Node\Scalar\String_
+                        && $node->args[1]->value->value === 'JSON_SET(fs.config, "$.recipient.type", "admin")') {
+                        $node->args[1]->value->value = "jsonb_set(fs.config, '{recipient,type}', '\"admin\"'::jsonb)";
+                        $this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] = ($this->appliedRules['diagnostic_query_builder_postgresql_json_uuid_expressions'] ?? 0) + 1;
+                    }
+                }
+                if ($this->diagnosticMode
                     && $this->classFile === 'Migration1673964565MigrateToReferencedColumns.php'
                     && $this->currentMethodName === 'update'
                     && $node instanceof Node\Expr\MethodCall
