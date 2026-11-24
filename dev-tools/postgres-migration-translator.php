@@ -941,10 +941,39 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $this->appliedRules['lower_hex_uuid_to_encode_hex'] = ($this->appliedRules['lower_hex_uuid_to_encode_hex'] ?? 0) + count($changes);
                 }
 
+                $plainPattern = '/\\bHEX\\s*\\(\\s*(' . $identifier . ')\\s*\\)/i';
+                $plainChanges = [];
+                if (preg_match_all($plainPattern, $sql, $plainMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                    foreach ($plainMatches as $match) {
+                        $offset = $match[0][1];
+                        if (!$this->isSqlOffsetOutsideQuotes($sql, $offset)) {
+                            continue;
+                        }
+                        $prefix = substr($sql, max(0, $offset - 20), min(20, $offset));
+                        if (preg_match('/LOWER\\s*\\(\\s*$/i', $prefix)) {
+                            continue;
+                        }
+                        $parts = preg_split('/\\s*\\.\\s*/', trim($match[1][0])) ?: [];
+                        $column = strtolower(trim((string) end($parts), '`"'));
+                        if ($column !== 'id' && !str_ends_with($column, '_id')) {
+                            $this->unsupported[] = 'HEX(...) on a non-UUID-named column needs explicit translation';
+
+                            continue;
+                        }
+                        $plainChanges[] = [$offset, strlen($match[0][0]), "encode(" . $match[1][0] . ", 'hex')"];
+                    }
+                }
+                foreach (array_reverse($plainChanges) as [$offset, $length, $replacement]) {
+                    $sql = substr_replace($sql, $replacement, $offset, $length);
+                }
+                if ($plainChanges !== []) {
+                    $this->appliedRules['hex_uuid_to_encode_hex'] = ($this->appliedRules['hex_uuid_to_encode_hex'] ?? 0) + count($plainChanges);
+                }
+
                 if (preg_match_all('/\\bHEX\\s*\\(/i', $sql, $hexMatches, PREG_OFFSET_CAPTURE)) {
                     foreach ($hexMatches[0] as [$hexCall, $offset]) {
                         if ($this->isSqlOffsetOutsideQuotes($sql, $offset)) {
-                            $this->unsupported[] = 'HEX(...) form other than LOWER(HEX(UUID-column)) remains unsupported';
+                            $this->unsupported[] = 'HEX(...) form remains unsupported';
 
                             break;
                         }
