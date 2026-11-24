@@ -13,8 +13,12 @@ use Shopware\Core\Content\Product\Aggregate\ProductManufacturer\ProductManufactu
 use Shopware\Core\Content\Product\Aggregate\ProductManufacturerTranslation\ProductManufacturerTranslationDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductTranslation\ProductTranslationDefinition;
 use Shopware\Core\Content\Product\ProductDefinition;
+use Shopware\Core\Framework\App\Aggregate\AppTranslation\AppTranslationDefinition;
+use Shopware\Core\Framework\App\AppDefinition;
+use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\QueryBuilder;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StringField;
@@ -40,6 +44,40 @@ class EntityDefinitionQueryHelperTest extends TestCase
         static::assertSame('"product.translation.name"', EntityDefinitionQueryHelper::escape('product.translation.name', $postgres));
         static::assertSame('`product.translation.name`', EntityDefinitionQueryHelper::escape('product.translation.name'));
         static::assertSame('"name""quote"', EntityDefinitionQueryHelper::escape('name"quote', $postgres));
+
+        $longAlias = 'order_delivery.shippingOrderAddress.country.translation.addressFormat';
+        $shortAlias = EntityDefinitionQueryHelper::shortenPostgreSqlAlias($longAlias);
+        static::assertSame(63, \strlen($shortAlias));
+        static::assertSame('"' . $shortAlias . '"', EntityDefinitionQueryHelper::escape($longAlias, $postgres));
+        static::assertSame('`' . $longAlias . '`', EntityDefinitionQueryHelper::escape($longAlias, $mysql));
+        static::assertNotSame($shortAlias, EntityDefinitionQueryHelper::shortenPostgreSqlAlias(substr($longAlias, 0, 46) . 'other'));
+    }
+
+    public function testTranslationSelectShortensLongPostgreSqlAliases(): void
+    {
+        $postgres = DriverManager::getConnection(['driver' => 'pdo_pgsql', 'serverVersion' => '18.6']);
+        $registry = new StaticDefinitionInstanceRegistry(
+            [AppDefinition::class, AppTranslationDefinition::class],
+            static::createStub(ValidatorInterface::class),
+            static::createStub(EntityWriteGatewayInterface::class)
+        );
+        $root = 'payment_method.appPaymentMethod.app';
+        $alias = $root . '.translation.privacyPolicyExtensions';
+        $query = new QueryBuilder($postgres);
+
+        (new EntityDefinitionQueryHelper($postgres))->addTranslationSelect(
+            $root,
+            $registry->get(AppDefinition::class),
+            $query,
+            Context::createDefaultContext()
+        );
+
+        $selects = implode(', ', $query->getSelectParts());
+        static::assertStringContainsString(
+            '"' . EntityDefinitionQueryHelper::shortenPostgreSqlAlias($alias) . '"',
+            $selects
+        );
+        static::assertStringNotContainsString('"' . $alias . '"', $selects);
     }
 
     #[DataProvider('provideTestGetRoot')]

@@ -138,7 +138,8 @@ class TranslationFieldResolver extends AbstractFieldResolver
 
         $translationQuery = $this->getTranslationQuery(
             $definition,
-            $this->getSelectSQL($translationDefinition, $field, '#alias#'),
+            $translationDefinition,
+            $field,
             $path,
             $context,
             $translatedVersionFieldName
@@ -191,7 +192,8 @@ class TranslationFieldResolver extends AbstractFieldResolver
 
     private function getTranslationQuery(
         EntityDefinition $definition,
-        string $select,
+        EntityDefinition $translationDefinition,
+        TranslatedField $field,
         string $on,
         Context $context,
         ?string $versionFieldName = null,
@@ -217,7 +219,7 @@ class TranslationFieldResolver extends AbstractFieldResolver
         }
 
         // set first language as from part
-        $query->addSelect(str_replace('#alias#', $firstAlias, $select));
+        $query->addSelect($this->getSelectSQL($translationDefinition, $field, $firstAlias));
         $query->from($this->quote($table), $this->quote($firstAlias));
         $query->where($this->quote($firstAlias) . '.language_id = :languageId');
         $query->setParameter('languageId', Uuid::fromHexToBytes($first), ParameterType::BINARY);
@@ -274,7 +276,7 @@ class TranslationFieldResolver extends AbstractFieldResolver
                 str_replace(array_keys($variables), array_values($variables), $condition)
             );
 
-            $query->addSelect(str_replace('#alias#', $alias, $select));
+            $query->addSelect($this->getSelectSQL($translationDefinition, $field, $alias));
             $query->setParameter('languageId' . $i, Uuid::fromHexToBytes($language), ParameterType::BINARY);
         }
 

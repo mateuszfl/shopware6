@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Dbal;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
@@ -28,6 +29,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Parser\ParseResult;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Util\Database\TableHelper;
+use Shopware\Core\Framework\Util\Hasher;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
@@ -51,7 +53,21 @@ class EntityDefinitionQueryHelper
             throw DataAbstractionLayerException::invalidIdentifier($string);
         }
 
-        return $connection?->getDatabasePlatform()->quoteSingleIdentifier($string) ?? '`' . $string . '`';
+        $platform = $connection?->getDatabasePlatform();
+        if ($platform instanceof PostgreSQLPlatform && str_contains($string, '.') && \strlen($string) > 63) {
+            $string = self::shortenPostgreSqlAlias($string);
+        }
+
+        return $platform?->quoteSingleIdentifier($string) ?? '`' . $string . '`';
+    }
+
+    public static function shortenPostgreSqlAlias(string $alias): string
+    {
+        if (\strlen($alias) <= 63) {
+            return $alias;
+        }
+
+        return substr($alias, 0, 46) . '_' . substr(Hasher::hash($alias), 0, 16);
     }
 
     /**
@@ -514,15 +530,7 @@ class EntityDefinitionQueryHelper
         foreach ($fields as $field) {
             $selects = [];
             foreach ($translationChain as $select) {
-                $vars = [
-                    '#root#' => $select,
-                    '#field#' => $field->getPropertyName(),
-                ];
-                $select = str_replace(
-                    array_keys($vars),
-                    array_values($vars),
-                    $this->quote('#root#.#field#'),
-                );
+                $select = $this->quote($select . '.' . $field->getPropertyName());
 
                 $query->addSelect($select);
                 $selects[] = $select;

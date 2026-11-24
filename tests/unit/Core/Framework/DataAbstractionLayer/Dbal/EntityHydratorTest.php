@@ -9,6 +9,7 @@ use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityDefinitionQueryHelper;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityHydrator;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\EntityReader;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityCollection;
@@ -120,6 +121,32 @@ class EntityHydratorTest extends TestCase
         static::assertSame(Uuid::fromBytesToHex($extended), $foreignKeys->get('extendedFk'));
     }
 
+    public function testNullManyToOnePrimaryKeyHydratesAsMissingAssociation(): void
+    {
+        $definition = $this->definitionInstanceRegistry->get(SingleEntityDependencyTestRootDefinition::class);
+        $id = Uuid::randomBytes();
+
+        $entities = $this->hydrator->hydrate(
+            new EntityCollection(),
+            $definition->getEntityClass(),
+            $definition,
+            [[
+                'test.id' => $id,
+                'test.name' => 'root',
+                'test.warehouse.id' => null,
+                'test.zipcode.id' => null,
+            ]],
+            'test',
+            Context::createDefaultContext()
+        );
+
+        static::assertCount(1, $entities);
+        $entity = $entities->first();
+        static::assertNotNull($entity);
+        static::assertNull($entity->get('warehouse'));
+        static::assertNull($entity->get('zipcode'));
+    }
+
     public function testTranslationWithZeroStringField(): void
     {
         $definition = $this->definitionInstanceRegistry->get(TranslatableTestDefinition::class);
@@ -142,6 +169,33 @@ class EntityHydratorTest extends TestCase
         static::assertNotNull($first);
         static::assertSame('0', $first->get('name'));
         static::assertSame('0', $first->getTranslation('name'));
+    }
+
+    public function testHydratesTranslatedFieldFromLongPostgreSqlAlias(): void
+    {
+        $definition = $this->definitionInstanceRegistry->get(TranslatableTestDefinition::class);
+        $root = 'order_delivery.shippingOrderAddress.country';
+        $id = Uuid::randomBytes();
+        $rows = [[
+            $root . '.id' => $id,
+            $root . '.name' => 'Poland',
+            EntityDefinitionQueryHelper::shortenPostgreSqlAlias($root . '.translation.name') => 'Poland',
+        ]];
+
+        $entities = $this->hydrator->hydrate(
+            new EntityCollection(),
+            $definition->getEntityClass(),
+            $definition,
+            $rows,
+            $root,
+            Context::createDefaultContext()
+        );
+
+        static::assertCount(1, $entities);
+        $country = $entities->first();
+        static::assertNotNull($country);
+        static::assertSame('Poland', $country->get('name'));
+        static::assertSame('Poland', $country->getTranslation('name'));
     }
 
     #[TestDox('Translated fields are resolved per definition instance, not per entity name')]

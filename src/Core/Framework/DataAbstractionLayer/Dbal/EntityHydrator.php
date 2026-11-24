@@ -144,9 +144,7 @@ class EntityHydrator
             if ($field instanceof VersionField || $field instanceof ReferenceVersionField) {
                 continue;
             }
-            $accessor = $root . '.' . $field->getPropertyName();
-
-            $primaryKey[$field->getPropertyName()] = $field->getSerializer()->decode($field, $row[$accessor]);
+            $primaryKey[$field->getPropertyName()] = $field->getSerializer()->decode($field, self::value($row, $root, $field->getPropertyName()));
         }
 
         return $primaryKey;
@@ -252,11 +250,11 @@ class EntityHydrator
                 continue;
             }
 
-            if (!\array_key_exists($key, $row)) {
+            if (!self::hasValue($row, $root, $property)) {
                 continue;
             }
 
-            $value = $row[$key];
+            $value = self::value($row, $root, $property);
 
             $typed = $field;
             if ($field instanceof TranslatedField) {
@@ -278,9 +276,8 @@ class EntityHydrator
                 $chain = EntityDefinitionQueryHelper::buildTranslationChain($root, $context, $inherited);
 
                 // assign translated value of the first language
-                $key = array_shift($chain) . '.' . $property;
-
-                $decoded = $typed->getSerializer()->decode($typed, $row[$key]);
+                $languageAlias = $chain[0];
+                $decoded = $typed->getSerializer()->decode($typed, self::value($row, $languageAlias, $property));
                 $entity->assign([$property => $decoded]);
 
                 continue;
@@ -309,15 +306,13 @@ class EntityHydrator
             throw DataAbstractionLayerException::entityHydratorError('No association field for "manyToMany" provided');
         }
 
-        $accessor = $root . '.' . $field->getPropertyName() . '.id_mapping';
-
         // many to many isn't loaded in case of limited association criterias
-        if (!\array_key_exists($accessor, $row)) {
+        if (!self::hasValue($row, $root, $field->getPropertyName() . '.id_mapping')) {
             return;
         }
 
         // explode hexed ids
-        $ids = explode('||', (string) $row[$accessor]);
+        $ids = explode('||', (string) self::value($row, $root, $field->getPropertyName() . '.id_mapping'));
 
         $ids = array_map('strtolower', array_filter($ids));
 
@@ -392,7 +387,7 @@ class EntityHydrator
 
         $key = $association . '.' . $pk;
 
-        if (!isset($row[$key])) {
+        if (self::value($row, $association, $pk) === null) {
             return null;
         }
 
@@ -502,7 +497,11 @@ class EntityHydrator
     {
         $accessor = $root . '.' . $property;
 
-        return $row[$accessor] ?? null;
+        if (\array_key_exists($accessor, $row)) {
+            return $row[$accessor];
+        }
+
+        return $row[EntityDefinitionQueryHelper::shortenPostgreSqlAlias($accessor)] ?? null;
     }
 
     protected function getManyToOneProperty(AssociationField $field): string
@@ -553,6 +552,17 @@ class EntityHydrator
         }
 
         return json_encode($merged, \JSON_PRESERVE_ZERO_FRACTION | \JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<mixed> $row
+     */
+    private static function hasValue(array $row, string $root, string $property): bool
+    {
+        $accessor = $root . '.' . $property;
+
+        return \array_key_exists($accessor, $row)
+            || \array_key_exists(EntityDefinitionQueryHelper::shortenPostgreSqlAlias($accessor), $row);
     }
 
     /**

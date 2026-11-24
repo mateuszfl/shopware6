@@ -347,7 +347,6 @@ ALTER TABLE public."product" ALTER COLUMN "product_number" TYPE character varyin
 ALTER TABLE public."product" ALTER COLUMN "manufacturer_number" TYPE character varying(255) COLLATE public.sw_type_ci;
 ALTER TABLE public."product" ALTER COLUMN "ean" TYPE character varying(255) COLLATE public.sw_type_ci;
 ALTER TABLE public."product" ALTER COLUMN "display_group" TYPE character varying(64) COLLATE public.sw_type_ci;
-ALTER TABLE public."product" ALTER COLUMN "cheapest_price" TYPE text COLLATE public.sw_type_ci;
 ALTER TABLE public."product" ALTER COLUMN "cheapest_price_accessor" TYPE text COLLATE public.sw_type_ci;
 ALTER TABLE public."product" ALTER COLUMN "type" TYPE character varying(32) COLLATE public.sw_type_ci;
 ALTER TABLE public."product_cross_selling" ALTER COLUMN "type" TYPE character varying(255) COLLATE public.sw_type_ci;

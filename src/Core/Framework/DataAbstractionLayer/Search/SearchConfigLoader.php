@@ -5,6 +5,7 @@ namespace Shopware\Core\Framework\DataAbstractionLayer\Search;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DataAbstractionLayerException;
 use Shopware\Core\Framework\Deprecation\BCChange\ClassMoved;
@@ -35,11 +36,15 @@ class SearchConfigLoader
      */
     public function load(Context $context): array
     {
+        $excludedTerms = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform
+            ? 'LOWER(CAST(product_search_config.excluded_terms AS TEXT))'
+            : 'LOWER(product_search_config.excluded_terms)';
+
         foreach ($context->getLanguageIdChain() as $languageId) {
             $config = $this->connection->fetchAllAssociative(
                 'SELECT
 product_search_config.and_logic,
-LOWER(product_search_config.excluded_terms) as excluded_terms,
+' . $excludedTerms . ' as excluded_terms,
 product_search_config.min_search_length,
 product_search_config_field.field,
 product_search_config_field.tokenize,

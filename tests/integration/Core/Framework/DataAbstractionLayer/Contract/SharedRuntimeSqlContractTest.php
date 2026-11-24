@@ -72,9 +72,9 @@ class SharedRuntimeSqlContractTest extends TestCase
     {
         $isPostgreSql = $this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform;
         $binary = $isPostgreSql ? 'BYTEA' : 'BINARY(16)';
-        $text = $isPostgreSql ? 'TEXT' : 'LONGTEXT';
+        $json = $isPostgreSql ? 'JSONB' : 'JSON';
         static::assertFalse($this->connection->createSchemaManager()->tablesExist(['product_search_config', 'product_search_config_field']), 'The isolated contract database must not contain search config tables.');
-        $this->connection->executeStatement('CREATE TABLE product_search_config (id ' . $binary . ' PRIMARY KEY, language_id ' . $binary . ' NOT NULL, and_logic VARCHAR(10) NOT NULL, excluded_terms ' . $text . ' NOT NULL, min_search_length INTEGER NOT NULL)');
+        $this->connection->executeStatement('CREATE TABLE product_search_config (id ' . $binary . ' PRIMARY KEY, language_id ' . $binary . ' NOT NULL, and_logic VARCHAR(10) NOT NULL, excluded_terms ' . $json . ' NOT NULL, min_search_length INTEGER NOT NULL)');
         $this->ownedTables[] = 'product_search_config';
         $this->connection->executeStatement('CREATE TABLE product_search_config_field (id ' . $binary . ' PRIMARY KEY, product_search_config_id ' . $binary . ' NOT NULL, field VARCHAR(255) NOT NULL, tokenize SMALLINT NOT NULL, ranking DOUBLE PRECISION NOT NULL, use_exact_subfield SMALLINT NOT NULL, searchable SMALLINT NOT NULL)');
         $this->ownedTables[] = 'product_search_config_field';
