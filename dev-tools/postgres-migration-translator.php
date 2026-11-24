@@ -715,6 +715,32 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                 return $sql;
             }
 
+            private function rewriteQuotedDefaultStrings(string $sql): string
+            {
+                $pattern = '/(\\bDEFAULT\\s+)"((?:[^"]|"")*)"/i';
+                if (!preg_match_all($pattern, $sql, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                    return $sql;
+                }
+
+                $changes = [];
+                foreach ($matches as $match) {
+                    if (!$this->isSqlOffsetOutsideQuotes($sql, $match[1][1])) {
+                        continue;
+                    }
+                    $literal = str_replace('""', '"', $match[2][0]);
+                    $replacement = $match[1][0] . "'" . str_replace("'", "''", $literal) . "'";
+                    $changes[] = [$match[0][1], strlen($match[0][0]), $replacement];
+                }
+                foreach (array_reverse($changes) as [$offset, $length, $replacement]) {
+                    $sql = substr_replace($sql, $replacement, $offset, $length);
+                }
+                if ($changes !== []) {
+                    $this->appliedRules['mysql_double_quoted_default_to_string_literal'] = ($this->appliedRules['mysql_double_quoted_default_to_string_literal'] ?? 0) + count($changes);
+                }
+
+                return $sql;
+            }
+
             private function rewriteJsonReplaceUpdate(string $sql): string
             {
                 $identifier = '(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
@@ -1588,6 +1614,7 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                     $sql = $this->rewriteJsonObjectCalls($sql);
                     $sql = $this->rewriteLikeIdentifierOperands($sql);
                     $sql = $this->rewriteJsonEmptyStringComparison($sql);
+                    $sql = $this->rewriteQuotedDefaultStrings($sql);
                 }
                 $sql = $this->rewriteSingleDropForeignKey($sql);
                 if ($this->diagnosticMode) {
