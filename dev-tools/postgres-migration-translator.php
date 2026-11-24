@@ -1887,6 +1887,18 @@ SQL;
                 return $rewritten;
             }
 
+            private function rewriteTemporaryVariantListingGeneratedColumn(string $sql): string
+            {
+                if ($this->classFile !== 'Migration1656397126AddMainVariantConfiguration.php'
+                    || !preg_match('/^\s*(ALTER\s+TABLE\s+`?product`?\s+ADD\s+COLUMN\s+`?variant_listing_config`?\s+JSON)\s+GENERATED\s+ALWAYS\s+AS\s*\([\s\S]*\)\s+VIRTUAL\s*(;?)\s*$/i', $sql, $matches)) {
+                    return $sql;
+                }
+
+                $this->appliedRules['temporary_variant_listing_generated_column_to_nullable_json'] = ($this->appliedRules['temporary_variant_listing_generated_column_to_nullable_json'] ?? 0) + 1;
+
+                return $matches[1] . ' NULL' . ($matches[2] ?? '');
+            }
+
             private function hasMultiActionDropForeignKey(string $sql): bool
             {
                 foreach ($this->splitSqlStatements($sql) as $statement) {
@@ -2116,6 +2128,7 @@ SQL;
                 $sql = $this->rewriteCreateTable($originalSql);
                 if ($this->diagnosticMode) {
                     $sql = $this->rewriteProductPricePercentageUpdate($sql);
+                    $sql = $this->rewriteTemporaryVariantListingGeneratedColumn($sql);
                     $sql = $this->rewriteAlterTable($sql);
                     $sql = $this->rewriteShowIndexes($sql);
                     $sql = $this->rewriteDeleteSelfJoin($sql);
