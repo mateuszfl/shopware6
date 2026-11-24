@@ -1757,6 +1757,15 @@ SQL;
                         continue;
                     }
 
+                    if ($this->diagnosticMode
+                        && $this->classFile === 'Migration1697788982ChangeColumnAvailabilityRuleIdFromShippingMethodToNullable.php'
+                        && preg_match('/^\s*ALTER\s+TABLE\s+`shipping_method`\s+MODIFY(?:\s+COLUMN)?\s+`availability_rule_id`\s+BINARY\s*\(\s*16\s*\)\s+DEFAULT\s+NULL\s*;?\s*$/i', $statement)) {
+                        $rewritten .= 'ALTER TABLE shipping_method ALTER COLUMN availability_rule_id DROP NOT NULL, ALTER COLUMN availability_rule_id DROP DEFAULT;';
+                        $this->appliedRules['diagnostic_shipping_availability_rule_nullable_without_duplicate_check'] = ($this->appliedRules['diagnostic_shipping_availability_rule_nullable_without_duplicate_check'] ?? 0) + 1;
+
+                        continue;
+                    }
+
                     $identifier = '(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)';
                     if ($this->classFile === 'Migration1671003201RemoveDeprecatedColumns.php'
                         && preg_match('/^\s*ALTER\s+TABLE\s+(' . $identifier . ')\s+CHANGE(?:\s+COLUMN)?\s+(' . $identifier . ')\s+\2\s+TINYINT(?:\s*\(\s*1\s*\))?\s+DEFAULT\s+0\s*(;?)\s*$/i', $statement, $changeMatch)) {
