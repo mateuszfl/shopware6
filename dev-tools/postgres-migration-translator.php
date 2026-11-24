@@ -2356,6 +2356,13 @@ SQL;
                         if (preg_match('/^(?:VAR)?BINARY\\s*\\(\\s*\\d+\\s*\\)$/i', $type)) {
                             $typeArgument->value->value = 'BYTEA';
                             $this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] = ($this->appliedRules['diagnostic_add_column_binary_type_to_bytea'] ?? 0) + 1;
+                        } elseif (preg_match('/^(DATE|DATETIME|TIMESTAMP)(?:\\s*\\(\\s*(\\d+)\\s*\\))?$/i', $type, $dateTimeTypeMatch)) {
+                            $baseType = strtoupper($dateTimeTypeMatch[1]);
+                            $precision = $dateTimeTypeMatch[2] ?? '';
+                            $typeArgument->value->value = $baseType === 'DATE'
+                                ? 'DATE'
+                                : 'TIMESTAMP' . ($precision !== '' ? '(' . $precision . ')' : '') . ' WITHOUT TIME ZONE';
+                            $this->appliedRules['diagnostic_add_column_datetime_type_normalized'] = ($this->appliedRules['diagnostic_add_column_datetime_type_normalized'] ?? 0) + 1;
                         } elseif (preg_match('/^(TINYINT|SMALLINT|MEDIUMINT|INT|INTEGER|BIGINT)(?:\\s*\\(\\s*\\d+\\s*\\))?(?:\\s+(UNSIGNED))?$/i', $type, $integerTypeMatch)) {
                             $baseType = strtoupper($integerTypeMatch[1]);
                             $unsigned = strtoupper($integerTypeMatch[2] ?? '') === 'UNSIGNED';
