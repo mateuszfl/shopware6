@@ -937,13 +937,13 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
                         }
                         continue;
                     }
-                    if (!preg_match('/^\\s*KEY\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $match)) {
+                    if (!preg_match('/^\\s*(?:KEY|INDEX)\\s+("[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\\s*\\((.*)\\)\\s*$/is', $clause, $match)) {
                         $kept[] = $clause;
                         continue;
                     }
                     $columns = trim($match[2]);
                     if (!preg_match('/^(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)(?:\\s*\\(\\s*\\d+\\s*\\))?(?:\\s*,\\s*(?:"[^"\\r\\n]+"|`[^`\\r\\n]+`|[A-Za-z_][A-Za-z0-9_$]*)(?:\\s*\\(\\s*\\d+\\s*\\))?)*$/', $columns)) {
-                        $this->unsupported[] = 'table-level KEY has unsupported column expression';
+                        $this->unsupported[] = 'table-level KEY/INDEX has unsupported column expression';
                         $kept[] = $clause;
                         continue;
                     }
