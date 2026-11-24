@@ -2025,6 +2025,28 @@ SQL;
                     )];
                     $this->appliedRules['diagnostic_flow_template_uuid_stream_read'] = ($this->appliedRules['diagnostic_flow_template_uuid_stream_read'] ?? 0) + 1;
                 }
+                if ($this->diagnosticMode
+                    && $this->classFile === 'Migration1675218708UpdateDeliverOrderedProductDownloadsFlowTemplate.php'
+                    && $node instanceof Node\Expr\StaticCall
+                    && $node->class instanceof Node\Name
+                    && $node->class->getLast() === 'Uuid'
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'fromBytesToHex'
+                    && isset($node->args[0])
+                    && $node->args[0]->value instanceof Node\Expr\Variable
+                    && in_array($node->args[0]->value->name, ['mailTemplateId', 'mailTemplateTypeId'], true)) {
+                    $variableName = $node->args[0]->value->name;
+                    $result = new Node\Expr\Variable($variableName);
+                    $node->args[0]->value = new Node\Expr\Ternary(
+                        new Node\Expr\FuncCall(new Node\Name\FullyQualified('is_resource'), [new Node\Arg($result)]),
+                        new Node\Expr\Cast\String_(new Node\Expr\FuncCall(
+                            new Node\Name\FullyQualified('stream_get_contents'),
+                            [new Node\Arg(new Node\Expr\Variable($variableName))]
+                        )),
+                        new Node\Expr\Variable($variableName)
+                    );
+                    $this->appliedRules['diagnostic_flow_template_uuid_bytes_stream_read'] = ($this->appliedRules['diagnostic_flow_template_uuid_bytes_stream_read'] ?? 0) + 1;
+                }
                 if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
                     && $node->var instanceof Node\Expr\Variable
                     && is_string($node->var->name)) {
