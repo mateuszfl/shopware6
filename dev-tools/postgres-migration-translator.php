@@ -116,7 +116,47 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
             public array $appliedRules = [];
             public bool $diagnosticMode = false;
             private string $classFile;
+            /** @var array<string, list<string>> */
+            private array $methodArrayKeys = [];
             private const SQL = '/\\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|RENAME)\\b/i';
+
+            /** @return list<string> */
+            private function getInsertDataKeys(Node\Expr $expression): array
+            {
+                if ($expression instanceof Node\Expr\Variable && is_string($expression->name)) {
+                    return $this->methodArrayKeys[$expression->name] ?? [];
+                }
+                if (!$expression instanceof Node\Expr\Array_) {
+                    return [];
+                }
+
+                $keys = [];
+                $nestedKeys = [];
+                foreach ($expression->items as $item) {
+                    if ($item === null) {
+                        continue;
+                    }
+                    if ($item->key instanceof Node\Scalar\String_) {
+                        $keys[] = $item->key->value;
+                        continue;
+                    }
+                    if ($item->value instanceof Node\Expr\Array_) {
+                        foreach ($item->value->items as $childItem) {
+                            if ($childItem?->key instanceof Node\Scalar\String_) {
+                                $nestedKeys[] = $childItem->key->value;
+                            }
+                        }
+                    }
+                }
+
+                return array_values(array_unique($keys !== [] ? $keys : $nestedKeys));
+            }
+
+            /** @param list<string> $keys */
+            private function getBinaryInsertKeys(array $keys): array
+            {
+                return array_values(array_filter($keys, static fn (string $key): bool => $key === 'id' || str_ends_with($key, '_id')));
+            }
 
             public function __construct(bool $diagnosticMode, string $classFile)
             {
@@ -567,6 +607,39 @@ if ($argc === 5 && \in_array($argv[1], ['--inventory', '--diagnostic-inventory']
 
             public function enterNode(Node $node): ?Node
             {
+                if ($this->diagnosticMode && $node instanceof Node\Stmt\ClassMethod) {
+                    $this->methodArrayKeys = [];
+                }
+                if ($this->diagnosticMode && $node instanceof Node\Expr\Assign
+                    && $node->var instanceof Node\Expr\Variable
+                    && is_string($node->var->name)) {
+                    $this->methodArrayKeys[$node->var->name] = $this->getInsertDataKeys($node->expr);
+                }
+                if ($this->diagnosticMode && $node instanceof Node\Stmt\Foreach_
+                    && $node->valueVar instanceof Node\Expr\Variable
+                    && is_string($node->valueVar->name)) {
+                    $this->methodArrayKeys[$node->valueVar->name] = $this->getInsertDataKeys($node->expr);
+                }
+                if ($this->diagnosticMode && $node instanceof Node\Expr\MethodCall
+                    && $node->var instanceof Node\Expr\Variable
+                    && $node->var->name === 'connection'
+                    && $node->name instanceof Node\Identifier
+                    && $node->name->toString() === 'insert'
+                    && isset($node->args[1])
+                    && !isset($node->args[2])) {
+                    $keys = $this->getBinaryInsertKeys($this->getInsertDataKeys($node->args[1]->value));
+                    if ($keys !== []) {
+                        $typeItems = [];
+                        foreach ($keys as $key) {
+                            $typeItems[] = new Node\Expr\ArrayItem(
+                                new Node\Expr\ClassConstFetch(new Node\Name\FullyQualified('Doctrine\\DBAL\\ParameterType'), 'BINARY'),
+                                new Node\Scalar\String_($key)
+                            );
+                        }
+                        $node->args[] = new Node\Arg(new Node\Expr\Array_($typeItems));
+                        $this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] = ($this->appliedRules['diagnostic_insert_uuid_columns_bind_as_binary'] ?? 0) + count($keys);
+                    }
+                }
                 if ($this->diagnosticMode
                     && $this->classFile === 'Migration1576590301FixSalesChannelDomainLanguageFk.php'
                     && $node instanceof Node\Stmt\Expression
