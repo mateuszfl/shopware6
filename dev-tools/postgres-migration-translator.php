@@ -1831,7 +1831,7 @@ SQL;
                     );
                     $this->replace(
                         'alter_modify_column_to_alter_column',
-                        '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|TEXT|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))(?:\s+COLLATE\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?\s+(NULL|NOT\s+NULL)(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
+                        '/\bMODIFY(?:\s+COLUMN)?\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*)\s+(VARCHAR\s*\(\s*\d+\s*\)|CHARACTER\s+VARYING\s*\(\s*\d+\s*\)|DOUBLE(?:\s+PRECISION)?|FLOAT|INTEGER|INT|SMALLINT|BIGINT|BYTEA|TEXT|JSON|DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\))(?:\s+COLLATE\s+("[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?\s+(NULL|NOT\s+NULL)(?:\s+DEFAULT\s+(NULL|[-+]?[0-9]+(?:\.[0-9]+)?|\'[^\']*(?:\'\'[^\']*)*\'))?(?:\s+AFTER\s+(?:"[^"\r\n]+"|`[^`\r\n]+`|[A-Za-z_][A-Za-z0-9_$]*))?(?=\s*(?:,|;|$))/i',
                         static function (array $matches): string {
                             $column = str_starts_with($matches[1], '`') ? '"' . trim($matches[1], '`') . '"' : $matches[1];
                             $type = preg_replace('/^INT$/i', 'INTEGER', $matches[2]) ?? $matches[2];
