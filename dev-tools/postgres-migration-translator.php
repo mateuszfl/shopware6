@@ -1497,6 +1497,15 @@ SQL;
                         continue;
                     }
 
+                    if ($this->diagnosticMode && $this->classFile === 'Migration1674204177TaxProvider.php') {
+                        $this->replace(
+                            'create_table_tax_provider_missing_name_separator_added',
+                            '/\\b(CREATE\\s+TABLE\\s+IF\\s+NOT\\s+EXISTS)(?=["`])/i',
+                            '$1 ',
+                            $statement
+                        );
+                    }
+
                     $indexes = [];
                     if ($this->diagnosticMode) {
                         [$statement, $indexes] = $this->extractTableLevelKeys($statement);
@@ -1580,6 +1589,14 @@ SQL;
                             $this->replace(
                                 'create_table_increment_bigint_unsigned_removed',
                                 '/(\\bBIGINT)\\s+UNSIGNED\\b/i',
+                                '$1',
+                                $statement
+                            );
+                        }
+                        if ($this->classFile === 'Migration1674204177TaxProvider.php') {
+                            $this->replace(
+                                'create_table_tax_provider_unsigned_tinyint_removed',
+                                '/(?m)^([ \\t]*`active`[ \\t]+SMALLINT(?:[ \\t]*\\(\\s*\\d+\\s*\\))?)[ \\t]+UNSIGNED\\b/i',
                                 '$1',
                                 $statement
                             );
@@ -1669,7 +1686,7 @@ SQL;
                         }
                         continue;
                     }
-                    if ($this->classFile === 'Migration1669124190AddDoctrineMessengerTable.php'
+                    if (in_array($this->classFile, ['Migration1669124190AddDoctrineMessengerTable.php', 'Migration1674204177TaxProvider.php'], true)
                         && preg_match('/^\\s*INDEX\\s*\\((.*)\\)\\s*$/is', $clause, $anonymousIndexMatch)) {
                         $columns = trim($anonymousIndexMatch[1]);
                         $columnParts = $this->splitSqlCommaList($columns);
