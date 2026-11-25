@@ -81,6 +81,15 @@ python3 benchmark/build_catalog.py
 python3 benchmark/build_catalog.py --count 500
 ```
 
-Wynikowy JSON to neutralny format fixture z wariantami i metadanymi; przed importem do konkretnego Shopware należy zmapować kategorie, podatki, walutę, sales channel, grupy/opcje właściwości i dostępność do ID tej instalacji. Import przez Sync API należy mierzyć jako oddzielny scenariusz: czas całego importu, produkty/s, wielkość batcha, błędy i czas do zakończenia indeksowania. Po nim sprawdź liczność i próbki danych, odśwież indeksy, a dopiero potem uruchom scenariusze odczytowe. Nie licz czasu seedowania do wyniku k6 listingu.
+Wynikowy JSON to neutralny format fixture z wariantami i metadanymi. Po czystej instalacji Shopware oraz utworzeniu storefront sales channel zaimportuj go przez Admin API/Sync API:
+
+```sh
+python3 benchmark/build_catalog.py
+SHOPWARE_ADMIN_PASSWORD=shopware python3 benchmark/import_catalog.py \
+  --sales-channel "PostgreSQL Benchmark" \
+  --metadata-file /tmp/postgresql-benchmark.json
+```
+
+Skrypt tworzy grupy/opcje właściwości, 48 rodzin rodziców i 4 952 warianty z tymi samymi ID/SKU w obu bazach. Tworzy też kategorię przypisaną do dynamicznego product stream z filtrem ceny 50–250 EUR. Zapisuje czasy przygotowania właściwości i importu produktów oddzielnie. Po imporcie sprawdź listing oraz liczność danych; dopiero potem wykonuj przebiegi k6. Nie licz czasu seedowania do wyniku odczytowego k6.
 
 Wyniki benchmarku i wygenerowany plik `data/catalog.generated.json` są ignorowane przez Git. Repo zawiera źródłowe rodziny produktów i generator, nigdy sekrety ani kopię bazy.
