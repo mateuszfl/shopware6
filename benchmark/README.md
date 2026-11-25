@@ -19,6 +19,18 @@ docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml up
 
 Do uruchomienia wariantu MySQL użyj `benchmark/compose.mysql.yaml`. Wolumeny są oddzielone nazwami projektu. Baza nie publikuje portu na hoście; administruj nią przez `docker compose exec`. Nie uruchamiaj obu wariantów jednocześnie na jednym VPS.
 
+### Adminer do pre-testów
+
+Adminer jest opcjonalny, aby nie dodawać kontenera do właściwego pomiaru. Uruchom go razem z bazą na stałym porcie `8081`:
+
+```sh
+docker compose --env-file benchmark/.env.example -f benchmark/compose.postgresql.yaml --profile tools up -d db adminer
+# albo zamiast PostgreSQL:
+docker compose --env-file benchmark/.env.example -f benchmark/compose.mysql.yaml --profile tools up -d db adminer
+```
+
+Otwórz <http://localhost:8081>. W Adminerze wybierz `Benchmark` i kliknij `Auto Sign-In`; dane logowania pozostają po stronie kontenera, nie trafiają do formularza przeglądarki. Serwis jest przypięty do localhost; nie wystawiaj tego portu publicznie. Właściwy pomiar wykonuj bez profilu `tools`.
+
 ## Scenariusz dynamicznej grupy
 
 `scenarios/dynamic-product-group-listing.js` wysyła stały napływ żądań do Store API listingu kategorii. Przykład:

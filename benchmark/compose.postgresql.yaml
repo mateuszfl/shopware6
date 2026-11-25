@@ -48,5 +48,17 @@ services:
       retries: 24
       start_period: 10s
 
+  adminer:
+    image: dockette/adminer:full@sha256:079280177475c0244111b3da5e0bbbe9297c90fc493b8f8c56e170ccc9552ec0
+    profiles: [tools]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ADMINER_BIND_IP:-127.0.0.1}:${ADMINER_PORT:-8081}:80"
+    environment:
+      ADMINER_PLUGIN_SERVER_LIST: "1"
+      ADMINER_SERVERS_Benchmark: "pgsql://${BENCHMARK_DB_USER:-shopware_bench}:${BENCHMARK_DB_PASSWORD:-bench_only_change_me}@db:5432/${BENCHMARK_DB_NAME:-shopware_bench}"
+
 volumes:
   postgresql-data:
