@@ -19,6 +19,23 @@ docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml up
 
 Do uruchomienia wariantu MySQL użyj `benchmark/compose.mysql.yaml`. Wolumeny są oddzielone nazwami projektu. Baza nie publikuje portu na hoście; administruj nią przez `docker compose exec`. Nie uruchamiaj obu wariantów jednocześnie na jednym VPS.
 
+### Storefront assety i motyw
+
+Po instalacji Shopware zbuduj assety storefrontu i skompiluj motyw kanału sprzedaży, zanim sprawdzisz stronę sklepu. Obraz benchmarkowej aplikacji nie zawiera Node.js, więc zależności i assety buduj na hoście z wersjami wymaganymi przez `package.json`:
+
+```sh
+STOREFRONT_APP=src/Storefront/Resources/app/storefront
+npx --yes npm@11.8.0 ci --prefix "$STOREFRONT_APP"
+docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml exec app php bin/console bundle:dump
+docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml exec app php bin/console feature:dump
+PROJECT_ROOT="$PWD" APP_URL=http://localhost:8000 npm --prefix "$STOREFRONT_APP" run production
+node "$STOREFRONT_APP/copy-to-vendor.js"
+docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml exec app php bin/console assets:install
+docker compose --env-file benchmark/.env -f benchmark/compose.postgresql.yaml exec app php bin/console theme:change Storefront --sales-channel=<storefront-id> --sync
+```
+
+Przy kompilacji na PostgreSQL wybierz konkretny kanał przez `theme:change`; `theme:compile --active-only` w tej gałęzi porównuje kolumnę `sales_channel.active` typu `smallint` z wartością boolean i kończy się błędem.
+
 ### Adminer do pre-testów
 
 Adminer jest opcjonalny, aby nie dodawać kontenera do właściwego pomiaru. Uruchom go razem z bazą na stałym porcie `8081`:
